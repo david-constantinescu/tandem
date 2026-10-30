@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+
+  --color-paper: #faf8f4;
+  --color-sand-50: #f6f2eb;
+  --color-sand-100: #efe8dc;
+  --color-sand-200: #e2d8c7;
+  --color-sand-300: #cfc1aa;
+  --color-ink-900: #14262a;
+  --color-ink-800: #1f3438;
+  --color-ink-700: #33484c;
+  --color-ink-500: #5b6d70;
+  --color-ink-400: #7d8c8e;
+  --color-ink-300: #a4b0b1;
+  --color-lagoon-50: #ecf5f3;
+  --color-lagoon-100: #d4e9e5;
+  --color-lagoon-500: #2f7f77;
+  --color-lagoon-600: #23675f;
+  --color-lagoon-700: #1b524c;
+  --color-lagoon-900: #14363a;
+  --color-clay-50: #fbf0ea;
+  --color-clay-100: #f6dccd;
+  --color-clay-500: #c8623a;
+  --color-clay-600: #a94f2d;
+  --color-amber-soft: #fbf3dc;
+  --color-amber-ink: #8a5a08;
+  --color-violet-soft: #f1effb;
+  --color-violet-ink: #5b4bb5;
+  --color-rose-soft: #fcecec;
+  --color-rose-ink: #a83232;
+
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --shadow-card: 0 1px 2px rgb(20 38 42 / 0.04), 0 1px 1px rgb(20 38 42 / 0.03);
+  --shadow-lift: 0 10px 30px -12px rgb(20 38 42 / 0.25);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-paper text-ink-900 font-sans;
+    font-feature-settings: "cv11", "ss01";
+  }
+  h1, h2, h3 {
+    @apply text-ink-900;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-lagoon-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: var(--color-lagoon-100);
+  }
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
+  .card {
+    @apply rounded-2xl border border-sand-200/80 bg-white shadow-[var(--shadow-card)];
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-400;
+  }
+  .field {
+    @apply w-full rounded-xl border border-sand-200 bg-white px-3.5 py-2.5 text-[15px] text-ink-900 placeholder:text-ink-300 transition focus:border-lagoon-500 focus:outline-none focus:ring-4 focus:ring-lagoon-100 disabled:bg-sand-50;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-ink-700;
+  }
+  .prose-chat p { @apply my-1.5 leading-relaxed; }
+  .prose-chat ul { @apply my-2 list-disc space-y-1 pl-5; }
+  .prose-chat ol { @apply my-2 list-decimal space-y-1 pl-5; }
+  .prose-chat strong { @apply font-semibold text-ink-900; }
+  .prose-chat em { @apply text-ink-500; }
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+  border-radius: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

@@ -1,0 +1,3975 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tandem API",
+    "version": "1.0.0",
+    "description": "Tandem travel management API. Session cookie auth; state-changing requests require the X-CSRF-Token header returned by /auth/me or /auth/login."
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "tandem_session"
+      },
+      "csrfHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token"
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/activities/proposals": {
+      "post": {
+        "summary": "Prepare a booking proposal (re-checks live price/availability). Requires approval to book.",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "provider_item_id": {
+                    "type": "string"
+                  },
+                  "date": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "time": {
+                    "anyOf": [
+                      {
+                        "pattern": "^\\d{2}:\\d{2}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "participants": {
+                    "maximum": 20,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "replaces_event_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "provider_item_id",
+                  "date"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/providers": {
+      "get": {
+        "summary": "Activity providers available to this account and their capability states",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/saved": {
+      "get": {
+        "summary": "Saved activities",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Save an activity for later",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "provider_item_id": {
+                    "type": "string"
+                  },
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "data": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "provider_item_id"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/saved/{saved_id}": {
+      "delete": {
+        "summary": "Remove a saved activity",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "saved_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/search": {
+      "post": {
+        "summary": "Search activities across providers, optionally checking fit against a trip's itinerary",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "date_from": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "date_to": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_after": {
+                    "anyOf": [
+                      {
+                        "pattern": "^\\d{2}:\\d{2}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_before": {
+                    "anyOf": [
+                      {
+                        "pattern": "^\\d{2}:\\d{2}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "max_price": {
+                    "anyOf": [
+                      {
+                        "minimum": 0,
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "currency": {
+                    "pattern": "^[A-Z]{3}$",
+                    "type": "string"
+                  },
+                  "categories": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "query": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "group_size": {
+                    "maximum": 20,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "max_duration_minutes": {
+                    "anyOf": [
+                      {
+                        "minimum": 15,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "accessible_only": {
+                    "type": "boolean"
+                  },
+                  "radius_km": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 25,
+                    "type": "number"
+                  },
+                  "providers": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/{provider}/{item_id}": {
+      "get": {
+        "summary": "Activity details from its provider",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/{provider}/{item_id}/availability": {
+      "post": {
+        "summary": "Live availability and price for a date/time",
+        "tags": [
+          "Activities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "date": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "time": {
+                    "anyOf": [
+                      {
+                        "pattern": "^\\d{2}:\\d{2}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "participants": {
+                    "maximum": 20,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "date"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals": {
+      "get": {
+        "summary": "Actions and proposals (filter ?status=awaiting_approval,in_progress...)",
+        "tags": [
+          "Approvals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals/{action_id}": {
+      "get": {
+        "summary": "One action with its approval history",
+        "tags": [
+          "Approvals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals/{action_id}/approve": {
+      "post": {
+        "summary": "Approve the exact proposal identified by its payload hash",
+        "tags": [
+          "Approvals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "payload_hash": {
+                    "description": "Hash of the exact proposal shown to the user",
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payload_hash"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals/{action_id}/reject": {
+      "post": {
+        "summary": "Reject a proposal",
+        "tags": [
+          "Approvals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "note": {
+                    "maxLength": 500,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations": {
+      "get": {
+        "summary": "Conversations, most recent first",
+        "tags": [
+          "Assistant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Start a conversation, optionally focused on a trip",
+        "tags": [
+          "Assistant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conv_id}": {
+      "get": {
+        "summary": "Conversation with messages and linked actions",
+        "tags": [
+          "Assistant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "conv_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete a conversation",
+        "tags": [
+          "Assistant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "conv_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conv_id}/messages": {
+      "get": {
+        "summary": "Messages in a conversation",
+        "tags": [
+          "Assistant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "conv_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Send a message; the assistant replies using Tandem's tools",
+        "tags": [
+          "Assistant"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "conv_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "content": {
+                    "maxLength": 4000,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "content"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "summary": "Start an isolated demo workspace (fictional data, simulated providers)",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Sign in with email and password",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "email": {
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "password": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Sign out of this session",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Current user and CSRF token",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "Create an account",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "email": {
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "password": {
+                    "maxLength": 200,
+                    "minLength": 10,
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "maxLength": 120,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/samples": {
+      "get": {
+        "summary": "Sample documents for the demo's live upload flow",
+        "tags": [
+          "Demo"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/demo/samples/{key}": {
+      "get": {
+        "summary": "Download a sample document to try drag-and-drop",
+        "tags": [
+          "Demo"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/demo/samples/{key}/upload": {
+      "post": {
+        "summary": "Send a sample document into the inbox through the real ingestion pipeline",
+        "tags": [
+          "Demo"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents": {
+      "get": {
+        "summary": "All documents (filter trip_id)",
+        "tags": [
+          "Documents"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/{doc_id}": {
+      "get": {
+        "summary": "Document metadata",
+        "tags": [
+          "Documents"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete a document",
+        "tags": [
+          "Documents"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/{doc_id}/download": {
+      "get": {
+        "summary": "Download the original file (authenticated; never a public URL)",
+        "tags": [
+          "Documents"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/{doc_id}/preview": {
+      "get": {
+        "summary": "Safe text preview (HTML is sanitised; scripts and remote content removed)",
+        "tags": [
+          "Documents"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "summary": "Liveness and dependency status",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        }
+      }
+    },
+    "/api/v1/inbox": {
+      "get": {
+        "summary": "Inbox items (top-level documents), newest first. Filter with ?status=",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/email-candidates": {
+      "get": {
+        "summary": "Travel-looking Gmail messages found by the last sync",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/email-candidates/import": {
+      "post": {
+        "summary": "Import selected Gmail messages into the inbox",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "candidate_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 25,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "candidate_ids"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/paste": {
+      "post": {
+        "summary": "Import pasted text (e.g. a confirmation email body)",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "text": {
+                    "maxLength": 60000,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/upload": {
+      "post": {
+        "summary": "Upload one or more files (multipart field 'files')",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/url": {
+      "post": {
+        "summary": "Import a web page or file by URL (SSRF-protected)",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "url": {
+                    "maxLength": 2000,
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{doc_id}": {
+      "get": {
+        "summary": "Inbox item with extracted records, fields and evidence",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete a document, its stored original and its pending records",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{doc_id}/ignore": {
+      "post": {
+        "summary": "Mark an item as not relevant",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{doc_id}/retry": {
+      "post": {
+        "summary": "Re-process a document",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{doc_id}/review": {
+      "post": {
+        "summary": "Accept (with corrections and trip choice) or reject extracted records",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "decisions": {
+                    "items": {
+                      "properties": {
+                        "record_id": {
+                          "type": "string"
+                        },
+                        "decision": {
+                          "pattern": "^(accept|reject)$",
+                          "type": "string"
+                        },
+                        "corrections": {
+                          "additionalProperties": true,
+                          "type": "object"
+                        },
+                        "trip_id": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "new_trip_name": {
+                          "anyOf": [
+                            {
+                              "maxLength": 200,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "no_trip": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "record_id",
+                        "decision"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "decisions"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations": {
+      "get": {
+        "summary": "Connected accounts and travel provider states",
+        "tags": [
+          "Integrations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/gmail/callback": {
+      "get": {
+        "summary": "OAuth redirect target (browser navigation)",
+        "tags": [
+          "Integrations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/gmail/connect": {
+      "post": {
+        "summary": "Start Gmail read-only OAuth; returns the Google consent URL",
+        "tags": [
+          "Integrations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/gmail/disconnect": {
+      "post": {
+        "summary": "Disconnect Gmail, revoke tokens, optionally delete imported emails",
+        "tags": [
+          "Integrations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "delete_imported": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/gmail/sync": {
+      "post": {
+        "summary": "Search Gmail for new travel emails",
+        "tags": [
+          "Integrations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/itinerary/events": {
+      "post": {
+        "summary": "Add an itinerary event",
+        "tags": [
+          "Itinerary"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "trip_id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "start_local": {
+                    "type": "string"
+                  },
+                  "start_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "address": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "city": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "trip_id",
+                  "title",
+                  "start_local"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/itinerary/events/{event_id}": {
+      "patch": {
+        "summary": "Edit an itinerary event (users may edit their own plans directly)",
+        "tags": [
+          "Itinerary"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "address": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "city": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete an itinerary event",
+        "tags": [
+          "Itinerary"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "summary": "Notifications (?unread=true)",
+        "tags": [
+          "Notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "summary": "Mark all notifications read",
+        "tags": [
+          "Notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/{note_id}/read": {
+      "post": {
+        "summary": "Mark a notification read",
+        "tags": [
+          "Notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reservations": {
+      "get": {
+        "summary": "List reservations (filter: trip_id, unassigned=true)",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Add a reservation manually",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "provider_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "booking_reference": {
+                    "anyOf": [
+                      {
+                        "maxLength": 64,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "YYYY-MM-DDTHH:MM local"
+                  },
+                  "start_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "destination": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "address": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "city": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "price": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "currency": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[A-Z]{3}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cancellation_policy": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "details": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "type",
+                  "title"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reservations/changes/{change_id}/apply": {
+      "post": {
+        "summary": "Apply a detected reservation change",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "change_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reservations/changes/{change_id}/dismiss": {
+      "post": {
+        "summary": "Dismiss a detected reservation change",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "change_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reservations/{res_id}": {
+      "get": {
+        "summary": "Reservation detail with change history",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "res_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Edit a reservation",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "res_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "status": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "provider_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "booking_reference": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_local": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_tz": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "address": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "city": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "price": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "currency": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cancellation_policy": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "details": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete a reservation from Tandem (does not cancel it with the provider)",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "res_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reservations/{res_id}/changes": {
+      "get": {
+        "summary": "Change history for a reservation",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "res_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reservations/{res_id}/move": {
+      "post": {
+        "summary": "Move a reservation to another trip (or unassign)",
+        "tags": [
+          "Reservations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "res_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "summary": "All settings for the current user",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/ai": {
+      "get": {
+        "summary": "AI privacy settings and provider capabilities",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Update AI privacy settings (consent is recorded)",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "allowed_providers": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "boolean"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "preferred_provider": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "acknowledge_privacy": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/delete-account": {
+      "post": {
+        "summary": "Permanently delete the account and all data",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  },
+                  "confirm": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "password",
+                  "confirm"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/export": {
+      "get": {
+        "summary": "Export all of your data as a ZIP of JSON files",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/password": {
+      "post": {
+        "summary": "Change password (signs out all sessions)",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "maxLength": 200,
+                    "minLength": 10,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "current_password",
+                  "new_password"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/preferences": {
+      "patch": {
+        "summary": "Update travel and notification preferences",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "interests": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pace": {
+                    "anyOf": [
+                      {
+                        "pattern": "^(relaxed|balanced|packed)$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "budget": {
+                    "anyOf": [
+                      {
+                        "pattern": "^(budget|moderate|premium)$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "accessibility_needs": {
+                    "anyOf": [
+                      {
+                        "maxLength": 500,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "default_currency": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[A-Z]{3}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "notification_prefs": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "boolean"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "retain_original_documents": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "auto_organize": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/profile": {
+      "patch": {
+        "summary": "Update profile",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "display_name": {
+                    "anyOf": [
+                      {
+                        "maxLength": 120,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "home_city": {
+                    "anyOf": [
+                      {
+                        "maxLength": 120,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "home_airport": {
+                    "anyOf": [
+                      {
+                        "maxLength": 8,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "timezone": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "locale": {
+                    "anyOf": [
+                      {
+                        "pattern": "^(en|ro)$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/providers": {
+      "get": {
+        "summary": "Travel provider integration states",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/sessions": {
+      "get": {
+        "summary": "Active sign-in sessions",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/sessions/{session_id}": {
+      "delete": {
+        "summary": "Sign out another session",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/usage": {
+      "get": {
+        "summary": "AI usage over the last 30 days",
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips": {
+      "get": {
+        "summary": "List trips",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create a trip",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_date": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "primary_destination": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "maxLength": 20000,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}": {
+      "get": {
+        "summary": "Trip detail",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Update a trip",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_date": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_date": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "primary_destination": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "maxLength": 20000,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "is_cancelled": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete a trip (reservations are kept and become unassigned unless delete_reservations=true)",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/conflicts": {
+      "get": {
+        "summary": "Deterministic conflict check for a trip",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/conflicts/explain": {
+      "post": {
+        "summary": "Ask AI to explain the detected conflicts and suggest fixes (text only)",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/destinations": {
+      "post": {
+        "summary": "Add a destination",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "arrive_date": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "depart_date": {
+                    "anyOf": [
+                      {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/destinations/{dest_id}": {
+      "delete": {
+        "summary": "Remove a destination",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dest_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/documents": {
+      "get": {
+        "summary": "Documents linked to a trip",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/itinerary": {
+      "get": {
+        "summary": "Itinerary events in a trip, ordered by start time",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/map": {
+      "get": {
+        "summary": "Located points for the trip map",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/reservations": {
+      "get": {
+        "summary": "Reservations in a trip",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/travellers": {
+      "post": {
+        "summary": "Add a traveller",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "full_name": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "full_name"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    }
+  }
+}
