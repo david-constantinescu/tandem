@@ -1,0 +1,11 @@
+backend/.venv
+backend/var
+backend/.env
+backend/tests
+backend/.pytest_cache
+backend/.ruff_cache
+frontend/node_modules
+frontend/dist
+.claude
+scripts
+*.local

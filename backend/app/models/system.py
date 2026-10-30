@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, LargeBinary, Numeric, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.extensions import db
@@ -113,6 +113,18 @@ class EmailCandidate(UUIDPk, db.Model):
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("documents.id", ondelete="SET NULL"), nullable=True
     )
+    created_at: Mapped[datetime] = mapped_column(tz_dt(), default=utcnow)
+
+
+class StoredObject(db.Model):
+    """File storage inside PostgreSQL for hosts without a persistent filesystem (STORAGE_TYPE=database).
+    Bytes are already encrypted by the storage layer before they reach this table."""
+
+    __tablename__ = "stored_objects"
+    key: Mapped[str] = mapped_column(String(300), primary_key=True)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    content_type: Mapped[str] = mapped_column(String(100), default="application/octet-stream")
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(tz_dt(), default=utcnow)
 
 

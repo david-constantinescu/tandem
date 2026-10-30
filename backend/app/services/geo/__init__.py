@@ -110,6 +110,8 @@ def tz_for_point(lat: float | None, lon: float | None) -> str | None:
             return tz
     try:
         return _tzfinder().timezone_at(lat=lat, lng=lon)
+    except ImportError:  # optional dependency, omitted from slim serverless builds
+        return None
     except Exception:  # noqa: BLE001
         return None
 

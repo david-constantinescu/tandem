@@ -16,7 +16,8 @@ from app.utils.errors import APIError
 BLUEPRINTS = (
     "app.api.health", "app.api.auth", "app.api.settings", "app.api.trips", "app.api.reservations",
     "app.api.itinerary", "app.api.inbox", "app.api.documents", "app.api.activities", "app.api.assistant",
-    "app.api.approvals", "app.api.integrations", "app.api.notifications", "app.api.demo", "app.api.openapi",
+    "app.api.approvals", "app.api.integrations", "app.api.notifications", "app.api.demo", "app.api.internal",
+    "app.api.openapi",
 )
 
 
@@ -34,7 +35,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
         # Keep database sessions in UTC regardless of the server's local timezone.
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {**app.config["SQLALCHEMY_ENGINE_OPTIONS"],
-                                                   "connect_args": {"options": "-c timezone=utc"}}
+                                                   "connect_args": {"options": "-c timezone=UTC"}}
     app.config["MAX_CONTENT_LENGTH"] = (
         app.config["MAX_UPLOAD_BYTES"] * app.config["MAX_FILES_PER_UPLOAD"] + 1024 * 1024
     )

@@ -1,0 +1,25 @@
+# Runtime dependencies for the Vercel serverless function (api/index.py).
+# Slimmer than backend/requirements.txt: no dev/test tools, no S3 client, no Redis, no timezonefinder
+# (optional fallback; curated city data covers common destinations), no browser automation.
+Flask==3.1.2
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-Limiter==3.12
+flask-cors==6.0.1
+SQLAlchemy==2.0.43
+alembic==1.16.5
+psycopg[binary]==3.2.10
+pydantic==2.14.2
+email-validator==2.3.0
+python-dateutil==2.9.0.post0
+cryptography==46.0.1
+httpx==0.28.1
+google-genai==2.30.1
+PyMuPDF==1.26.4
+pytesseract==0.3.13
+pillow==11.3.0
+python-docx==1.2.0
+beautifulsoup4==4.14.2
+nh3==0.3.0
+filetype==1.2.0
+airportsdata==20250909

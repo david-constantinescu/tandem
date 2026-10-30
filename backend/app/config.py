@@ -46,14 +46,24 @@ def load_dotenv(path: Path | None = None) -> None:
         os.environ.setdefault(key.strip(), value)
 
 
+def normalise_database_url(url: str) -> str:
+    """Accept provider-style URLs (postgres://, postgresql://) and select the psycopg 3 driver."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 class Config:
     def __init__(self) -> None:
+        on_vercel = bool(os.environ.get("VERCEL"))
+        self.ON_VERCEL = on_vercel
         self.APP_ENV = _str("APP_ENV", "development")
         self.SECRET_KEY = _str("SECRET_KEY", "dev-insecure-secret-change-me")
         self.ENCRYPTION_KEY = _str("ENCRYPTION_KEY")
-        self.SQLALCHEMY_DATABASE_URI = _str(
+        self.SQLALCHEMY_DATABASE_URI = normalise_database_url(_str(
             "DATABASE_URL", "postgresql+psycopg://tandem@127.0.0.1:5433/tandem"
-        )
+        ))
         self.REDIS_URL = _str("REDIS_URL")
         self.FRONTEND_URL = _str("FRONTEND_URL", "http://localhost:5173")
         self.BACKEND_URL = _str("BACKEND_URL", "http://localhost:5050")
@@ -65,7 +75,8 @@ class Config:
         self.SESSION_COOKIE_SECURE = _bool("SESSION_COOKIE_SECURE", self.APP_ENV == "production")
 
         # Storage
-        self.STORAGE_TYPE = _str("STORAGE_TYPE", "local")
+        # local | s3 | database (serverless hosts such as Vercel have no persistent filesystem)
+        self.STORAGE_TYPE = _str("STORAGE_TYPE", "database" if on_vercel else "local")
         self.STORAGE_LOCAL_PATH = _str("STORAGE_LOCAL_PATH", str(BACKEND_DIR / "var" / "storage"))
         self.STORAGE_BUCKET = _str("STORAGE_BUCKET")
         self.STORAGE_ENDPOINT = _str("STORAGE_ENDPOINT")
@@ -76,7 +87,8 @@ class Config:
         self.MAX_FILES_PER_UPLOAD = _int("MAX_FILES_PER_UPLOAD", 10)
 
         # Jobs
-        self.JOB_RUNNER = _str("JOB_RUNNER", "worker")  # worker | inline
+        self.JOB_RUNNER = _str("JOB_RUNNER", "inline" if on_vercel else "worker")  # worker | inline
+        self.CRON_SECRET = _str("CRON_SECRET")
         self.WORKER_POLL_SECONDS = float(_str("WORKER_POLL_SECONDS", "1.0"))
         self.SCHEDULED_CHECK_MINUTES = _int("SCHEDULED_CHECK_MINUTES", 10)
 
@@ -132,7 +144,7 @@ class Config:
         self.OVERPASS_URL = _str("OVERPASS_URL", "https://overpass-api.de/api/interpreter")
 
         # Location services
-        self.LOCATION_PROVIDER = _str("LOCATION_PROVIDER", "nominatim")  # nominatim | offline
+        self.LOCATION_PROVIDER = _str("LOCATION_PROVIDER", "offline" if on_vercel else "nominatim")  # nominatim | offline
         self.NOMINATIM_URL = _str("NOMINATIM_URL", "https://nominatim.openstreetmap.org")
         self.OSM_CONTACT_EMAIL = _str("OSM_CONTACT_EMAIL")
         self.ROUTING_OSRM_URL = _str("ROUTING_OSRM_URL")

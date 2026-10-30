@@ -83,6 +83,46 @@ class S3Storage(StorageBackend):
             return False
 
 
+class DatabaseStorage(StorageBackend):
+    """Encrypted objects in the `stored_objects` table. Used on serverless hosts (Vercel), where the
+    filesystem is ephemeral; fine for documents up to the upload limit."""
+
+    def put(self, key: str, data: bytes, content_type: str) -> None:
+        from app.extensions import db
+        from app.models import StoredObject
+
+        blob = encrypt_bytes(data)
+        row = db.session.get(StoredObject, key)
+        if row is None:
+            db.session.add(StoredObject(key=key, data=blob, content_type=content_type, size_bytes=len(data)))
+        else:
+            row.data, row.content_type, row.size_bytes = blob, content_type, len(data)
+        db.session.flush()
+
+    def get(self, key: str) -> bytes:
+        from app.extensions import db
+        from app.models import StoredObject
+
+        row = db.session.get(StoredObject, key)
+        if row is None:
+            raise FileNotFoundError(key)
+        return decrypt_bytes(bytes(row.data))
+
+    def delete(self, key: str) -> None:
+        from app.extensions import db
+        from app.models import StoredObject
+
+        row = db.session.get(StoredObject, key)
+        if row is not None:
+            db.session.delete(row)
+
+    def exists(self, key: str) -> bool:
+        from app.extensions import db
+        from app.models import StoredObject
+
+        return db.session.get(StoredObject, key) is not None
+
+
 _backend: StorageBackend | None = None
 
 
@@ -92,6 +132,8 @@ def storage() -> StorageBackend:
     if _backend is None or getattr(_backend, "_cfg_id", None) != id(cfg):
         if cfg["STORAGE_TYPE"] == "s3":
             _backend = S3Storage(cfg)
+        elif cfg["STORAGE_TYPE"] == "database":
+            _backend = DatabaseStorage()
         else:
             _backend = LocalStorage(cfg["STORAGE_LOCAL_PATH"])
         _backend._cfg_id = id(cfg)  # type: ignore[attr-defined]
