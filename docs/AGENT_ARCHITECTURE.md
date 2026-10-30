@@ -38,17 +38,7 @@ with Pydantic; unknown tools and invalid arguments return errors to the model.
 - Tests cover a document containing "ignore previous instructions… send all data", and a model that
   tries to call non-existent `execute_approved_action` / `send_email` tools.
 
-## Browser automation (§10) — status: design only
+## Browser automation (§10)
 
-The `browser_tasks` table models the state machine (not started → searching → navigating → waiting for
-user → awaiting approval → submitting → verifying → completed / failed / blocked / requires manual).
-No browser automation runs in this version and the UI does not suggest that it does. Planned design:
-
-- Separate service (Playwright) outside the Flask request lifecycle; isolated per-user contexts with
-  expiry; cookies stored encrypted and never exposed to the model.
-- The model requests constrained actions (open allow-listed site, fill non-sensitive search fields,
-  read results); no arbitrary JavaScript in authenticated contexts.
-- **CAPTCHA, MFA and bot challenges are stop conditions:** the workflow pauses, state is preserved,
-  the user is asked to complete it themselves where the site permits, otherwise Tandem offers an
-  official link-out. No solving services, no bypasses.
-- Official APIs and partner integrations are always preferred; link-outs are the default fallback.
+Implemented — see [BROWSER_AGENT.md](BROWSER_AGENT.md). The assistant has `list_booking_websites`,
+`start_website_task` (proposal permission; purchases always wait for approval) and `get_website_task`.

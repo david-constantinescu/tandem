@@ -1,4 +1,4 @@
-import { ArrowRight, Compass, FileUp, MessageCircle, Plane, Sparkles } from "lucide-react";
+import { ArrowRight, Compass, FileUp, Globe, MessageCircle, Plane, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ActionCard } from "@/components/activities/ActionCard";
 import { ConflictList } from "@/components/trips/ConflictList";
@@ -69,11 +69,12 @@ export default function HomePage() {
           <div className="space-y-6">
             <section className="card p-4">
               <SectionTitle>Quick actions</SectionTitle>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   { to: "/inbox", icon: <FileUp className="h-5 w-5" />, label: "Add booking" },
                   { to: "/assistant", icon: <MessageCircle className="h-5 w-5" />, label: "Ask Tandem" },
                   { to: "/discover", icon: <Compass className="h-5 w-5" />, label: "Discover" },
+                  { to: "/websites", icon: <Globe className="h-5 w-5" />, label: "Book on sites" },
                 ].map((q) => (
                   <Link key={q.to} to={q.to} className="flex flex-col items-center gap-2 rounded-xl bg-sand-50 px-2 py-4 text-center text-[12.5px] font-medium text-ink-700 transition hover:bg-sand-100">
                     <span className="text-lagoon-600">{q.icon}</span>{q.label}

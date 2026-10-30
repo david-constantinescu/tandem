@@ -10,11 +10,14 @@ from flask import Flask
 def register_cli(app: Flask) -> None:
     @app.cli.command("worker")
     @click.option("--once", is_flag=True, help="Process at most one job and exit")
-    def worker(once: bool):
+    @click.option("--only", default="", help="Comma-separated job kinds to process (e.g. browser_task)")
+    @click.option("--skip", default="", help="Comma-separated job kinds to leave for another worker")
+    def worker(once: bool, only: str, skip: str):
         """Run the background job worker (PostgreSQL-backed queue)."""
         from app.tasks.queue import worker_loop
 
-        worker_loop(app, once=once)
+        split = lambda v: {x.strip() for x in v.split(",") if x.strip()} or None  # noqa: E731
+        worker_loop(app, once=once, only=split(only), skip=split(skip))
 
     @app.cli.command("run-jobs")
     def run_jobs():

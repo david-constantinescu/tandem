@@ -33,6 +33,13 @@ def _gmail_import(job: ProcessingJob) -> None:
     import_messages(job.user_id, job.payload.get("candidate_ids", []))
 
 
+@handler("browser_task")
+def _browser_task(job: ProcessingJob) -> None:
+    from app.services.browser.agent import run_task
+
+    run_task(job.payload["task_id"])
+
+
 @handler("execute_action")
 def _execute_action(job: ProcessingJob) -> None:
     from app.services.agent.approvals import execute_action

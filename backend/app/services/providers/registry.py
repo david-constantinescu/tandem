@@ -10,11 +10,14 @@ from flask import current_app
 from app.models import User
 from app.services.providers.base import TravelProviderAdapter
 from app.services.providers.osm import OSMPlacesAdapter
-from app.services.providers.partners import BookingComAdapter, ExpediaAdapter, GetYourGuideAdapter, ViatorAdapter
+from app.services.providers.partners import (
+    BookingComAdapter, ExpediaAdapter, GetYourGuideAdapter, HeadoutAdapter, KlookAdapter, TiqetsAdapter, ViatorAdapter,
+)
 from app.services.providers.simulator import SimulatorAdapter
 from app.utils.errors import NotFound
 
-REAL_ADAPTERS = (OSMPlacesAdapter, BookingComAdapter, ExpediaAdapter, ViatorAdapter, GetYourGuideAdapter)
+REAL_ADAPTERS = (OSMPlacesAdapter, BookingComAdapter, ExpediaAdapter, ViatorAdapter, GetYourGuideAdapter, TiqetsAdapter,
+                 KlookAdapter, HeadoutAdapter)
 
 
 def adapters_for(user: User) -> list[TravelProviderAdapter]:

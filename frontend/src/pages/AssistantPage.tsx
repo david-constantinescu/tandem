@@ -18,7 +18,7 @@ const PROMPTS = [
   "Is there enough time between my flight and hotel check-in?",
   "Find something to do on Sunday afternoon that fits my plans",
   "What's still unconfirmed?",
-  "Summarise everything I need before departure",
+  "Book a train from Rome to Florence on Sunday for 2 people",
   "Are there any conflicts I should fix?",
 ];
 
@@ -28,6 +28,7 @@ const TOOL_LABEL: Record<string, string> = {
   search_activities: "Searched activities", get_activity_details: "Got activity details", create_itinerary_event: "Added a suggestion",
   update_itinerary_event: "Updated plan", delete_itinerary_event: "Removed event", create_booking_proposal: "Prepared booking proposal",
   get_pending_approvals: "Checked approvals", get_action_status: "Checked action status", search_travel_information: "Searched your bookings",
+  list_booking_websites: "Checked booking websites", start_website_task: "Ran the browser agent", get_website_task: "Checked the browser agent",
 };
 
 export default function AssistantPage() {
@@ -164,7 +165,7 @@ function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPaylo
     return <div className="flex justify-end"><div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-lagoon-900 px-4 py-2.5 text-[14.5px] text-white">{m.content}</div></div>;
   }
   const activities = m.references.filter((r) => r.type === "activity" && r.activity).slice(0, 3);
-  const links = m.references.filter((r) => r.type === "trip" || r.type === "reservation");
+  const links = m.references.filter((r) => r.type === "trip" || r.type === "reservation" || r.type === "browser_task");
   return (
     <div className="max-w-[92%] space-y-3">
       {m.tool_calls.length > 0 && (
@@ -187,7 +188,7 @@ function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPaylo
       <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-ink-400">
         {m.provider === "local" ? <Badge tone="neutral">Offline assistant</Badge> : m.provider && <span>{m.provider} · {m.model}</span>}
         {links.slice(0, 4).map((r) => (
-          <Link key={r.id} to={r.type === "trip" ? `/trips/${r.id}` : `/trips/${r.trip_id}`} className="text-lagoon-600 hover:underline">{r.label}</Link>
+          <Link key={r.id} to={r.type === "trip" ? `/trips/${r.id}` : r.type === "browser_task" ? `/websites?task=${r.id}` : `/trips/${r.trip_id}`} className="text-lagoon-600 hover:underline">{r.label}</Link>
         ))}
       </div>
     </div>

@@ -1029,6 +1029,272 @@
         }
       }
     },
+    "/api/v1/browser/sites": {
+      "get": {
+        "summary": "Booking websites the browser agent knows, with each site's automation policy",
+        "tags": [
+          "Browser agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/browser/tasks": {
+      "get": {
+        "summary": "Recent browser-agent tasks",
+        "tags": [
+          "Browser agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Start a website task: search a site and, on simulated sites, prepare a purchase for approval",
+        "tags": [
+          "Browser agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "site": {
+                    "type": "string"
+                  },
+                  "origin": {
+                    "anyOf": [
+                      {
+                        "maxLength": 120,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "destination": {
+                    "anyOf": [
+                      {
+                        "maxLength": 120,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "venue": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "date": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "time": {
+                    "anyOf": [
+                      {
+                        "pattern": "^\\d{2}:\\d{2}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "adults": {
+                    "maximum": 9,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "travellers": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 9,
+                    "type": "array"
+                  },
+                  "trip_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "goal": {
+                    "pattern": "^(book|search)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "site"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/browser/tasks/{task_id}": {
+      "get": {
+        "summary": "A browser-agent task with its step log",
+        "tags": [
+          "Browser agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/browser/tasks/{task_id}/cancel": {
+      "post": {
+        "summary": "Cancel a browser-agent task that hasn't completed",
+        "tags": [
+          "Browser agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
+    "/api/v1/browser/tasks/{task_id}/steps/{step}/screenshot": {
+      "get": {
+        "summary": "Screenshot captured at a step (sensitive fields are masked)",
+        "tags": [
+          "Browser agent"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "step",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ]
+      }
+    },
     "/api/v1/demo/samples": {
       "get": {
         "summary": "Sample documents for the demo's live upload flow",
@@ -1819,6 +2085,22 @@
             "csrfHeader": []
           }
         ]
+      }
+    },
+    "/api/v1/internal/cron": {
+      "get": {
+        "summary": "Run periodic checks and due jobs (requires Authorization: Bearer CRON_SECRET)",
+        "tags": [
+          "Internal"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success: {\"data\": ...}"
+          },
+          "4XX": {
+            "description": "Error: {\"error\": {\"code\", \"message\"}}"
+          }
+        }
       }
     },
     "/api/v1/itinerary/events": {

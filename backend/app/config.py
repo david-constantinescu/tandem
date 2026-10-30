@@ -143,6 +143,11 @@ class Config:
         self.OSM_PLACES_ENABLED = _bool("OSM_PLACES_ENABLED", True)
         self.OVERPASS_URL = _str("OVERPASS_URL", "https://overpass-api.de/api/interpreter")
 
+        # Browser agent (see docs/BROWSER_AGENT.md)
+        self.BROWSER_ASSIST_SITES = _str("BROWSER_ASSIST_SITES")  # comma-separated site keys, after terms review
+        self.BROWSER_WORKER_ENABLED = _bool("BROWSER_WORKER_ENABLED", False)  # Playwright installed in the worker
+        self.BROWSER_CDP_URL = _str("BROWSER_CDP_URL")  # optional remote Chromium over CDP
+
         # Location services
         self.LOCATION_PROVIDER = _str("LOCATION_PROVIDER", "offline" if on_vercel else "nominatim")  # nominatim | offline
         self.NOMINATIM_URL = _str("NOMINATIM_URL", "https://nominatim.openstreetmap.org")

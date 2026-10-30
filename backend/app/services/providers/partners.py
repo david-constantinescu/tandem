@@ -279,3 +279,34 @@ class GetYourGuideAdapter(TravelProviderAdapter):
                 availability_checked=False, source_label="GetYourGuide (book on GetYourGuide)",
             ))
         return results
+
+
+class _PartnerStub(TravelProviderAdapter):
+    """Activity marketplaces with partner-only APIs. Registered so their status is visible; no calls are made
+    until a partnership grants credentials and the adapter is implemented against their documentation."""
+
+    env_key = ""
+    access_note = ""
+
+    def state(self) -> str:
+        return AWAITING_PARTNER_APPROVAL
+
+    def capabilities(self) -> dict:
+        caps = super().capabilities()
+        caps.update(notes=[self.access_note, "Not implemented yet: needs partner credentials and API documentation."])
+        return caps
+
+
+class TiqetsAdapter(_PartnerStub):
+    key, name, docs_url = "tiqets", "Tiqets", "https://www.tiqets.com/en/affiliate/"
+    access_note = "Tiqets offers museum and attraction tickets through its affiliate and distribution partner programmes."
+
+
+class KlookAdapter(_PartnerStub):
+    key, name, docs_url = "klook", "Klook", "https://affiliate.klook.com/"
+    access_note = "Klook's API is available to approved affiliate/distribution partners."
+
+
+class HeadoutAdapter(_PartnerStub):
+    key, name, docs_url = "headout", "Headout", "https://www.headout.com/affiliates/"
+    access_note = "Headout's partner API requires an approved affiliate or distribution agreement."

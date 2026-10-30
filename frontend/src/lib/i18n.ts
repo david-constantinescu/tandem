@@ -9,6 +9,7 @@ const en = {
   "nav.discover": "Discover",
   "nav.assistant": "Assistant",
   "nav.approvals": "Approvals",
+  "nav.websites": "Websites",
   "nav.settings": "Settings",
   "status.confirmed": "Confirmed",
   "status.pending": "Pending",
@@ -29,6 +30,7 @@ const ro: Partial<Record<Key, string>> = {
   "nav.discover": "Descoperă",
   "nav.assistant": "Asistent",
   "nav.approvals": "Aprobări",
+  "nav.websites": "Site-uri",
   "nav.settings": "Setări",
 };
 

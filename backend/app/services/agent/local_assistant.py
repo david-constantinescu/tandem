@@ -88,6 +88,41 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
         lines = [f"- **{c['title']}** ({c['severity']}): {c['detail']}" for c in items[:8]]
         return header + f"I found {len(items)} item(s) to look at:\n" + "\n".join(lines)
 
+    booking = re.search(r"\b(book|buy|get)\b.*\b(train|rail|bus|coach|flight|plane|museum|gallery)\b", lower)
+    if booking:
+        kind = booking.group(2)
+        site = {"train": "demo_rail", "rail": "demo_rail", "bus": "demo_coach", "coach": "demo_coach",
+                "flight": "demo_air", "plane": "demo_air", "museum": "demo_museum", "gallery": "demo_museum"}[kind]
+        if not user.is_demo:
+            sites = call("list_booking_websites", category={"rail": "train", "coach": "bus", "plane": "flight"}.get(kind, kind)) or []
+            names = ", ".join(s["name"] for s in sites if s["policy"] != "simulated")[:400]
+            return header + (f"Real booking sites are link-only for now ({names}). Open one from **Websites**, book "
+                             "there, then forward the confirmation to your Inbox and I'll add it to your trip.")
+        day = _resolve_day(text, user, t_start, t_end)
+        route = re.search(r"from ([a-zà-ÿ .'-]+?) to ([a-zà-ÿ .'-]+?)(?: on| for| at| this| next|,|\.|$)", lower)
+        party = re.search(r"\b(\d) (?:people|persons|adults|tickets|of us)\b", lower)
+        args = {"site": site, "date": day.isoformat() if day else None, "trip_id": tid,
+                "adults": int(party.group(1)) if party else max(1, len(trip_info.get("travellers") or []) or 1)}
+        if site == "demo_museum":
+            args["venue"] = "Galleria Demo" if "rome" in lower or not re.search(r"paris|london|lisbon", lower) else \
+                {"paris": "Musée", "london": "Demo Gallery", "lisbon": "Azulejo"}[re.search(r"paris|london|lisbon", lower).group(0)]
+        elif route:
+            args["origin"], args["destination"] = route.group(1).strip().title(), route.group(2).strip().title()
+        else:
+            return header + "Tell me where from and to, e.g. *book a train from Rome to Florence on Sunday*."
+        if not args["date"]:
+            return header + "Which day? e.g. *on Sunday* or *on 15 November*."
+        result = call("start_website_task", **{k: v for k, v in args.items() if v is not None})
+        if not result:
+            return header + "I couldn't start the website task."
+        sel = result.get("selected") or {}
+        if result["state"] == "awaiting_approval":
+            return header + (f"The browser agent searched the simulated site and picked **{sel.get('offer_id', '')} "
+                             f"{sel.get('depart', '')}–{sel.get('arrive', '')}** (€{sel.get('total', 0):.2f}). "
+                             "It paused before entering any names — approve the card below to complete the "
+                             "(simulated) purchase.")
+        return header + f"Website task {result['state'].replace('_', ' ')}: {result.get('note') or ''}"
+
     if re.search(r"find|suggest|recommend|something to do|activity|activities|museum|tour|things to do", lower):
         day = _resolve_day(text, user, t_start, t_end)
         cats = sorted({c for w, c in CATEGORY_WORDS.items() if w in lower})

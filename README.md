@@ -43,12 +43,16 @@ npm --prefix ../frontend install && npm --prefix ../frontend run dev
 
 Open http://localhost:5173. The Vite dev server proxies `/api` to the Flask API on port 5050.
 
+**Live:** https://tandem-travel-roan.vercel.app — click *Explore the demo*.
+
 ## The demo
 
 Click **Explore the demo** on the sign-in page. Each visitor gets an isolated, expiring workspace with
 a fictional Rome long weekend (flights, hotel with an applied update, museum ticket, walking tour,
 dinner, free time, a suggestion, one deliberate conflict, documents and an assistant conversation).
-Bookings use a simulated provider — nothing real is booked or charged. The shared account
+Bookings use a simulated provider — nothing real is booked or charged. On **Websites**, the browser agent
+can complete a full (simulated) purchase on Tandem's demo rail, bus, airline and museum sites after you approve it;
+real booking sites (42 listed) are link-only by default — see [docs/BROWSER_AGENT.md](docs/BROWSER_AGENT.md). The shared account
 `demo@tandem.travel` is created by `flask seed-demo`. Details: [docs/DEMO_ENVIRONMENT.md](docs/DEMO_ENVIRONMENT.md).
 
 ## Configuring AI providers
@@ -84,7 +88,8 @@ See [docs/PROVIDER_INTEGRATIONS.md](docs/PROVIDER_INTEGRATIONS.md).
 ## Tests
 
 ```bash
-cd backend && .venv/bin/python -m pytest          # 84 tests on PostgreSQL (tandem_test); no API keys needed
+cd backend && .venv/bin/python -m pytest          # 103 tests on PostgreSQL (tandem_test); no API keys needed
+# Playwright tests need: .venv/bin/pip install playwright && .venv/bin/python -m playwright install chromium
 cd frontend && npx vitest run && npx tsc -b --noEmit
 ```
 
@@ -104,4 +109,5 @@ app (gunicorn serving API + built SPA on one origin) and the worker. See [docs/D
 [Approvals](docs/APPROVAL_SYSTEM.md) · [Provider integrations](docs/PROVIDER_INTEGRATIONS.md) ·
 [Booking.com](docs/BOOKING_COM_INTEGRATION.md) · [Expedia](docs/EXPEDIA_INTEGRATION.md) ·
 [Airlines](docs/AIRLINE_INTEGRATIONS.md) · [Demo](docs/DEMO_ENVIRONMENT.md) ·
-[Deployment](docs/DEPLOYMENT.md) · [Security](docs/SECURITY.md) · [Status](docs/IMPLEMENTATION_STATUS.md)
+[Browser agent](docs/BROWSER_AGENT.md) · [Deployment](docs/DEPLOYMENT.md) · [Security](docs/SECURITY.md) ·
+[Status](docs/IMPLEMENTATION_STATUS.md)

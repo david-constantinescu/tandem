@@ -5,7 +5,10 @@ live third-party service · 📐 designed / scaffolded only · ⛔ not started.
 
 ## Verification summary
 
-- Backend: **84 pytest tests pass** on PostgreSQL 16 (`backend/tests`), no API keys required; external
+- **Live deployment:** https://tandem-travel-roan.vercel.app (Vercel, region fra1, Neon Postgres). The full demo
+  workflow was run on the live URL: sample upload → inline processing → review → conflict → assistant →
+  proposal → approval → verified simulated booking in the itinerary.
+- Backend: **103 pytest tests pass** on PostgreSQL 16 (`backend/tests`), no API keys required; external
   providers mocked with fakes and `respx`.
 - Frontend: type-check (`tsc -b`) and production build pass; unit tests (vitest) pass.
 - Manual end-to-end run in a browser against the real stack (Flask API + separate worker + Vite):
@@ -36,9 +39,10 @@ live third-party service · 📐 designed / scaffolded only · ⛔ not started.
 | 10 Activity discovery | ✅ | Provider framework, itinerary fit, saved activities, proposals; OSM search (live network, not in tests) |
 | 11 Booking.com | 🟡 | Attractions search/details + redirect booking per docs; awaiting partner access |
 | 12 Expedia | 📐 | Capability reporting and signature helper; Rapid Activities beta endpoints not yet public |
-| 13 Specialist providers | 🟡/⛔ | Viator and GetYourGuide search + link-out (untested live); Tiqets, Klook, Headout not started; Eventbrite public search retired |
+| 13 Specialist providers | 🟡/📐 | Viator and GetYourGuide search + link-out (untested live); Tiqets, Klook, Headout registered as partner-only (awaiting approval); Eventbrite public search retired |
 | 14 Gmail | ✅/🟡 | Read-only OAuth, candidate search, selective import, dedupe, encrypted tokens, disconnect + delete — tested with mocked Google; production needs Google verification |
 | 15 Airlines | ✅ (import) / ⛔ (search, booking) | Flight import incl. multi-segment and timezones; link-outs only; see AIRLINE_INTEGRATIONS.md |
+| 10b Browser agent | ✅ (simulated + guards) / 🟡 (real sites) | Full agentic purchase on Tandem's simulated rail/bus/air/museum sites (works on Vercel); Playwright engine + AI navigator for allow-listed real sites, tested with real Chromium against a fixture site; 42 real sites registered link-only by default. See BROWSER_AGENT.md |
 | 16 Production hardening | 🟡 | Security headers, rate limits, encryption, SSRF, privacy controls, backups doc, Docker/Compose (unverified here) |
 
 ## Definition of done (§29)
@@ -68,7 +72,9 @@ live third-party service · 📐 designed / scaffolded only · ⛔ not started.
   near a curated destination; offsets are correct.
 - Travel times are only available with a configured OSRM server; otherwise conflicts use a physical
   lower bound and say travel time is unknown.
-- Browser automation (§10) is design-only; no automated website interaction exists.
+- Browser agent on real websites is link-only by default (terms not reviewed); assisted search needs an operator
+  allow-list, a browser worker and an AI provider, and has only been tested against a local fixture site.
+  Tandem never enters traveller or payment details on real sites; payment there is always done by the user.
 - Audio ingestion is not supported.
 - Romanian translation covers navigation only; the i18n layer is ready for full translation.
 - Outbound email notifications are not implemented (in-app notifications only).

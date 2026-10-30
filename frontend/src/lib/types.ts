@@ -207,3 +207,37 @@ export type Message = {
 export type Conversation = { id: string; trip_id: string | null; title: string; created_at: string; updated_at: string };
 
 export type Notification = { id: string; type: string; severity: "info" | "warning" | "critical" | "success"; title: string; body: string; link: string | null; read: boolean; created_at: string };
+
+export type BookingSite = {
+  key: string;
+  name: string;
+  category: "train" | "bus" | "flight" | "museum" | "gallery" | "attraction";
+  homepage: string;
+  country: string;
+  simulated: boolean;
+  terms_note: string;
+  automation_forbidden: boolean;
+  notes: string[];
+  policy: "simulated" | "assisted" | "link_only";
+  agent_can: { search: boolean; select: boolean; enter_traveller_details: boolean; payment: string; deep_link: boolean };
+};
+
+export type BrowserStep = { step: number; action: string; reason: string; at: string; url: string | null; title: string | null; screenshot?: string; page_text?: string };
+
+export type BrowserTask = {
+  id: string;
+  site: string;
+  site_name: string;
+  simulated: boolean;
+  state: string;
+  goal: string;
+  params: Record<string, any>;
+  engine: string | null;
+  stop_reason: string | null;
+  handoff_url: string | null;
+  result: { offers?: { offer_id?: string; title?: string; depart?: string; arrive?: string; total?: number; price?: number; currency?: string }[]; selected?: any; selection_reason?: string; reservation_id?: string; confirmation?: Record<string, string>; venue_name?: string };
+  log: BrowserStep[];
+  action_id: string | null;
+  trip_id: string | null;
+  created_at: string;
+};

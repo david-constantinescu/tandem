@@ -50,6 +50,8 @@ class Tool:
     args: type[BaseModel]
     permission: Literal["read", "internal", "proposal"]
     fn: Callable[[ToolContext, Any], Any]
+    # Tools that commit (e.g. run a browser task inline) can't run inside the per-call savepoint.
+    transactional: bool = True
 
     def spec(self) -> ToolSpec:
         return ToolSpec(self.name, self.description, inline_schema(self.args))
@@ -58,9 +60,9 @@ class Tool:
 TOOLS: dict[str, Tool] = {}
 
 
-def tool(name: str, description: str, args: type[BaseModel], permission: str = "read"):
+def tool(name: str, description: str, args: type[BaseModel], permission: str = "read", transactional: bool = True):
     def register(fn):
-        TOOLS[name] = Tool(name, description, args, permission, fn)  # type: ignore[arg-type]
+        TOOLS[name] = Tool(name, description, args, permission, fn, transactional)  # type: ignore[arg-type]
         return fn
 
     return register
@@ -378,6 +380,77 @@ def get_action_status(ctx: ToolContext, args: ActionArg):
             "error": d["error"]}
 
 
+class WebsitesArgs(BaseModel):
+    category: str | None = Field(default=None, description="train, bus, flight, museum, gallery or attraction")
+
+
+@tool("list_booking_websites", "Booking websites the browser agent knows, with what it may do on each "
+      "(simulated demo sites support a full purchase; real sites are link-only unless allow-listed).", WebsitesArgs)
+def list_booking_websites(ctx: ToolContext, args: WebsitesArgs):
+    from app.services.browser.sites import sites_for
+
+    return [{"site": s.key, "name": s.name, "category": s.category, "policy": d["policy"], "agent_can": d["agent_can"],
+             "note": s.terms_note} for s in sites_for(ctx.user.is_demo) if not args.category or s.category == args.category
+            for d in [s.to_dict()]][:40]
+
+
+class WebsiteTaskArgs(BaseModel):
+    site: str
+    origin: str | None = None
+    destination: str | None = None
+    venue: str | None = Field(default=None, description="Museum/gallery name for museum sites")
+    date: str = Field(description="YYYY-MM-DD local")
+    time: str | None = Field(default=None, description="Earliest departure/entry time HH:MM")
+    adults: int = Field(default=1, ge=1, le=9)
+    trip_id: str | None = None
+
+
+@tool("start_website_task", "Have the browser agent use a booking website. On Tandem's simulated sites it searches, "
+      "picks an option that fits the itinerary and prepares a purchase that the user must approve; on real sites it "
+      "hands off a link. Nothing is bought without the user's approval.", WebsiteTaskArgs, permission="proposal",
+      transactional=False)
+def start_website_task(ctx: ToolContext, args: WebsiteTaskArgs):
+    from app.services.browser.agent import create_task, task_dict
+    from app.tasks.queue import run_inline_if_configured
+
+    trip = _trip(ctx, args.trip_id) if (args.trip_id or ctx.default_trip_id) else None
+    try:
+        task = create_task(ctx.user, args.site, args.model_dump(exclude={"site", "trip_id"}), trip=trip,
+                           conversation_id=ctx.conversation_id)
+    except APIError as exc:
+        raise ToolError(exc.message) from exc
+    job = getattr(task, "_job", None)
+    db.session.commit()
+    if job is not None:
+        run_inline_if_configured(job)  # in worker mode the task runs in the background; poll get_website_task
+        db.session.refresh(task)
+    if task.action_id:
+        ctx.action_ids.append(str(task.action_id))
+    d = task_dict(task)
+    ctx.references.append({"type": "browser_task", "id": d["id"], "label": f"{d['site_name']} task"})
+    return {"task_id": d["id"], "state": d["state"], "selected": d["result"].get("selected"),
+            "offers": d["result"].get("offers", [])[:5], "handoff_url": d["handoff_url"], "note": d["stop_reason"]}
+
+
+class WebsiteTaskArg(BaseModel):
+    task_id: str
+
+
+@tool("get_website_task", "Status, steps and result of a browser-agent task.", WebsiteTaskArg)
+def get_website_task(ctx: ToolContext, args: WebsiteTaskArg):
+    from app.models import BrowserTask
+    from app.services.browser.agent import task_dict
+
+    try:
+        t = db.session.get(BrowserTask, uuid.UUID(args.task_id))
+    except ValueError as exc:
+        raise ToolError("Invalid task id") from exc
+    if t is None or t.user_id != ctx.user.id:
+        raise ToolError("Task not found")
+    d = task_dict(t)
+    return {k: d[k] for k in ("state", "stop_reason", "handoff_url", "result")} | {"steps": [s["reason"] for s in d["log"]][-8:]}
+
+
 class SearchInfoArgs(BaseModel):
     query: str = Field(description="Words to look for in the user's reservations and documents")
 
@@ -424,7 +497,10 @@ def run_tool(ctx: ToolContext, name: str, raw_args: dict) -> tuple[str, Any]:
     except ValidationError as exc:
         return "error", {"error": "Invalid arguments", "details": exc.errors(include_url=False, include_input=False)[:5]}
     try:
-        with db.session.begin_nested():
+        if t.transactional:
+            with db.session.begin_nested():
+                result = t.fn(ctx, args)
+        else:
             result = t.fn(ctx, args)
         return "ok", result
     except ToolError as exc:

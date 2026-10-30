@@ -24,7 +24,27 @@ workers are safe. Uploaded files live in the `storage` volume; for multiple host
 > This Compose stack and the Dockerfile were written for this build but could not be executed on the
 > development machine (no Docker available). The same commands were verified directly on the host.
 
-## Option B — Frontend on Vercel, API elsewhere
+## Option B — Everything on Vercel (current live deployment)
+
+Live: **https://tandem-travel-roan.vercel.app** (project `tandem-travel`, team `softhoarders-projects`).
+
+- `api/index.py` exposes the Flask app as a Python function; `vercel.json` builds the SPA, rewrites
+  `/api/*` and `/demo-sites/*` to the function, sets security headers, pins the function to **fra1**
+  (next to the database — from iad1 every query crossed the Atlantic and demo creation took ~17 s; now ~1 s),
+  and schedules a daily cron to `/api/v1/internal/cron`.
+- Database: Neon Postgres (free plan, fra1) provisioned through the Vercel Marketplace and connected to the
+  project (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`). Migrations run from a workstation:
+  `vercel env pull .env.vercel.local --environment=production` then
+  `DATABASE_URL=$DATABASE_URL_UNPOOLED STORAGE_TYPE=database flask db upgrade` (and `flask seed-demo`).
+- On Vercel: `JOB_RUNNER=inline`, `STORAGE_TYPE=database` (encrypted files in Postgres),
+  `LOCATION_PROVIDER=offline`, no Tesseract (screenshots need an AI provider), no browser worker (real-site
+  automation unavailable; simulated sites work via the in-process engine).
+- Production env vars: `APP_ENV`, `SECRET_KEY`, `ENCRYPTION_KEY`, `CRON_SECRET`, `DEMO_ACCOUNT_PASSWORD`,
+  `TRUSTED_PROXIES=1`, `FRONTEND_URL`/`BACKEND_URL`, `DEMO_ALLOW_EXTERNAL_AI`, `LOCATION_PROVIDER`.
+  Add AI keys with `vercel env add GEMINI_API_KEY production` and redeploy.
+- Deploy: `vercel deploy --prod`.
+
+## Option C — Frontend on Vercel, API elsewhere
 
 Build the SPA (`npm run build`) and deploy `frontend/dist` to Vercel with a rewrite of `/api/*` to the
 Flask host so cookies stay first-party:

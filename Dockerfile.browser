@@ -1,0 +1,9 @@
+# Browser worker: the Tandem image plus Playwright + Chromium, processing only browser-agent jobs.
+FROM tandem-app:latest
+USER root
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN pip install playwright==1.55.0 \
+ && python -m playwright install --with-deps chromium \
+ && chmod -R a+rx /ms-playwright
+USER tandem
+CMD ["flask", "worker", "--only", "browser_task"]

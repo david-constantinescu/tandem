@@ -20,6 +20,7 @@ services:
 
   migrate:
     build: .
+    image: tandem-app:latest
     env_file: .env
     environment: &dbenv
       DATABASE_URL: postgresql+psycopg://tandem:${POSTGRES_PASSWORD:-tandem-change-me}@db:5432/tandem
@@ -31,9 +32,11 @@ services:
       db: { condition: service_healthy }
 
   web:
-    build: .
+    image: tandem-app:latest
     env_file: .env
-    environment: *dbenv
+    environment:
+      <<: *dbenv
+      BROWSER_WORKER_ENABLED: "true"   # the browser-worker service below runs Playwright jobs
     volumes: [storage:/data/storage]
     ports: ["8000:8000"]
     depends_on:
@@ -42,11 +45,20 @@ services:
     restart: unless-stopped
 
   worker:
-    build: .
+    image: tandem-app:latest
     env_file: .env
     environment: *dbenv
     volumes: [storage:/data/storage]
-    command: ["flask", "worker"]
+    command: ["flask", "worker", "--skip", "browser_task"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  browser-worker:
+    build: { context: ., dockerfile: Dockerfile.browser }
+    env_file: .env
+    environment: *dbenv
+    volumes: [storage:/data/storage]
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped

@@ -21,7 +21,7 @@ the simulator; real users never get the simulator.
 | **Expedia Rapid Activities** | Early-access beta (Q3 2026), GA planned 2027; OAuth 2.0; booking needs Payments API token | capability reporting, EAN signature helper; search intentionally disabled until endpoints are issued | awaiting partner approval |
 | **Viator Partner API v2** | Affiliate API key (self-serve basic access); merchant access for API booking | free-text product search, link-out to Viator | awaiting partner approval |
 | **GetYourGuide Partner API** | Approved partners | tour search, link-out | awaiting partner approval |
-| Tiqets, Klook, Headout | Partner programmes | not yet implemented (Phase 3, one at a time) | — |
+| Tiqets, Klook, Headout | Partner programmes | registered with honest status; no API calls until a partnership grants credentials | awaiting partner approval |
 | Eventbrite | Public event search API was retired; only organiser-scoped APIs remain | not planned | — |
 | Google Places | Paid; place listings are not ticket availability | not used | — |
 

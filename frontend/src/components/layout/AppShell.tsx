@@ -1,7 +1,7 @@
 import * as Popover from "@radix-ui/react-popover";
 import { clsx } from "clsx";
 import {
-  Bell, CheckCheck, Compass, Home, Inbox, LogOut, Map, MessageCircle, Settings, ShieldCheck, Sparkles,
+  Bell, CheckCheck, Compass, Globe, Home, Inbox, LogOut, Map, MessageCircle, Settings, ShieldCheck, Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
@@ -115,6 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <NavItem to="/trips" icon={<Map />} label={t("nav.trips")} />
           <NavItem to="/inbox" icon={<Inbox />} label={t("nav.inbox")} count={reviewCount} />
           <NavItem to="/discover" icon={<Compass />} label={t("nav.discover")} />
+          <NavItem to="/websites" icon={<Globe />} label={t("nav.websites")} />
           <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} />
           <NavItem to="/approvals" icon={<ShieldCheck />} label={t("nav.approvals")} count={approvalCount} />
         </nav>
@@ -145,6 +146,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo className="lg:hidden" />
           <div className="flex items-center gap-1">
             <Notifications />
+            <Link to="/websites" className="rounded-xl p-2 text-ink-500 hover:bg-sand-100 lg:hidden" aria-label="Book on websites"><Globe className="h-5 w-5" /></Link>
+            <Link to="/approvals" className="rounded-xl p-2 text-ink-500 hover:bg-sand-100 lg:hidden" aria-label="Approvals"><ShieldCheck className="h-5 w-5" /></Link>
             <Link to="/settings" className="rounded-xl p-2 text-ink-500 hover:bg-sand-100 lg:hidden" aria-label="Settings"><Settings className="h-5 w-5" /></Link>
           </div>
         </header>

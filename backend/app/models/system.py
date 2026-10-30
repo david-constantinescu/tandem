@@ -129,14 +129,24 @@ class StoredObject(db.Model):
 
 
 class BrowserTask(UUIDPk, Timestamps, db.Model):
-    """State record for user-guided website workflows (design scaffold; see docs/AGENT_ARCHITECTURE.md)."""
+    """An agentic website workflow (search, select, checkout hand-off) run by the browser agent."""
 
     __tablename__ = "browser_tasks"
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    trip_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("trips.id", ondelete="SET NULL"), nullable=True)
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True)
+    action_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("agent_actions.id", ondelete="SET NULL"), nullable=True)
     site: Mapped[str] = mapped_column(String(200))
     # not_started|searching|navigating|waiting_for_user|awaiting_approval|submitting|verifying|
-    # completed|failed|blocked|requires_manual
-    state: Mapped[str] = mapped_column(String(30), default="not_started")
-    goal: Mapped[str] = mapped_column(Text, default="")
-    stop_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # completed|failed|blocked|requires_manual|cancelled
+    state: Mapped[str] = mapped_column(String(30), default="not_started", index=True)
+    goal: Mapped[str] = mapped_column(Text, default="")  # search | book
+    params: Mapped[dict] = mapped_column(JSONType, default=dict)
+    engine: Mapped[str | None] = mapped_column(String(20), nullable=True)  # http | playwright | none
+    stop_reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    state_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    handoff_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    result: Mapped[dict] = mapped_column(JSONType, default=dict)
     log: Mapped[list] = mapped_column(JSONType, default=list)

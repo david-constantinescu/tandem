@@ -14,7 +14,8 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
   const toast = useToast();
   const p = action.payload;
   const awaiting = action.status === "awaiting_approval";
-  const isBooking = action.action_type === "book_activity";
+  const isWebsite = action.action_type === "browser_checkout";
+  const isBooking = action.action_type === "book_activity" || isWebsite;
 
   const doApprove = async () => {
     try {
@@ -39,7 +40,7 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
               : action.status === "in_progress" ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <ShieldCheck className="h-[18px] w-[18px]" />}
           </span>
           <div className="min-w-0">
-            <p className="eyebrow">{isBooking ? `Booking proposal · ${p.provider_name ?? action.provider}` : action.action_type === "link_out" ? "Book with provider" : "Itinerary change"}</p>
+            <p className="eyebrow">{isWebsite ? `Website purchase by the browser agent · ${p.site_name}` : isBooking ? `Booking proposal · ${p.provider_name ?? action.provider}` : action.action_type === "link_out" ? "Book with provider" : "Itinerary change"}</p>
             <h3 className="mt-0.5 text-[15.5px] font-semibold text-ink-900">{action.title}</h3>
             {action.description && <p className="mt-0.5 text-[13.5px] text-ink-500">{action.description}</p>}
           </div>
@@ -50,10 +51,13 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
       {isBooking && !compact && (
         <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-sand-50 p-3.5 text-[13px] sm:grid-cols-4">
           <div><dt className="text-ink-400">Date</dt><dd className="font-medium text-ink-800">{fmtDate(p.date, { year: true })}</dd></div>
-          <div><dt className="text-ink-400">Time</dt><dd className="font-medium text-ink-800">{p.time} <span className="font-normal text-ink-400">{p.timezone?.split("/").pop()?.replace("_", " ")}</span></dd></div>
-          <div><dt className="text-ink-400">People</dt><dd className="font-medium text-ink-800">{p.participants}</dd></div>
+          <div><dt className="text-ink-400">Time</dt><dd className="font-medium text-ink-800">{isWebsite ? `${p.offer?.depart}–${p.offer?.arrive}` : p.time} <span className="font-normal text-ink-400">{p.timezone?.split("/").pop()?.replace("_", " ")}</span></dd></div>
+          <div><dt className="text-ink-400">People</dt><dd className="font-medium text-ink-800">{isWebsite ? p.travellers?.length : p.participants}</dd></div>
           <div><dt className="text-ink-400">Total</dt><dd className="font-semibold text-ink-900">{money(action.cost, action.currency)}</dd></div>
         </dl>
+      )}
+      {isWebsite && !compact && p.travellers?.length > 0 && (
+        <p className="mt-3 text-[13px] text-ink-600">Names the agent will enter: <strong>{p.travellers.join(", ")}</strong></p>
       )}
       {!compact && action.consequences.length > 0 && awaiting && (
         <ul className="mt-3 space-y-1 text-[13px] text-ink-600">
@@ -66,7 +70,7 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
       )}
       {action.status === "completed" && action.result?.provider_booking_id && (
         <p className="mt-3 rounded-lg bg-lagoon-50 px-3 py-2 text-[13px] text-lagoon-700">
-          Confirmation <span className="font-mono font-medium">{action.result.provider_booking_id}</span>, verified with the provider
+          Confirmation <span className="font-mono font-medium">{action.result.provider_booking_id}</span>, {isWebsite ? "read back from the website's confirmation page" : "verified with the provider"}
           {action.result.simulated ? " (simulated — nothing was charged)" : ""}. Added to your itinerary.
         </p>
       )}

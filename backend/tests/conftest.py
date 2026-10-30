@@ -25,6 +25,7 @@ def app():
         "LOCATION_PROVIDER": "offline", "STORAGE_LOCAL_PATH": storage_dir, "OSM_PLACES_ENABLED": False,
         "SECRET_KEY": "test-secret-key-that-is-long-enough-for-tests", "GEMINI_API_KEY": "", "ZAI_API_KEY": "",
         "GROQ_API_KEY": "", "GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": "", "DEMO_ALLOW_EXTERNAL_AI": False,
+        "BROWSER_WORKER_ENABLED": False, "BROWSER_ASSIST_SITES": "",
     })
     from app.extensions import limiter
 

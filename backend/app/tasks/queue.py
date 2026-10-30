@@ -58,7 +58,7 @@ def run_inline_if_configured(job: ProcessingJob) -> None:
         execute(job.id)
 
 
-def claim_next(worker_id: str) -> uuid.UUID | None:
+def claim_next(worker_id: str, *, only: set[str] | None = None, skip: set[str] | None = None) -> uuid.UUID | None:
     now = utcnow()
     stmt = (
         db.select(ProcessingJob)
@@ -70,6 +70,10 @@ def claim_next(worker_id: str) -> uuid.UUID | None:
         .limit(1)
         .with_for_update(skip_locked=True)
     )
+    if only:
+        stmt = stmt.where(ProcessingJob.kind.in_(only))
+    if skip:
+        stmt = stmt.where(ProcessingJob.kind.notin_(skip))
     job = db.session.execute(stmt).scalar_one_or_none()
     if job is None:
         db.session.rollback()
@@ -159,7 +163,7 @@ def run_pending(limit: int = 100) -> int:
     return count
 
 
-def worker_loop(app, *, once: bool = False) -> None:
+def worker_loop(app, *, once: bool = False, only: set[str] | None = None, skip: set[str] | None = None) -> None:
     from app.tasks import periodic
 
     worker_id = f"{socket.gethostname()}-{os.getpid()}"
@@ -169,14 +173,14 @@ def worker_loop(app, *, once: bool = False) -> None:
     log.info("worker %s started", worker_id)
     while True:
         with app.app_context():
-            if time.monotonic() - last_periodic > interval:
+            if not only and time.monotonic() - last_periodic > interval:
                 try:
                     periodic.run_periodic()
                 except Exception:  # noqa: BLE001
                     log.exception("periodic tasks failed")
                     db.session.rollback()
                 last_periodic = time.monotonic()
-            job_id = claim_next(worker_id)
+            job_id = claim_next(worker_id, only=only, skip=skip)
             if job_id:
                 execute(job_id)
             db.session.remove()

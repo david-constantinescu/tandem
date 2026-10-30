@@ -14,6 +14,7 @@ const DiscoverPage = lazy(() => import("./pages/DiscoverPage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const ApprovalsPage = lazy(() => import("./pages/ApprovalsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const WebsitesPage = lazy(() => import("./pages/WebsitesPage"));
 
 function Protected() {
   const { user, loading } = useAuth();
@@ -33,6 +34,7 @@ function Protected() {
           <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/assistant/:id" element={<AssistantPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="/websites" element={<WebsitesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/:section" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

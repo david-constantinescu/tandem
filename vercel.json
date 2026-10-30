@@ -20,6 +20,10 @@
       "destination": "/api/index"
     },
     {
+      "source": "/demo-sites/(.*)",
+      "destination": "/api/index"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
