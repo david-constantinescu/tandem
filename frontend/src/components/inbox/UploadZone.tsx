@@ -1,43 +1,56 @@
 import { clsx } from "clsx";
 import { ClipboardPaste, FileUp, Link2 } from "lucide-react";
-import { useRef, useState, type DragEvent, type FormEvent } from "react";
+import { useCallback, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { Button, ErrorNote, Field } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { useInvalidateTripData } from "@/lib/queries";
 import type { DocumentItem } from "@/lib/types";
 
-const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.txt,.html,.htm,.eml,.docx";
+export const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.heic,.txt,.html,.htm,.eml,.docx";
 
-export function UploadZone() {
-  const input = useRef<HTMLInputElement>(null);
-  const [drag, setDrag] = useState(false);
+type UploadError = { filename: string; message: string };
+
+/** Sends files to the inbox. Shared by the drop zone and the Add sheet. */
+export function useUpload() {
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<{ filename: string; message: string }[]>([]);
-  const [dialog, setDialog] = useState<"paste" | "url" | null>(null);
+  const [errors, setErrors] = useState<UploadError[]>([]);
   const invalidate = useInvalidateTripData();
   const toast = useToast();
-
-  const send = async (files: FileList | File[]) => {
+  const { t, tp } = useT();
+  const send = useCallback(async (files: FileList | File[]): Promise<DocumentItem[]> => {
     const list = Array.from(files);
-    if (!list.length) return;
+    if (!list.length) return [];
     setBusy(true);
     setErrors([]);
     const form = new FormData();
     list.forEach((f) => form.append("files", f));
     try {
-      const res = await api.upload<{ documents: DocumentItem[]; errors: { filename: string; message: string }[] }>("/inbox/upload", form);
+      const res = await api.upload<{ documents: DocumentItem[]; errors: UploadError[] }>("/inbox/upload", form);
       setErrors(res.errors);
-      if (res.documents.length) toast(`${res.documents.length} file${res.documents.length > 1 ? "s" : ""} added — reading now`, "success");
+      if (res.documents.length) toast(tp("upload.added", res.documents.length), "success");
+      res.errors.forEach((e) => toast(`${e.filename}: ${e.message}`, "error"));
+      return res.documents;
     } catch (e) {
-      setErrors([{ filename: "Upload", message: errorMessage(e) }]);
+      setErrors([{ filename: t("upload.upload"), message: errorMessage(e) }]);
+      toast(errorMessage(e), "error");
+      return [];
     } finally {
       setBusy(false);
       invalidate();
-      if (input.current) input.current.value = "";
     }
-  };
+  }, [invalidate, t, toast, tp]);
+  return { send, busy, errors };
+}
+
+export function UploadZone() {
+  const input = useRef<HTMLInputElement>(null);
+  const [drag, setDrag] = useState(false);
+  const [dialog, setDialog] = useState<"paste" | "url" | null>(null);
+  const { send, busy, errors } = useUpload();
+  const { t } = useT();
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -51,18 +64,19 @@ export function UploadZone() {
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
-        className={clsx("relative overflow-hidden rounded-[26px] border-2 border-dashed px-5 py-7 text-center transition sm:py-11",
+        className={clsx("relative overflow-hidden rounded-[26px] border-2 border-dashed px-5 py-7 text-center transition sm:py-10",
           drag ? "scale-[1.01] border-lagoon-500 bg-lagoon-50" : "border-sand-300 bg-white hover:border-clay-500/40")}
       >
         <div className="mx-auto flex h-14 w-14 rotate-[-6deg] items-center justify-center rounded-[18px] bg-apricot-soft text-clay-600 shadow-[var(--shadow-card)]"><FileUp className="h-6 w-6" /></div>
-        <p className="display mt-4 text-[22px] text-ink-900"><span className="pointer-coarse:hidden">Drop booking confirmations here</span><span className="hidden pointer-coarse:inline">Add a booking</span></p>
-        <p className="mx-auto mt-1.5 max-w-sm text-[14px] text-ink-500">PDFs, screenshots, photos, emails (.eml), Word, HTML or text — up to 10 at once.</p>
+        <p className="display mt-4 text-[22px] text-ink-900"><span className="pointer-coarse:hidden">{t("upload.dropTitle")}</span><span className="hidden pointer-coarse:inline">{t("upload.title")}</span></p>
+        <p className="mx-auto mt-1.5 max-w-sm text-[14px] text-ink-500">{t("upload.formats")}</p>
         <div className="mx-auto mt-5 grid max-w-sm grid-cols-2 gap-2 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
-          <Button onClick={() => input.current?.click()} loading={busy} className="col-span-2" icon={<FileUp className="h-4 w-4" />}>Choose files or photos</Button>
-          <Button variant="secondary" onClick={() => setDialog("paste")} icon={<ClipboardPaste className="h-4 w-4" />}>Paste text</Button>
-          <Button variant="secondary" onClick={() => setDialog("url")} icon={<Link2 className="h-4 w-4" />}>Add a link</Button>
+          <Button onClick={() => input.current?.click()} loading={busy} className="col-span-2" icon={<FileUp className="h-4 w-4" />}>{t("upload.choose")}</Button>
+          <Button variant="secondary" onClick={() => setDialog("paste")} icon={<ClipboardPaste className="h-4 w-4" />}>{t("upload.paste")}</Button>
+          <Button variant="secondary" onClick={() => setDialog("url")} icon={<Link2 className="h-4 w-4" />}>{t("upload.link")}</Button>
         </div>
-        <input ref={input} type="file" multiple accept={ACCEPT} className="sr-only" onChange={(e) => e.target.files && send(e.target.files)} aria-label="Upload files" />
+        <input ref={input} type="file" multiple accept={ACCEPT} className="sr-only" aria-label={t("upload.choose")}
+          onChange={(e) => { if (e.target.files) send(e.target.files); e.target.value = ""; }} />
       </div>
       {errors.length > 0 && <div className="mt-3 space-y-2">{errors.map((e, i) => <ErrorNote key={i}><strong>{e.filename}</strong>: {e.message}</ErrorNote>)}</div>}
       {dialog === "paste" && <PasteDialog onClose={() => setDialog(null)} />}
@@ -71,18 +85,20 @@ export function UploadZone() {
   );
 }
 
-function PasteDialog({ onClose }: { onClose: () => void }) {
+export function PasteDialog({ onClose, onDone }: { onClose: () => void; onDone?: (doc: DocumentItem) => void }) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const invalidate = useInvalidateTripData();
+  const { t } = useT();
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.post("/inbox/paste", { text });
+      const doc = await api.post<DocumentItem>("/inbox/paste", { text });
       invalidate();
       onClose();
+      onDone?.(doc);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -90,29 +106,31 @@ function PasteDialog({ onClose }: { onClose: () => void }) {
     }
   };
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title="Paste a confirmation" description="Paste the text of an email or message. Instructions inside it are never followed — it's treated as data." wide>
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={t("upload.pasteTitle")} description={t("upload.pasteHint")} wide>
       <form onSubmit={submit} className="space-y-4">
-        <textarea className="field min-h-[220px] font-mono text-[13px]" value={text} onChange={(e) => setText(e.target.value)} placeholder="Booking reference: ..." aria-label="Pasted text" required />
+        <textarea className="field min-h-[220px] font-mono text-[13px]" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("upload.pastePlaceholder")} aria-label={t("upload.pasteTitle")} required />
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="flex justify-end gap-2 pb-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy}>Add to inbox</Button></div>
+        <div className="flex justify-end gap-2 pb-2"><Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button><Button type="submit" loading={busy}>{t("upload.pasteSubmit")}</Button></div>
       </form>
     </Dialog>
   );
 }
 
-function UrlDialog({ onClose }: { onClose: () => void }) {
+export function UrlDialog({ onClose, onDone }: { onClose: () => void; onDone?: (doc: DocumentItem) => void }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const invalidate = useInvalidateTripData();
+  const { t } = useT();
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api.post("/inbox/url", { url });
+      const doc = await api.post<DocumentItem>("/inbox/url", { url });
       invalidate();
       onClose();
+      onDone?.(doc);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -120,11 +138,11 @@ function UrlDialog({ onClose }: { onClose: () => void }) {
     }
   };
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title="Import from a link" description="Tandem fetches public pages or files (PDF, image, HTML). Private network addresses are blocked.">
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={t("upload.urlTitle")} description={t("upload.urlHint")}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Link" htmlFor="u"><input id="u" type="url" required className="field" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" /></Field>
+        <Field label={t("upload.urlLabel")} htmlFor="u"><input id="u" type="url" required className="field" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" /></Field>
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="flex justify-end gap-2 pb-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy}>Import</Button></div>
+        <div className="flex justify-end gap-2 pb-2"><Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button><Button type="submit" loading={busy}>{t("upload.urlSubmit")}</Button></div>
       </form>
     </Dialog>
   );

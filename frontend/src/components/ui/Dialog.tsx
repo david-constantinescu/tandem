@@ -2,11 +2,13 @@ import * as RD from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 
 export function Dialog({ open, onOpenChange, title, description, children, footer, wide }: {
   open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: ReactNode; children: ReactNode;
   footer?: ReactNode; wide?: boolean;
 }) {
+  const { t } = useT();
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
@@ -24,7 +26,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
               <RD.Title className="display text-xl text-ink-900">{title}</RD.Title>
               {description && <RD.Description className="mt-1 text-[14px] text-ink-500">{description}</RD.Description>}
             </div>
-            <RD.Close className="-mr-1.5 flex h-11 w-11 items-center justify-center rounded-full text-ink-400 hover:bg-sand-100 hover:text-ink-700 active:scale-90" aria-label="Close">
+            <RD.Close className="-mr-1.5 flex h-11 w-11 items-center justify-center rounded-full text-ink-400 hover:bg-sand-100 hover:text-ink-700 active:scale-90" aria-label={t("common.close")}>
               <X className="h-4 w-4" />
             </RD.Close>
           </div>

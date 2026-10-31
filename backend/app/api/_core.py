@@ -9,6 +9,7 @@ from typing import Any, Callable, TypeVar
 from flask import Response, current_app, g, jsonify, request
 from pydantic import BaseModel, ValidationError
 
+from app.i18n import tr
 from app.extensions import db
 from app.models import User, UserSession
 from app.security.encryption import hash_token
@@ -30,7 +31,8 @@ def ok(data: Any = None, status: int = 200, meta: dict | None = None) -> tuple[R
 
 
 def error_response(err: APIError) -> tuple[Response, int]:
-    body: dict[str, Any] = {"error": {"code": err.code, "message": err.message}}
+    # Messages are written in English; the client's language is applied here when a translation exists.
+    body: dict[str, Any] = {"error": {"code": err.code, "message": tr(str(err.message))}}
     if err.details is not None:
         body["error"]["details"] = err.details
     return jsonify(body), err.status

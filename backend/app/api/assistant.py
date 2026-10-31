@@ -4,6 +4,7 @@ from flask import Blueprint
 from pydantic import BaseModel, Field
 
 from app.api._core import current_user, doc, get_owned, login_required, ok, parse_body, parse_uuid
+from app.i18n import locale_of, tr
 from app.extensions import db, limiter
 from app.models import AgentAction, Conversation, Message, Trip
 from app.schemas.serializers import action_dict, conversation_dict, message_dict
@@ -51,7 +52,7 @@ def create_conversation():
         if trip is None or trip.user_id != u.id:
             raise NotFound("Trip not found")
         trip_id = trip.id
-    c = Conversation(user_id=u.id, trip_id=trip_id, title=body.title or "New conversation")
+    c = Conversation(user_id=u.id, trip_id=trip_id, title=body.title or tr("New conversation", locale_of(u)))
     db.session.add(c)
     db.session.commit()
     return ok(conversation_dict(c), 201)

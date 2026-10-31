@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { CloudOff, Loader2, RotateCw } from "lucide-react";
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useT, type Key } from "@/lib/i18n";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "accent";
 type Size = "sm" | "md" | "lg";
@@ -53,11 +54,12 @@ export function Card({ className, children, as: As = "div" }: { className?: stri
   return <As className={clsx("card", className)}>{children}</As>;
 }
 
-export function Spinner({ className, label = "Loading" }: { className?: string; label?: string }) {
+export function Spinner({ className, label }: { className?: string; label?: string }) {
+  const { t } = useT();
   return (
     <span role="status" className={clsx("inline-flex items-center gap-2 text-ink-400", className)}>
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t("common.loading")}</span>
     </span>
   );
 }
@@ -97,17 +99,31 @@ const statusTone: Record<string, Tone> = {
   cancelled: "neutral", rejected: "neutral", expired: "neutral", ignored: "neutral", duplicate: "neutral",
   failed: "rose",
 };
-const statusText: Record<string, string> = {
-  confirmed: "Confirmed", pending: "Pending", suggested: "Suggestion", unbooked: "Not booked", cancelled: "Cancelled",
-  completed: "Completed", unknown: "Unconfirmed", awaiting_approval: "Awaiting approval", in_progress: "In progress",
-  requires_manual: "Needs you", failed: "Failed", rejected: "Rejected", expired: "Expired", awaiting_review: "To review",
-  processed: "Processed", ignored: "Ignored", duplicate: "Duplicate", queued: "Queued", processing: "Processing",
-  analysing: "Analysing", validating: "Validating", uploaded: "Uploaded", prepared: "Prepared",
-};
+
+/** Label for a status code in the active language; unknown codes fall back to the code itself. */
+export function useStatusLabel() {
+  const { t } = useT();
+  return (status: string) => {
+    const key = `status.${status}` as Key;
+    const text = t(key);
+    return text === key ? status.replace(/_/g, " ") : text;
+  };
+}
+
+/** Label for a booking or event type (flight, hotel, museum…) in the active language. */
+export function useTypeLabel() {
+  const { t } = useT();
+  return (type: string) => {
+    const key = `type.${type}` as Key;
+    const text = t(key);
+    return text === key ? type.replace(/_/g, " ") : text;
+  };
+}
 
 export function StatusPill({ status, className }: { status: string; className?: string }) {
   // Pills read like little stamps: tight, confident, never shouting.
-  return <Badge tone={statusTone[status] ?? "neutral"} className={className}>{statusText[status] ?? status.replace(/_/g, " ")}</Badge>;
+  const label = useStatusLabel();
+  return <Badge tone={statusTone[status] ?? "neutral"} className={className}>{label(status)}</Badge>;
 }
 
 export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; title: string; body?: ReactNode; action?: ReactNode }) {
@@ -150,12 +166,12 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
 }
 
 /** A list that failed to load must not look like an empty account: say so and offer a retry. */
-export function LoadError({ what, onRetry, retrying }: { what: string; onRetry: () => void; retrying?: boolean }) {
+export function LoadError({ title, onRetry, retrying }: { title: string; onRetry: () => void; retrying?: boolean }) {
+  const { t } = useT();
   const offline = typeof navigator !== "undefined" && !navigator.onLine;
   return (
-    <EmptyState icon={<CloudOff />} title={`Couldn't load your ${what}`}
-      body={offline ? "You're offline. Tandem will catch up when you're back online." : "Something went wrong on the way. Check your connection and try again."}
-      action={<Button variant="secondary" onClick={onRetry} loading={retrying} icon={<RotateCw className="h-4 w-4" />}>Try again</Button>} />
+    <EmptyState icon={<CloudOff />} title={title} body={offline ? t("load.offline") : t("load.failed")}
+      action={<Button variant="secondary" onClick={onRetry} loading={retrying} icon={<RotateCw className="h-4 w-4" />}>{t("common.retry")}</Button>} />
   );
 }
 
@@ -202,10 +218,11 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
 }
 
 export function Confidence({ value }: { value: number }) {
+  const { t } = useT();
   const pct = Math.round(value * 100);
   const tone = value >= 0.8 ? "bg-lagoon-500" : value >= 0.55 ? "bg-amber-ink/70" : "bg-rose-ink/70";
   return (
-    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-500" title="Extraction confidence">
+    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-500" title={t("review.confidence")}>
       <span className="h-1.5 w-12 overflow-hidden rounded-full bg-sand-200"><span className={clsx("block h-full rounded-full", tone)} style={{ width: `${pct}%` }} /></span>
       {pct}%
     </span>

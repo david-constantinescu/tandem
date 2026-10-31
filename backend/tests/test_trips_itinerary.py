@@ -16,7 +16,7 @@ from tests.conftest import upload
 
 
 def _user():
-    u = user_service.create_user("g@example.com", "password12345", "G")
+    u = user_service.create_user("g@example.com", "password12345", "G", locale="en")
     u.home_city = "London"
     u.timezone = "Europe/London"
     db.session.flush()

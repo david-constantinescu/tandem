@@ -7,18 +7,27 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { duration, fmtDate, money } from "@/lib/format";
+import { useT, type Key } from "@/lib/i18n";
 import { useInvalidateTripData } from "@/lib/queries";
 import type { Action, ActivityResult } from "@/lib/types";
 import { ActionCard } from "./ActionCard";
 
+/** Category names arrive in English from providers; show the ones Tandem knows in the active language. */
+export function categoryLabel(c: string, t: (k: Key) => string) {
+  const key = `category.${c.toLowerCase()}` as Key;
+  const text = t(key);
+  return text === key ? c : text;
+}
+
 export function ActivityCard({ a, tripId, date }: { a: ActivityResult; tripId?: string; date?: string | null }) {
   const [open, setOpen] = useState(false);
   const toast = useToast();
+  const { t } = useT();
   const fit = a.fits?.status;
   const save = async () => {
     try {
       await api.post("/activities/saved", { provider: a.provider, provider_item_id: a.provider_item_id, trip_id: tripId, data: a });
-      toast("Saved for later", "success");
+      toast(t("activity.saved"), "success");
     } catch (e) {
       toast(errorMessage(e), "error");
     }
@@ -27,41 +36,41 @@ export function ActivityCard({ a, tripId, date }: { a: ActivityResult; tripId?: 
     <article className="card flex w-full flex-col rounded-[22px] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="eyebrow">{a.categories?.[0] ?? "Activity"}</p>
+          <p className="eyebrow">{a.categories?.[0] ? categoryLabel(a.categories[0], t) : t("type.activity")}</p>
           <h3 className="display mt-1 text-[19px] leading-snug text-ink-900">{a.title}</h3>
         </div>
         {a.price !== null ? (
           <div className="shrink-0 text-right">
-            <p className="text-[16px] font-semibold text-ink-900">{a.price === 0 ? "Free" : money(a.price, a.currency)}</p>
-            {a.price_basis && a.price !== 0 && <p className="whitespace-nowrap text-[11.5px] text-ink-400">{a.price_basis.replace("_", " ")}</p>}
+            <p className="text-[16px] font-semibold text-ink-900">{a.price === 0 ? t("activity.free") : money(a.price, a.currency)}</p>
+            {a.price_basis && a.price !== 0 && <p className="whitespace-nowrap text-[11.5px] text-ink-400">{a.price_basis === "per_person" ? t("activity.perPerson") : a.price_basis === "per_group" ? t("activity.perGroup") : a.price_basis.replace("_", " ")}</p>}
           </div>
-        ) : <p className="text-[12px] text-ink-400">Price unknown</p>}
+        ) : <p className="text-[12px] text-ink-400">{t("activity.priceUnknown")}</p>}
       </div>
       {a.description && <p className="mt-2 line-clamp-2 text-[13.5px] text-ink-500">{a.description}</p>}
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-ink-500">
         {a.duration_minutes && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{duration(a.duration_minutes)}</span>}
-        {a.distance_km !== null && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{a.distance_km} km from your stay</span>}
+        {a.distance_km !== null && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{t("activity.fromStay", { km: a.distance_km })}</span>}
         {a.rating && <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5" />{a.rating.toFixed(1)}{a.review_count ? ` (${a.review_count})` : ""}</span>}
-        {a.accessible && <span className="inline-flex items-center gap-1"><Accessibility className="h-3.5 w-3.5" />Step-free</span>}
+        {a.accessible && <span className="inline-flex items-center gap-1"><Accessibility className="h-3.5 w-3.5" />{t("activity.stepFree")}</span>}
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {fit === "fits" && <Badge tone="lagoon" icon={<CalendarCheck className="h-3 w-3" />}>Fits your free time · {a.fits.slots?.slice(0, 3).map((s) => s.time).join(", ")}</Badge>}
-        {fit === "no_fitting_slot" && <Badge tone="amber" icon={<CalendarX className="h-3 w-3" />}>No slot fits your plans</Badge>}
-        {!a.availability_checked && <Badge tone="neutral">Availability not checked</Badge>}
-        {a.simulated && <Badge tone="violet">Simulated</Badge>}
+        {fit === "fits" && <Badge tone="lagoon" icon={<CalendarCheck className="h-3 w-3" />}>{t("activity.fits", { times: a.fits.slots?.slice(0, 3).map((s) => s.time).join(", ") ?? "" })}</Badge>}
+        {fit === "no_fitting_slot" && <Badge tone="amber" icon={<CalendarX className="h-3 w-3" />}>{t("activity.noFit")}</Badge>}
+        {!a.availability_checked && <Badge tone="neutral">{t("activity.notChecked")}</Badge>}
+        {a.simulated && <Badge tone="violet">{t("activity.simulated")}</Badge>}
       </div>
-      {a.opening_hours_text && <p className="mt-2 text-[12px] text-ink-400">Listed hours (unverified): {a.opening_hours_text}</p>}
+      {a.opening_hours_text && <p className="mt-2 text-[12px] text-ink-400">{t("activity.hours", { hours: a.opening_hours_text })}</p>}
       <p className="mt-3 text-[11.5px] text-ink-400">{a.source_label}{a.attribution ? ` · ${a.attribution}` : ""}</p>
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         {a.bookable_via_api ? (
-          <Button size="sm" onClick={() => setOpen(true)} icon={<CalendarCheck className="h-3.5 w-3.5" />}>Prepare booking</Button>
+          <Button size="sm" onClick={() => setOpen(true)} icon={<CalendarCheck className="h-3.5 w-3.5" />}>{t("activity.prepare")}</Button>
         ) : a.booking_url ? (
           <a href={a.booking_url} target="_blank" rel="noopener noreferrer nofollow"
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-sand-200 bg-white px-3 text-[13px] font-medium text-ink-800 transition active:scale-[0.97] hover:bg-sand-50 pointer-coarse:h-10 pointer-coarse:px-3.5 pointer-coarse:text-[14px]">
-            {a.provider === "osm" ? "Official website" : "View on provider"} <ExternalLink className="h-3.5 w-3.5" />
+            {a.provider === "osm" ? t("activity.official") : t("activity.viewProvider")} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         ) : null}
-        <Button size="sm" variant="ghost" onClick={save} icon={<Bookmark className="h-3.5 w-3.5" />}>Save</Button>
+        <Button size="sm" variant="ghost" onClick={save} icon={<Bookmark className="h-3.5 w-3.5" />}>{t("activity.save")}</Button>
       </div>
       {open && <BookingDialog a={a} tripId={tripId} date={date} onClose={() => setOpen(false)} />}
     </article>
@@ -77,6 +86,7 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const invalidate = useInvalidateTripData();
+  const { t, tp } = useT();
   const prepare = async () => {
     setBusy(true);
     setError(null);
@@ -92,15 +102,15 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
     }
   };
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={action ? "Review and approve" : `Book ${a.title}`}
-      description={action ? "Tandem checked live availability and price. Nothing is booked until you approve." : "Pick a time. Tandem will get a live quote first."} wide>
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={action ? t("activity.reviewTitle") : t("activity.bookTitle", { title: a.title })}
+      description={action ? t("activity.reviewHint") : t("activity.bookHint")} wide>
       {action ? (
         <ActionCardLive initial={action} />
       ) : (
         <div className="space-y-4">
           {slots.length > 0 ? (
             <fieldset>
-              <legend className="label">Available times{a.fits?.status === "fits" ? " that fit your itinerary" : ""}</legend>
+              <legend className="label">{a.fits?.status === "fits" ? t("activity.timesFit") : t("activity.times")}</legend>
               <div className="flex flex-wrap gap-2">
                 {slots.slice(0, 12).map((s) => {
                   const v = `${s.date}|${s.time}`;
@@ -108,7 +118,7 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
                     <button key={v} type="button" onClick={() => setSlot(v)}
                       className={clsx("min-h-11 rounded-xl border px-3 py-2 text-left text-[13px] transition active:scale-95", slot === v ? "border-lagoon-500 bg-lagoon-50 text-lagoon-700" : "border-sand-200 hover:border-sand-300")}>
                       <span className="block font-medium">{s.time}</span>
-                      <span className="block text-[11.5px] text-ink-400">{fmtDate(s.date)} · {s.remaining} left</span>
+                      <span className="block text-[11.5px] text-ink-400">{fmtDate(s.date)} · {tp("activity.left", s.remaining)}</span>
                     </button>
                   );
                 })}
@@ -116,18 +126,18 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
             </fieldset>
           ) : (
             <div>
-              <label className="label" htmlFor="bdate">Date</label>
+              <label className="label" htmlFor="bdate">{t("action.date")}</label>
               <input id="bdate" type="date" className="field" value={manualDate} onChange={(e) => setManualDate(e.target.value)} />
             </div>
           )}
           <div className="max-w-[160px]">
-            <label className="label" htmlFor="ppl">People</label>
+            <label className="label" htmlFor="ppl">{t("common.people")}</label>
             <input id="ppl" type="number" min={1} max={20} className="field" value={participants} onChange={(e) => setParticipants(Math.max(1, +e.target.value))} />
           </div>
           {error && <ErrorNote>{error}</ErrorNote>}
           <div className="flex justify-end gap-2 pb-2">
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button onClick={prepare} loading={busy} disabled={!slot && !manualDate}>Get live quote</Button>
+            <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button onClick={prepare} loading={busy} disabled={!slot && !manualDate}>{t("activity.quote")}</Button>
           </div>
         </div>
       )}

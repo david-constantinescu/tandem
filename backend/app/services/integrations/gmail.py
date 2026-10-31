@@ -17,6 +17,7 @@ from urllib.parse import urlencode
 import httpx
 from flask import current_app
 
+from app.i18n import T, locale_of, tr
 from app.extensions import db
 from app.models import Document, EmailCandidate, IntegrationConnection, User
 from app.services.audit import audit
@@ -118,8 +119,8 @@ def _access_token(conn: IntegrationConnection) -> str:
                                        "refresh_token": tokens["refresh_token"], "grant_type": "refresh_token"}, timeout=15)
     if resp.status_code != 200:
         conn.status = "error"
-        conn.error = "Could not refresh Gmail access; reconnect Gmail"
-        notify(conn.user_id, "integration_failure", "Gmail needs to be reconnected", conn.error,
+        conn.error = tr("Could not refresh Gmail access; reconnect Gmail", locale_of(conn.user_id))
+        notify(conn.user_id, "integration_failure", T("Gmail needs to be reconnected"), conn.error,
                link="/settings/connections", severity="warning", dedupe_key=f"gmail_reauth:{conn.id}:{utcnow().date()}")
         raise ValidationFailed(conn.error, code="reauth_required")
     data = resp.json()
@@ -176,8 +177,8 @@ def sync_candidates(user_id: uuid.UUID, *, full: bool = False) -> int:
     conn.last_sync_at = utcnow()
     db.session.commit()
     if added:
-        notify(user_id, "reservation_detected", f"{added} possible travel email(s) found in Gmail",
-               "Choose which ones to import.", link="/inbox?tab=email", dedupe_key=f"gmail_sync:{conn.last_sync_at.isoformat()}")
+        notify(user_id, "reservation_detected", T("Possible travel emails found in Gmail: {n}", n=added),
+               T("Choose which ones to import."), link="/inbox?tab=email", dedupe_key=f"gmail_sync:{conn.last_sync_at.isoformat()}")
         db.session.commit()
     return added
 

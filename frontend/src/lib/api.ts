@@ -1,4 +1,6 @@
-/** Thin client for the Flask API. Session cookie auth + CSRF header on every state-changing request. */
+/** Thin client for the Flask API. Session cookie auth + CSRF header on every state-changing request.
+ * Every request names the interface language so the server answers (errors, conflicts, assistant) in it. */
+import { getLocale, translate } from "./i18n";
 
 let csrfToken: string | null = null;
 
@@ -22,7 +24,7 @@ type Options = { method?: string; body?: unknown; form?: FormData; signal?: Abor
 
 export async function request<T = unknown>(path: string, opts: Options = {}): Promise<{ data: T; meta?: any }> {
   const method = opts.method ?? (opts.body || opts.form ? "POST" : "GET");
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: "application/json", "X-Tandem-Locale": getLocale() };
   if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
   let body: BodyInit | undefined;
   if (opts.form) body = opts.form;
@@ -36,13 +38,13 @@ export async function request<T = unknown>(path: string, opts: Options = {}): Pr
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
     // fetch only rejects when the request never got a response: offline, DNS, a dropped connection.
-    throw new ApiError(0, "network", navigator.onLine ? "Couldn't reach Tandem. Check your connection and try again." : "You're offline.");
+    throw new ApiError(0, "network", translate(navigator.onLine ? "err.unreachable" : "err.offline"));
   }
   const isJson = res.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await res.json() : null;
   if (!res.ok && !(res.status === 422 && payload?.data)) {
     const err = payload?.error ?? {};
-    throw new ApiError(res.status, err.code ?? "http_error", err.message ?? `Request failed (${res.status})`, err.details);
+    throw new ApiError(res.status, err.code ?? "http_error", err.message ?? translate("err.status", { status: res.status }), err.details);
   }
   return payload ?? { data: null as T };
 }
@@ -68,5 +70,5 @@ export function errorMessage(err: unknown): string {
     return err.message;
   }
   if (err instanceof Error) return err.message;
-  return "Something went wrong";
+  return translate("err.generic");
 }

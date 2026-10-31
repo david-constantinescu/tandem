@@ -30,7 +30,7 @@ class User(UUIDPk, Timestamps, db.Model):
     display_name: Mapped[str] = mapped_column(String(120), default="")
     home_city: Mapped[str | None] = mapped_column(String(120), nullable=True)
     home_airport: Mapped[str | None] = mapped_column(String(8), nullable=True)
-    locale: Mapped[str] = mapped_column(String(10), default="en")
+    locale: Mapped[str] = mapped_column(String(10), default="ro", server_default="ro")
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     demo_tenant_id: Mapped[uuid.UUID | None] = mapped_column(

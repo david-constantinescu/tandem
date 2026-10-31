@@ -52,7 +52,7 @@ class ApiClient:
         self.csrf = None
 
     def _headers(self, extra=None):
-        h = {"X-CSRF-Token": self.csrf} if self.csrf else {}
+        h = {"X-Tandem-Locale": "en", **({"X-CSRF-Token": self.csrf} if self.csrf else {})}
         h.update(extra or {})
         return h
 
@@ -72,13 +72,14 @@ class ApiClient:
         return self.client.delete(url, headers=self._headers(kw.pop("headers", None)), **kw)
 
     def register(self, email="traveller@example.com", password="correct horse battery", name="Test Traveller"):
-        r = self.client.post("/api/v1/auth/register", json={"email": email, "password": password, "display_name": name})
+        # The English suite: accounts are created in English (Romanian is covered in test_i18n.py).
+        r = self.client.post("/api/v1/auth/register", json={"email": email, "password": password, "display_name": name, "locale": "en"})
         assert r.status_code == 201, r.get_json()
         self.csrf = r.get_json()["data"]["csrf_token"]
         return r.get_json()["data"]["user"]
 
     def demo(self):
-        r = self.client.post("/api/v1/auth/demo")
+        r = self.client.post("/api/v1/auth/demo", json={"locale": "en"})
         assert r.status_code == 201, r.get_json()
         self.csrf = r.get_json()["data"]["csrf_token"]
         return r.get_json()["data"]["user"]

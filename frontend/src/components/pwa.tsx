@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { registerSW } from "virtual:pwa-register";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n";
 
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 
@@ -47,13 +48,14 @@ function isIOS(): boolean {
 
 export function OfflineBanner() {
   const online = useOnline();
+  const { t } = useT();
   return (
     <AnimatePresence initial={false}>
       {!online && (
         <motion.div role="status" initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
           <div className="flex items-center justify-center gap-2 bg-amber-soft px-4 py-1.5 text-center text-[12.5px] font-medium text-amber-ink">
             <CloudOff className="h-3.5 w-3.5 shrink-0" />
-            Offline · showing trips saved on this device
+            {t("pwa.offline")}
           </div>
         </motion.div>
       )}
@@ -65,6 +67,7 @@ export function OfflineBanner() {
 export function UpdatePrompt() {
   const [update, setUpdate] = useState<((reload?: boolean) => Promise<void>) | null>(null);
   const [busy, setBusy] = useState(false);
+  const { t } = useT();
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -85,12 +88,12 @@ export function UpdatePrompt() {
         <motion.div role="status" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
           className="fixed inset-x-0 bottom-[calc(max(env(safe-area-inset-bottom),12px)+82px)] z-[55] flex justify-center px-4 lg:bottom-6">
           <div className="flex max-w-md items-center gap-3 rounded-2xl bg-ink-900/95 py-2 pl-4 pr-2 text-[14px] text-white shadow-[var(--shadow-float)] backdrop-blur">
-            <span>A new version of Tandem is ready.</span>
+            <span>{t("pwa.update")}</span>
             <button onClick={() => { setBusy(true); update(true); }}
               className="flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 font-semibold active:scale-95">
-              <RotateCw className={clsx("h-4 w-4", busy && "animate-spin")} /> Reload
+              <RotateCw className={clsx("h-4 w-4", busy && "animate-spin")} /> {t("pwa.reload")}
             </button>
-            <button onClick={() => setUpdate(null)} className="flex h-9 w-9 items-center justify-center rounded-xl text-white/70 active:scale-95" aria-label="Later">
+            <button onClick={() => setUpdate(null)} className="flex h-9 w-9 items-center justify-center rounded-xl text-white/70 active:scale-95" aria-label={t("pwa.later")}>
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -105,6 +108,7 @@ const DISMISSED = "tandem.install.dismissed";
 /** Home-screen install: the browser's own prompt where it exists, Safari's Share → Add to Home Screen otherwise. */
 export function InstallCard({ className }: { className?: string }) {
   const [, rerender] = useState(0);
+  const { t } = useT();
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(DISMISSED) === "1"; } catch { return false; }
   });
@@ -135,21 +139,21 @@ export function InstallCard({ className }: { className?: string }) {
     <div className={clsx("relative flex max-w-xl items-start gap-3.5 rounded-[22px] border border-sand-200/80 bg-white p-4 pr-11 shadow-[var(--shadow-card)]", className)}>
       <img src="/apple-touch-icon.png" alt="" className="h-12 w-12 shrink-0 rounded-[13px]" />
       <div className="min-w-0">
-        <p className="text-[15px] font-semibold text-ink-900">Put Tandem on your home screen</p>
+        <p className="text-[15px] font-semibold text-ink-900">{t("pwa.installTitle")}</p>
         {deferredInstall ? (
           <>
-            <p className="mt-0.5 text-[13.5px] text-ink-500">It opens like an app, full screen, and your trips work offline.</p>
-            <Button size="sm" className="mt-3" onClick={install} icon={<Download className="h-4 w-4" />}>Install</Button>
+            <p className="mt-0.5 text-[13.5px] text-ink-500">{t("pwa.installBody")}</p>
+            <Button size="sm" className="mt-3" onClick={install} icon={<Download className="h-4 w-4" />}>{t("pwa.install")}</Button>
           </>
         ) : (
           <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-500">
-            Tap <Share className="mx-0.5 inline h-4 w-4 -translate-y-px text-lagoon-600" aria-label="Share" />, then
-            {" "}<span className="whitespace-nowrap font-medium text-ink-700"><SquarePlus className="mx-0.5 inline h-4 w-4 -translate-y-px" aria-hidden />Add to Home Screen</span>.
-            Trips open full screen and work offline.
+            {t("pwa.iosTap")} <Share className="mx-0.5 inline h-4 w-4 -translate-y-px text-lagoon-600" aria-label={t("pwa.share")} />, {t("pwa.iosThen")}
+            {" "}<span className="whitespace-nowrap font-medium text-ink-700"><SquarePlus className="mx-0.5 inline h-4 w-4 -translate-y-px" aria-hidden />{t("pwa.addToHome")}</span>.
+            {" "}{t("pwa.iosAfter")}
           </p>
         )}
       </div>
-      <button onClick={dismiss} aria-label="Dismiss"
+      <button onClick={dismiss} aria-label={t("pwa.dismiss")}
         className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-ink-300 hover:bg-sand-50 hover:text-ink-600">
         <X className="h-4 w-4" />
       </button>

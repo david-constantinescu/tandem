@@ -2,11 +2,9 @@
  * Date/time display. The API sends each event time already in its own timezone (e.g.
  * "2026-11-12T11:40:00+01:00"), so we format the wall-clock part directly instead of converting
  * to the browser's zone — a 09:30 museum entry in Rome must read 09:30 for a user in London.
+ * Names of days and months come from Intl in the active language, applied to UTC dates built from those parts.
  */
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const LONG_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+import { getLocale, intlLocale, translate, translatePlural, type Locale } from "./i18n";
 
 type Parts = { y: number; m: number; d: number; hh: number; mm: number };
 
@@ -17,44 +15,51 @@ export function parts(local: string | null | undefined): Parts | null {
   return { y: +m[1], m: +m[2], d: +m[3], hh: +(m[4] ?? 0), mm: +(m[5] ?? 0) };
 }
 
-function weekday(p: Parts) {
-  return new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay();
-}
+const utc = (p: Parts) => new Date(Date.UTC(p.y, p.m - 1, p.d));
+const fmt = (locale: Locale, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(intlLocale(locale), { timeZone: "UTC", ...opts });
+const capitalise = (s: string) => s.charAt(0).toLocaleUpperCase() + s.slice(1);
 
 export function fmtTime(local: string | null | undefined): string {
   const p = parts(local);
   return p ? `${String(p.hh).padStart(2, "0")}:${String(p.mm).padStart(2, "0")}` : "";
 }
 
-export function fmtDate(local: string | null | undefined, opts: { weekday?: boolean; year?: boolean } = {}): string {
+export function fmtDate(local: string | null | undefined, opts: { weekday?: boolean; year?: boolean } = {}, locale: Locale = getLocale()): string {
   const p = parts(local);
   if (!p) return "";
-  const wd = opts.weekday === false ? "" : `${DAYS[weekday(p)]} `;
-  return `${wd}${p.d} ${MONTHS[p.m - 1]}${opts.year ? ` ${p.y}` : ""}`;
+  return fmt(locale, { weekday: opts.weekday === false ? undefined : "short", day: "numeric", month: "short", year: opts.year ? "numeric" : undefined }).format(utc(p));
 }
 
-export function fmtDayHeading(dayKey: string): { weekday: string; date: string } {
-  const p = parts(dayKey)!;
-  return { weekday: LONG_DAYS[weekday(p)], date: `${p.d} ${MONTHS[p.m - 1]}` };
+export function fmtDayHeading(dayKey: string, locale: Locale = getLocale()): { weekday: string; date: string } {
+  const d = utc(parts(dayKey)!);
+  return { weekday: capitalise(fmt(locale, { weekday: "long" }).format(d)), date: fmt(locale, { day: "numeric", month: "short" }).format(d) };
 }
 
-export function fmtDateTime(local: string | null | undefined): string {
+export function fmtDateTime(local: string | null | undefined, locale: Locale = getLocale()): string {
   if (!local) return "";
-  return `${fmtDate(local)}, ${fmtTime(local)}`;
+  return `${fmtDate(local, {}, locale)}, ${fmtTime(local)}`;
+}
+
+/** Today in words, e.g. "Saturday 31 October" / "Sâmbătă, 31 octombrie". */
+export function fmtToday(locale: Locale = getLocale()): string {
+  return capitalise(new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", day: "numeric", month: "long" }).format(new Date()));
 }
 
 export function dayKey(local: string | null | undefined): string {
   return local ? local.slice(0, 10) : "";
 }
 
-export function fmtRange(start: string | null, end: string | null): string {
-  if (!start) return "Dates not set";
+export function fmtRange(start: string | null, end: string | null, locale: Locale = getLocale()): string {
+  if (!start) return translate("fmt.noDates", undefined, locale);
   const a = parts(start)!;
-  if (!end) return fmtDate(start, { year: true });
-  const b = parts(end)!;
-  if (a.y === b.y && a.m === b.m) return `${a.d}–${b.d} ${MONTHS[a.m - 1]} ${a.y}`;
-  if (a.y === b.y) return `${a.d} ${MONTHS[a.m - 1]} – ${b.d} ${MONTHS[b.m - 1]} ${a.y}`;
-  return `${fmtDate(start, { weekday: false, year: true })} – ${fmtDate(end, { weekday: false, year: true })}`;
+  const f = fmt(locale, { day: "numeric", month: "short", year: "numeric" });
+  if (!end) return f.format(utc(a));
+  return f.formatRange(utc(a), utc(parts(end)!));
+}
+
+/** Short month name for a date, e.g. "Nov" / "nov.". */
+export function fmtMonth(local: string, locale: Locale = getLocale()): string {
+  return fmt(locale, { month: "short" }).format(utc(parts(local)!));
 }
 
 export function tzCity(tz: string | null | undefined): string {
@@ -73,13 +78,17 @@ export function offsetLabel(local: string | null | undefined): string {
   return `UTC${m[1]}${h}${mins ? `:${m[3]}` : ""}`;
 }
 
-export function money(amount: number | null | undefined, currency: string | null | undefined): string {
+export function money(amount: number | null | undefined, currency: string | null | undefined, locale: Locale = getLocale()): string {
   if (amount === null || amount === undefined) return "";
   try {
-    return new Intl.NumberFormat("en-GB", { style: "currency", currency: currency || "EUR", maximumFractionDigits: amount % 1 ? 2 : 0 }).format(amount);
+    return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: currency || "EUR", maximumFractionDigits: amount % 1 ? 2 : 0 }).format(amount);
   } catch {
     return `${amount.toFixed(2)} ${currency ?? ""}`;
   }
+}
+
+export function num(n: number, locale: Locale = getLocale()): string {
+  return new Intl.NumberFormat(intlLocale(locale)).format(n);
 }
 
 export function duration(minutes: number | null | undefined): string {
@@ -89,12 +98,13 @@ export function duration(minutes: number | null | undefined): string {
   return h ? `${h} h${m ? ` ${m} min` : ""}` : `${m} min`;
 }
 
-export function relativeTime(iso: string): string {
+export function relativeTime(iso: string, locale: Locale = getLocale()): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
-  return `${Math.floor(diff / 86400)} d ago`;
+  if (diff < 60) return translate("fmt.justNow", undefined, locale);
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: "auto" });
+  if (diff < 3600) return rtf.format(-Math.floor(diff / 60), "minute");
+  if (diff < 86400) return rtf.format(-Math.floor(diff / 3600), "hour");
+  return rtf.format(-Math.floor(diff / 86400), "day");
 }
 
 export function bytes(n: number): string {
@@ -112,4 +122,10 @@ export function daysUntil(dateStr: string | null): number | null {
   return Math.round((target - today) / 86400000);
 }
 
-export const label = (s: string) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+/** "Today", "Tomorrow", "In 12 days" in the active language. */
+export function whenLabel(days: number | null, locale: Locale = getLocale()): string {
+  if (days === null) return translate("fmt.soon", undefined, locale);
+  if (days === 0) return translate("fmt.today", undefined, locale);
+  if (days === 1) return translate("fmt.tomorrow", undefined, locale);
+  return translatePlural("fmt.inDays", days, undefined, locale);
+}

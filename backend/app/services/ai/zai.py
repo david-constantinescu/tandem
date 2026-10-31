@@ -1,12 +1,4 @@
-"""Z.ai (GLM) provider over its OpenAI-compatible REST API.
-
-Verified 2026-10-30: free models are GLM-4.7-Flash / GLM-4.5-Flash (text) and GLM-4.6V-Flash (vision).
-File inputs (PDF, Word...) are documented only for the paid GLM-5.3-Flash series, so original
-documents reach Z.ai only when AI_ALLOW_PAID_MODELS=true; otherwise Z.ai receives images (vision
-model) or text that Tandem extracted locally.
-"""
 from __future__ import annotations
-
 from app.services.ai import registry
 from app.services.ai.base import (
     AIProvider, AIRequest, AIResponse, CapabilityError, FilePart, ImagePart, TextPart,
@@ -63,7 +55,7 @@ class ZaiProvider(AIProvider):
         tools = tools_payload(request)
         if tools:
             body["tools"] = tools
-            body["tool_choice"] = "auto"  # the only value Z.ai accepts
+            body["tool_choice"] = "auto"  # nu accepta nimic altceva decat auto idk
         payload, _ = post_chat(self.name, f"{self.cfg['ZAI_BASE_URL'].rstrip('/')}/chat/completions",
                                self.cfg.get("ZAI_API_KEY", ""), body, float(self.cfg["AI_REQUEST_TIMEOUT"]))
         return parse_chat_response(self.name, model, payload)

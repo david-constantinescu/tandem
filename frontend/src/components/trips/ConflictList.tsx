@@ -4,6 +4,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import type { Conflict } from "@/lib/types";
 
 const icon = { critical: AlertOctagon, warning: AlertTriangle, info: Info };
@@ -13,13 +14,15 @@ const style = {
   info: "border-sand-200 bg-sand-50 text-ink-600",
 };
 
-export function ConflictList({ conflicts, tripId, compact }: { conflicts: Conflict[]; tripId: string; compact?: boolean }) {
+/** Conflict texts come from the server in the account's language. `compact` shows titles only. */
+export function ConflictList({ conflicts, tripId, compact, showInfo }: { conflicts: Conflict[]; tripId: string; compact?: boolean; showInfo?: boolean }) {
   const [explanation, setExplanation] = useState<{ text: string | null; provider?: string | null; reason?: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const { t } = useT();
   if (!conflicts.length) {
-    return <p className="rounded-xl border border-lagoon-100 bg-lagoon-50/60 px-3.5 py-3 text-[13.5px] text-lagoon-700">No conflicts found in this itinerary.</p>;
+    return <p className="rounded-xl border border-lagoon-100 bg-lagoon-50/60 px-3.5 py-3 text-[13.5px] text-lagoon-700">{t("conflicts.none")}</p>;
   }
-  const shown = compact ? conflicts.filter((c) => c.severity !== "info").slice(0, 3) : conflicts;
+  const shown = compact && !showInfo ? conflicts.filter((c) => c.severity !== "info").slice(0, 3) : conflicts;
   const explain = async () => {
     setLoading(true);
     try {
@@ -40,25 +43,25 @@ export function ConflictList({ conflicts, tripId, compact }: { conflicts: Confli
             <Icon className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p className="text-[13.5px] font-medium">{c.title}</p>
-              {!compact && <p className="mt-0.5 text-[13px] opacity-90">{c.detail}</p>}
+              {!compact && c.detail && <p className="mt-0.5 text-[13px] opacity-90">{c.detail}</p>}
             </div>
           </div>
         );
       })}
       {!compact && (
-        <div className="pt-2">
+        <div className="pt-1">
           {explanation ? (
             <div className="rounded-xl border border-sand-200 bg-white p-4">
-              <p className="eyebrow mb-2 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Suggested fixes</p>
+              <p className="eyebrow mb-2 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> {t("conflicts.fixes")}</p>
               {explanation.text ? (
                 <div className="prose-chat text-[13.5px] text-ink-700"><ReactMarkdown>{explanation.text}</ReactMarkdown></div>
               ) : (
-                <p className="text-[13px] text-ink-500">AI explanations aren't available right now ({explanation.reason?.replace(/_/g, " ")}). The checks above are deterministic and complete without AI.</p>
+                <p className="text-[13px] text-ink-500">{t("conflicts.noAi", { reason: explanation.reason?.replace(/_/g, " ") ?? "" })}</p>
               )}
-              {explanation.provider && <p className="mt-2 text-[11.5px] text-ink-400">Explained by {explanation.provider} from the detected facts only.</p>}
+              {explanation.provider && <p className="mt-2 text-[11.5px] text-ink-400">{t("conflicts.explainedBy", { provider: explanation.provider })}</p>}
             </div>
           ) : (
-            <Button variant="secondary" size="sm" onClick={explain} loading={loading} icon={<Sparkles className="h-3.5 w-3.5" />}>Suggest fixes</Button>
+            <Button variant="secondary" size="sm" onClick={explain} loading={loading} icon={<Sparkles className="h-3.5 w-3.5" />}>{t("conflicts.suggestFixes")}</Button>
           )}
         </div>
       )}

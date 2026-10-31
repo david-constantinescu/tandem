@@ -1,50 +1,74 @@
 """Offline assistant used when no AI provider may or can be used.
 
-It recognises a handful of common requests and answers them from the same permission-checked tools
-the AI agent uses, so the answers come from real trip data. It says clearly that it is running in a
-limited offline mode.
+It recognises a handful of common requests, in Romanian or English, and answers them from the same
+permission-checked tools the AI agent uses, so the answers come from real trip data. It answers in the
+user's language and says clearly that it is running in a limited offline mode.
 """
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date, datetime, timedelta
 
+from app.i18n import When, locale_of, long_date, tr
 from app.services.agent.tools import ToolContext, _next_trip, run_tool, today_for
 from app.services.ingestion.dates import find_dates
 
-WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-CATEGORY_WORDS = {"museum": "museums", "gallery": "museums", "tour": "tours", "walking": "tours", "food": "food",
-                  "eat": "food", "cooking": "workshops", "workshop": "workshops", "class": "workshops",
-                  "outdoor": "outdoor", "bike": "outdoor", "history": "historical", "historic": "historical",
-                  "show": "entertainment", "nightlife": "entertainment", "day trip": "day trips"}
+# Weekday names, Monday first; Romanian ones are matched without diacritics.
+WEEKDAYS = [("monday", "luni"), ("tuesday", "marti"), ("wednesday", "miercuri"), ("thursday", "joi"),
+            ("friday", "vineri"), ("saturday", "sambata"), ("sunday", "duminica")]
+MONTHS = [("jan", "ian"), ("feb", "feb"), ("mar", "mar"), ("apr", "apr"), ("may", "mai"), ("jun", "iun"),
+          ("jul", "iul"), ("aug", "aug"), ("sep", "sep"), ("oct", "oct"), ("nov", "noi"), ("dec", "dec")]
+CATEGORY_WORDS = {"museum": "museums", "muzeu": "museums", "gallery": "museums", "galeri": "museums",
+                  "tour": "tours", "tur": "tours", "walking": "tours", "pe jos": "tours", "food": "food",
+                  "eat": "food", "mancare": "food", "cooking": "workshops", "gatit": "workshops",
+                  "workshop": "workshops", "atelier": "workshops", "class": "workshops", "curs": "workshops",
+                  "outdoor": "outdoor", "aer liber": "outdoor", "bike": "outdoor", "bicicl": "outdoor",
+                  "history": "historical", "historic": "historical", "istori": "historical",
+                  "show": "entertainment", "spectacol": "entertainment", "nightlife": "entertainment",
+                  "day trip": "day trips", "excursie": "day trips"}
+SITE_FOR = {"train": "demo_rail", "tren": "demo_rail", "rail": "demo_rail", "bus": "demo_coach", "autobuz": "demo_coach",
+            "coach": "demo_coach", "autocar": "demo_coach", "flight": "demo_air", "plane": "demo_air", "zbor": "demo_air",
+            "avion": "demo_air", "museum": "demo_museum", "muzeu": "demo_museum", "gallery": "demo_museum",
+            "galerie": "demo_museum"}
+CATEGORY_FOR = {"demo_rail": "train", "demo_coach": "bus", "demo_air": "flight", "demo_museum": "museum"}
+STATUS = {"confirmed": "confirmed", "pending": "pending", "unknown": "unconfirmed", "suggested": "suggestion",
+          "unbooked": "not booked", "cancelled": "cancelled", "completed": "completed"}
+SEVERITY = {"critical": "critical", "warning": "warning", "info": "info"}
 
 
-def _fmt_time(iso_value: str | None) -> str:
+def _plain(text: str) -> str:
+    """Lower case without diacritics, so "sâmbătă" and "sambata" match alike."""
+    return "".join(c for c in unicodedata.normalize("NFD", text.lower()) if unicodedata.category(c) != "Mn")
+
+
+def _fmt_time(iso_value: str | None, loc: str) -> str:
     if not iso_value:
         return ""
-    return datetime.fromisoformat(iso_value).strftime("%a %d %b %H:%M")
+    return When(datetime.fromisoformat(iso_value)).render(loc)
 
 
 def _resolve_day(text: str, user, trip_start: date | None, trip_end: date | None) -> date | None:
-    t = text.lower()
+    t = _plain(text)
     today = today_for(user)
-    if "tomorrow" in t:
+    if re.search(r"tomorrow|maine", t):
         return today + timedelta(days=1)
-    if "today" in t or "tonight" in t:
+    if re.search(r"today|tonight|\bazi\b|astazi|diseara", t):
         return today
     hits = find_dates(text)
     if hits:
         return hits[0].value
-    m = re.search(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b", t)
+    m = re.search(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3})[a-z]*\b", t)
     if m:
-        month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].index(m.group(2)) + 1
-        year = today.year if month >= today.month else today.year + 1
-        try:
-            return date(year, month, int(m.group(1)))
-        except ValueError:
-            return None
-    for i, name in enumerate(WEEKDAYS):
-        if name in t:
+        month = next((i + 1 for i, names in enumerate(MONTHS) if m.group(2) in names), None)
+        if month:
+            year = today.year if month >= today.month else today.year + 1
+            try:
+                return date(year, month, int(m.group(1)))
+            except ValueError:
+                return None
+    for i, names in enumerate(WEEKDAYS):
+        if any(re.search(rf"\b{n}\b", t) for n in names):
             start = trip_start if trip_start and trip_start > today else today
             for offset in range(0, 14):
                 d = start + timedelta(days=offset)
@@ -54,8 +78,10 @@ def _resolve_day(text: str, user, trip_start: date | None, trip_end: date | None
 
 
 def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) -> str:
-    lower = text.lower()
-    header = f"_Offline assistant — {reason}. I can answer common questions from your trip data._\n\n"
+    lower = _plain(text)
+    loc = locale_of(user)
+    header = tr("_Offline assistant — {reason}. I can answer common questions from your trip data._", loc,
+                reason=tr(reason, loc)) + "\n\n"
 
     def call(name: str, **kwargs):
         status, result = run_tool(ctx, name, kwargs)
@@ -67,120 +93,129 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
     trip_info = call("get_trip", trip_id=str(ctx.default_trip_id) if ctx.default_trip_id else (str(trip.id) if trip else None)) \
         if (ctx.default_trip_id or trip) else None
     if not trip_info:
-        return header + "You don't have any trips yet. Upload a booking confirmation in the Inbox to get started."
+        return header + tr("You don't have any trips yet. Add a booking confirmation to get started.", loc)
     tid = trip_info["trip_id"]
     t_start = date.fromisoformat(trip_info["start_date"]) if trip_info.get("start_date") else None
     t_end = date.fromisoformat(trip_info["end_date"]) if trip_info.get("end_date") else None
+    status_word = lambda s: tr(STATUS.get(s, s), loc)  # noqa: E731
 
-    if re.search(r"unconfirm|not confirmed|pending|still need to book", lower):
+    if re.search(r"unconfirm|not confirmed|pending|still need to book|neconfirm|nu (e|este) confirmat|in asteptare"
+                 r"|trebuie sa rezerv", lower):
         res = call("get_reservations", trip_id=tid) or []
         open_items = [r for r in res if r["status"] != "confirmed"]
         if not open_items:
-            return header + f"Everything booked for **{trip_info['name']}** shows as confirmed."
-        lines = [f"- **{r['title']}** — {r['status']}" + (f", {_fmt_time(r['start_local'])}" if r["start_local"] else "")
+            return header + tr("Everything booked for **{trip}** shows as confirmed.", loc, trip=trip_info["name"])
+        lines = [f"- **{r['title']}** — {status_word(r['status'])}" + (f", {_fmt_time(r['start_local'], loc)}" if r["start_local"] else "")
                  for r in open_items]
-        return header + f"Not confirmed yet on **{trip_info['name']}**:\n" + "\n".join(lines)
+        return header + tr("Not confirmed yet on **{trip}**:", loc, trip=trip_info["name"]) + "\n" + "\n".join(lines)
 
-    if re.search(r"conflict|clash|overlap|problem|issue|enough time|tight", lower):
+    if re.search(r"conflict|clash|overlap|problem|issue|enough time|tight|suprapun|destul timp|timp suficient|strans"
+                 r"|de rezolvat", lower):
         items = call("detect_conflicts", trip_id=tid) or []
         if not items:
-            return header + "I didn't find any conflicts in this itinerary."
-        lines = [f"- **{c['title']}** ({c['severity']}): {c['detail']}" for c in items[:8]]
-        return header + f"I found {len(items)} item(s) to look at:\n" + "\n".join(lines)
+            return header + tr("I didn't find any conflicts in this itinerary.", loc)
+        lines = [f"- **{c['title']}** ({tr(SEVERITY.get(c['severity'], c['severity']), loc)}): {c['detail']}" for c in items[:8]]
+        return header + tr("I found {n} things to look at:", loc, n=len(items)) + "\n" + "\n".join(lines)
 
-    booking = re.search(r"\b(book|buy|get)\b.*\b(train|rail|bus|coach|flight|plane|museum|gallery)\b", lower)
+    booking = re.search(r"\b(book|buy|get|rezerva|cumpara|ia-mi|ia)\b.*\b(train|tren|rail|bus|autobuz|coach|autocar|flight|zbor"
+                        r"|plane|avion|museum|muzeu|gallery|galerie)\b", lower)
     if booking:
-        kind = booking.group(2)
-        site = {"train": "demo_rail", "rail": "demo_rail", "bus": "demo_coach", "coach": "demo_coach",
-                "flight": "demo_air", "plane": "demo_air", "museum": "demo_museum", "gallery": "demo_museum"}[kind]
+        site = SITE_FOR[booking.group(2)]
         if not user.is_demo:
-            sites = call("list_booking_websites", category={"rail": "train", "coach": "bus", "plane": "flight"}.get(kind, kind)) or []
+            sites = call("list_booking_websites", category=CATEGORY_FOR[site]) or []
             names = ", ".join(s["name"] for s in sites if s["policy"] != "simulated")[:400]
-            return header + (f"Real booking sites are link-only for now ({names}). Open one from **Websites**, book "
-                             "there, then forward the confirmation to your Inbox and I'll add it to your trip.")
+            return header + tr("Real booking sites are link-only for now ({names}). Open one from **Explore → Tickets**, "
+                               "book there, then forward the confirmation to Tandem and I'll add it to your trip.", loc, names=names)
         day = _resolve_day(text, user, t_start, t_end)
-        route = re.search(r"from ([a-zà-ÿ .'-]+?) to ([a-zà-ÿ .'-]+?)(?: on| for| at| this| next|,|\.|$)", lower)
-        party = re.search(r"\b(\d) (?:people|persons|adults|tickets|of us)\b", lower)
+        route = re.search(r"(?:from|de la) ([a-z .'-]+?) (?:to|la|spre|catre) ([a-z .'-]+?)"
+                          r"(?: on| for| at| this| next| pe| pentru| in| duminica| luni| marti| miercuri| joi| vineri| sambata|,|\.|$)", lower)
+        party = re.search(r"\b(\d) (?:people|persons|adults|tickets|of us|persoane|oameni|adulti|bilete)\b", lower)
         args = {"site": site, "date": day.isoformat() if day else None, "trip_id": tid,
                 "adults": int(party.group(1)) if party else max(1, len(trip_info.get("travellers") or []) or 1)}
         if site == "demo_museum":
-            args["venue"] = "Galleria Demo" if "rome" in lower or not re.search(r"paris|london|lisbon", lower) else \
-                {"paris": "Musée", "london": "Demo Gallery", "lisbon": "Azulejo"}[re.search(r"paris|london|lisbon", lower).group(0)]
+            city = re.search(r"paris|london|londra|lisbon|lisabona", lower)
+            args["venue"] = "Galleria Demo" if not city else \
+                {"paris": "Musée", "london": "Demo Gallery", "londra": "Demo Gallery", "lisbon": "Azulejo", "lisabona": "Azulejo"}[city.group(0)]
         elif route:
             args["origin"], args["destination"] = route.group(1).strip().title(), route.group(2).strip().title()
         else:
-            return header + "Tell me where from and to, e.g. *book a train from Rome to Florence on Sunday*."
+            return header + tr("Tell me where from and to, e.g. *book a train from Rome to Florence on Sunday*.", loc)
         if not args["date"]:
-            return header + "Which day? e.g. *on Sunday* or *on 15 November*."
+            return header + tr("Which day? e.g. *on Sunday* or *on 15 November*.", loc)
         result = call("start_website_task", **{k: v for k, v in args.items() if v is not None})
         if not result:
-            return header + "I couldn't start the website task."
+            return header + tr("I couldn't start the website task.", loc)
         sel = result.get("selected") or {}
         if result["state"] == "awaiting_approval":
-            return header + (f"The browser agent searched the simulated site and picked **{sel.get('offer_id', '')} "
-                             f"{sel.get('depart', '')}–{sel.get('arrive', '')}** (€{sel.get('total', 0):.2f}). "
-                             "It paused before entering any names — approve the card below to complete the "
-                             "(simulated) purchase.")
-        return header + f"Website task {result['state'].replace('_', ' ')}: {result.get('note') or ''}"
+            return header + tr("The browser agent searched the simulated site and picked **{offer} {depart}–{arrive}** (€{total}). "
+                               "It paused before entering any names — approve the card below to complete the (simulated) purchase.",
+                               loc, offer=sel.get("offer_id", ""), depart=sel.get("depart", ""), arrive=sel.get("arrive", ""),
+                               total=f"{sel.get('total', 0):.2f}")
+        return header + tr("Website task: {state}. {note}", loc, state=result["state"].replace("_", " "), note=result.get("note") or "")
 
-    if re.search(r"find|suggest|recommend|something to do|activity|activities|museum|tour|things to do", lower):
+    if re.search(r"find|suggest|recommend|something to do|activit|museum|tour|things to do|gaseste|sugereaza|recomanda"
+                 r"|ceva de facut|ce sa fac|muzeu|\btur\b", lower):
         day = _resolve_day(text, user, t_start, t_end)
         cats = sorted({c for w, c in CATEGORY_WORDS.items() if w in lower})
         result = call("search_activities", trip_id=tid, date=day.isoformat() if day else None, categories=cats)
         if not result or not result["results"]:
             unavailable = [p["name"] for p in (result or {}).get("providers", []) if p.get("error")]
-            return header + "I couldn't find activities for that." + (
-                f" Unavailable providers: {', '.join(unavailable)}." if unavailable else "")
+            return header + tr("I couldn't find activities for that.", loc) + (
+                " " + tr("Unavailable providers: {names}.", loc, names=", ".join(unavailable)) if unavailable else "")
         lines = []
         for r in result["results"][:5]:
-            price = f"{r['price']:.0f} {r['currency']}" if r.get("price") is not None and r.get("currency") else "price unknown"
+            price = f"{r['price']:.0f} {r['currency']}" if r.get("price") is not None and r.get("currency") else tr("price unknown", loc)
             fit = r["fits"].get("status") if r.get("fits") else None
-            fit_text = {"fits": "fits your free time", "no_fitting_slot": "no slot fits your plans",
-                        "availability_unknown": "availability not checked"}.get(fit, "")
+            fit_text = {"fits": tr("fits your free time", loc), "no_fitting_slot": tr("no time fits your plans", loc),
+                        "availability_unknown": tr("availability not checked", loc)}.get(fit, "")
             slots = ", ".join(s["time"] for s in (r.get("fits") or {}).get("slots", [])[:3])
             lines.append(f"- **{r['title']}** · {price}" + (f" · {fit_text}" if fit_text else "")
-                         + (f" (e.g. {slots})" if slots else ""))
-        when = f" on {day:%A %d %B}" if day else ""
-        return header + f"Options{when}:\n" + "\n".join(lines) + \
-            "\n\nUse **Prepare booking** on a card to get a live quote you can approve."
+                         + (" (" + tr("e.g. {times}", loc, times=slots) + ")" if slots else ""))
+        intro = tr("Options on {day}:", loc, day=long_date(day, loc)) if day else tr("Options:", loc)
+        return header + intro + "\n" + "\n".join(lines) + "\n\n" + \
+            tr("Use **Prepare booking** on a card to get a live quote you can approve.", loc)
 
-    if re.search(r"summar|before (departure|i leave|leaving)|what do i need|checklist|overview", lower):
+    if re.search(r"summar|before (departure|i leave|leaving)|what do i need|checklist|overview|rezum|inainte de plecare"
+                 r"|de ce am nevoie|lista|pe scurt", lower):
         res = call("get_reservations", trip_id=tid) or []
         conflicts = call("detect_conflicts", trip_id=tid) or []
         lines = [f"**{trip_info['name']}** · {trip_info.get('start_date')} → {trip_info.get('end_date')}",
-                 f"Destinations: {', '.join(trip_info['destinations']) or 'not set'}", ""]
+                 tr("Destinations: {names}", loc, names=", ".join(trip_info["destinations"]) or tr("not set", loc)), ""]
         for r in res:
-            ref = f" · ref {r['booking_reference']}" if r.get("booking_reference") else ""
-            lines.append(f"- {r['type'].replace('_', ' ').title()}: **{r['title']}** — {_fmt_time(r['start_local'])}{ref} ({r['status']})")
+            ref = f" · {tr('ref', loc)} {r['booking_reference']}" if r.get("booking_reference") else ""
+            lines.append(f"- {tr(r['type'].replace('_', ' ').capitalize(), loc)}: **{r['title']}** — "
+                         f"{_fmt_time(r['start_local'], loc)}{ref} ({status_word(r['status'])})")
         crit = [c for c in conflicts if c["severity"] in ("critical", "warning")]
         if crit:
-            lines += ["", "Needs attention:"] + [f"- {c['title']}" for c in crit[:5]]
+            lines += ["", tr("Needs attention:", loc)] + [f"- {c['title']}" for c in crit[:5]]
         return header + "\n".join(lines)
 
-    if re.search(r"delay", lower):
+    if re.search(r"delay|intarzi", lower):
         it = call("get_itinerary", trip_id=tid) or {"events": []}
         flights = [e for e in it["events"] if e["type"] in ("flight", "train")]
         if not flights:
-            return header + "I don't see a flight or train in this trip."
+            return header + tr("I don't see a flight or train in this trip.", loc)
         f = flights[0]
         later = [e for e in it["events"] if e["start_local"] and f["end_local"] and e["start_local"] > f["start_local"]][:4]
-        lines = [f"If **{f['title']}** is delayed, the next plans after it are:"] + [
-            f"- {e['title']} at {_fmt_time(e['start_local'])}" for e in later if e["event_id"] != f["event_id"]]
-        return header + "\n".join(lines) + "\n\nTell me the new arrival time, or upload the airline's update to the Inbox."
+        lines = [tr("If **{title}** is delayed, the next plans after it are:", loc, title=f["title"])] + [
+            f"- {e['title']} — {_fmt_time(e['start_local'], loc)}" for e in later if e["event_id"] != f["event_id"]]
+        return header + "\n".join(lines) + "\n\n" + \
+            tr("Tell me the new arrival time, or add the airline's update to Tandem.", loc)
 
     day = _resolve_day(text, user, t_start, t_end)
-    if day or re.search(r"booked|plan|schedule|itinerary|what.*(have|doing)", lower):
+    if day or re.search(r"booked|plan|schedule|itinerary|what.*(have|doing)|rezervat|program|itinerar|ce am|ce fac", lower):
         it = call("get_itinerary", trip_id=tid, date=day.isoformat() if day else None) or {"events": []}
         events = it["events"]
         if not events:
-            return header + (f"Nothing is planned on {day:%A %d %B}." if day else "This trip has no itinerary events yet.")
-        title = f"{day:%A %d %B}" if day else trip_info["name"]
+            return header + (tr("Nothing is planned on {day}.", loc, day=long_date(day, loc)) if day
+                             else tr("This trip has no itinerary events yet.", loc))
+        title = long_date(day, loc) if day else trip_info["name"]
         lines = []
         for e in events[:15]:
-            status = "" if e["status"] == "confirmed" else f" _({e['status']})_"
-            lines.append(f"- {_fmt_time(e['start_local'])} — **{e['title']}**{status}")
-        return header + f"**{title}**\n" + "\n".join(lines)
+            status = "" if e["status"] == "confirmed" else f" _({status_word(e['status'])})_"
+            lines.append(f"- {_fmt_time(e['start_local'], loc)} — **{e['title']}**{status}")
+        return header + f"**{title[0].upper() + title[1:]}**\n" + "\n".join(lines)
 
-    return header + ("I can tell you what's planned on a day, what's unconfirmed, check conflicts, summarise the "
-                     "trip, or find activities that fit your free time. Connect an AI provider in Settings for "
-                     "open-ended questions.")
+    return header + tr("I can tell you what's planned on a day, what's unconfirmed, check conflicts, summarise the "
+                       "trip, or find activities that fit your free time. Connect an AI provider in Settings for "
+                       "open-ended questions.", loc)

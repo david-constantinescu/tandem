@@ -18,6 +18,7 @@ from typing import Any, Callable, Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from app.extensions import db
+from app.i18n import render
 from app.models import AgentAction, Document, ItineraryEvent, Reservation, Trip, User
 from app.schemas.serializers import action_dict
 from app.services.ai.base import ToolSpec
@@ -182,7 +183,7 @@ def get_documents(ctx: ToolContext, args: TripArg):
 @tool("detect_conflicts", "Run Tandem's deterministic conflict checks on a trip.", TripArg)
 def detect_conflicts(ctx: ToolContext, args: TripArg):
     t = _trip(ctx, args.trip_id)
-    return [{"type": c.type, "severity": c.severity, "title": c.title, "detail": c.detail, "event_ids": c.event_ids}
+    return [{"type": c.type, "severity": c.severity, "title": render(c.title), "detail": render(c.detail), "event_ids": c.event_ids}
             for c in conflict_engine.detect(t)]
 
 

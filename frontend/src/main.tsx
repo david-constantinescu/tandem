@@ -10,6 +10,7 @@ import { UpdatePrompt } from "./components/pwa";
 import { ToastProvider } from "./components/ui/Toast";
 import { ApiError } from "./lib/api";
 import { AuthProvider } from "./lib/auth";
+import { I18nProvider } from "./lib/i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <I18nProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
@@ -38,5 +40,6 @@ createRoot(document.getElementById("root")!).render(
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
+    </I18nProvider>
   </StrictMode>,
 );

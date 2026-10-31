@@ -11,11 +11,18 @@ const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const InboxPage = lazy(() => import("./pages/InboxPage"));
 const InboxItemPage = lazy(() => import("./pages/InboxItemPage"));
-const DiscoverPage = lazy(() => import("./pages/DiscoverPage"));
+const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
-const ApprovalsPage = lazy(() => import("./pages/ApprovalsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const WebsitesPage = lazy(() => import("./pages/WebsitesPage"));
+
+/** Old addresses live on in notifications, assistant answers and home-screen bookmarks: keep them working. */
+function Moved({ to, extra }: { to: string; extra?: Record<string, string> }) {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  for (const [k, v] of Object.entries(extra ?? {})) if (!params.has(k)) params.set(k, v);
+  const q = params.toString();
+  return <Navigate to={`${to}${q ? `?${q}` : ""}`} replace />;
+}
 
 function Protected() {
   const { user, loading } = useAuth();
@@ -32,13 +39,14 @@ function Protected() {
           <Route path="/trips/:id" element={<TripDetailPage />} />
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/inbox/:id" element={<InboxItemPage />} />
-          <Route path="/discover" element={<DiscoverPage />} />
+          <Route path="/explore" element={<ExplorePage />} />
           <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/assistant/:id" element={<AssistantPage />} />
-          <Route path="/approvals" element={<ApprovalsPage />} />
-          <Route path="/websites" element={<WebsitesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/:section" element={<SettingsPage />} />
+          <Route path="/discover" element={<Moved to="/explore" />} />
+          <Route path="/websites" element={<Moved to="/explore" extra={{ tab: "tickets" }} />} />
+          <Route path="/approvals" element={<Moved to="/inbox" extra={{ tab: "approvals" }} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Page>

@@ -4,6 +4,7 @@ from flask import Blueprint, current_app, g, make_response, request
 from pydantic import BaseModel, EmailStr, Field
 
 from app.api._core import client_ip, doc, login_required, ok, parse_body
+from app.i18n import request_locale
 from app.extensions import db, limiter
 from app.schemas.serializers import user_dict
 from app.services import users as user_service
@@ -17,6 +18,11 @@ class RegisterBody(BaseModel):
     email: EmailStr
     password: str = Field(min_length=10, max_length=200)
     display_name: str = Field(default="", max_length=120)
+    locale: str | None = Field(default=None, pattern="^(en|ro)$")
+
+
+class DemoBody(BaseModel):
+    locale: str | None = Field(default=None, pattern="^(en|ro)$")
 
 
 class LoginBody(BaseModel):
@@ -46,7 +52,7 @@ def register():
     if current_app.config["DEMO_MODE"]:
         raise Forbidden("Registration is disabled on this demo deployment", code="demo_mode")
     body = parse_body(RegisterBody)
-    user = user_service.create_user(body.email, body.password, body.display_name)
+    user = user_service.create_user(body.email, body.password, body.display_name, locale=body.locale or request_locale())
     token, sess = user_service.start_session(user, request.user_agent.string)
     audit(user.id, "auth.register")
     db.session.commit()
@@ -73,7 +79,8 @@ def demo():
 
     if not current_app.config["DEMO_ACCOUNT_ENABLED"]:
         raise Forbidden("The demo is disabled on this deployment", code="demo_disabled")
-    user = create_demo_workspace()
+    body = parse_body(DemoBody)
+    user = create_demo_workspace(locale=body.locale or request_locale())
     hours = current_app.config["DEMO_SESSION_HOURS"]
     token, sess = user_service.start_session(user, request.user_agent.string, hours=hours)
     audit(user.id, "auth.demo_start")

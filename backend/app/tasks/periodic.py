@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
+from app.i18n import T, When
 from app.extensions import db
 from app.models import AgentAction, DemoTenant, IntegrationConnection, ItineraryEvent, Reservation, User
 from app.services.notifications.service import notify
@@ -30,8 +31,8 @@ def upcoming_events(now) -> None:
         ItineraryEvent.status.in_(["confirmed", "pending"]))).scalars().all()
     for e in soon:
         local = to_local(e.start_at, e.start_tz)
-        notify(e.user_id, "upcoming_event", f"Tomorrow: {e.title}" if (e.start_at - now) > timedelta(hours=12)
-               else f"Coming up: {e.title}", f"{local:%a %d %b, %H:%M} ({e.start_tz})", link=f"/trips/{e.trip_id}",
+        notify(e.user_id, "upcoming_event", T("Tomorrow: {title}", title=e.title) if (e.start_at - now) > timedelta(hours=12)
+               else T("Coming up: {title}", title=e.title), T("{when} ({tz})", when=When(local), tz=e.start_tz), link=f"/trips/{e.trip_id}",
                dedupe_key=f"upcoming:{e.id}:{e.start_at.isoformat()}")
 
 
@@ -41,8 +42,8 @@ def cancellation_deadlines(now) -> None:
         Reservation.status != "cancelled")).scalars().all()
     for r in rows:
         local = to_local(r.cancellation_deadline, r.start_tz or "UTC")
-        notify(r.user_id, "cancellation_deadline", f"Free cancellation ends soon: {r.title}",
-               f"Deadline {local:%a %d %b, %H:%M}.", link=f"/trips/{r.trip_id}" if r.trip_id else None,
+        notify(r.user_id, "cancellation_deadline", T("Free cancellation ends soon: {title}", title=r.title),
+               T("Deadline {when}.", when=When(local)), link=f"/trips/{r.trip_id}" if r.trip_id else None,
                severity="warning", dedupe_key=f"deadline:{r.id}:{r.cancellation_deadline.isoformat()}")
 
 

@@ -6,6 +6,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from app.extensions import db
+from app.i18n import T, locale_of, tr
 from app.models import (
     Document, ExtractedRecord, ItineraryEvent, Reservation, ReservationChange, Traveller, Trip, TripDestination, User,
 )
@@ -170,7 +171,9 @@ def sync_events(res: Reservation) -> list[ItineraryEvent]:
     elif res.type in ("hotel", "car_rental"):
         first, last = ("hotel_checkin", "hotel_checkout") if res.type == "hotel" else ("car_rental", "car_rental")
         name = res.provider_name or res.title
-        labels = ("Check in", "Check out") if res.type == "hotel" else ("Pick up", "Drop off")
+        # Generated titles are stored, so they're written in the owner's language.
+        loc = locale_of(res.user_id)
+        labels = (tr("Check in", loc), tr("Check out", loc)) if res.type == "hotel" else (tr("Pick up", loc), tr("Drop off", loc))
         common = {"location_name": res.location_name or name, "city": res.city, "lat": res.lat, "lon": res.lon}
         specs.append({"role": "start", "type": first, "title": f"{labels[0]} · {name}", "start_at": res.start_at,
                       "start_tz": res.start_tz, "end_at": None, "end_tz": None, **common})
@@ -219,15 +222,15 @@ def assign_trip_for_data(user: User, data: dict, choice: dict | None) -> tuple[T
     if choice.get("new_trip") or proposal["action"] == "create":
         spec = {**(proposal.get("new_trip") or {}), **(choice.get("new_trip") or {})}
         trip = create_trip(
-            user, spec.get("name") or "New trip",
+            user, spec.get("name") or tr("New trip", locale_of(user)),
             start_date=date.fromisoformat(spec["start_date"]) if spec.get("start_date") else None,
             end_date=date.fromisoformat(spec["end_date"]) if spec.get("end_date") else None,
             destination=spec.get("destination"), created_via="auto",
             grouping_info={"created_from": "extraction", "reasons": proposal.get("reasons", [])},
             lat=spec.get("lat"), lon=spec.get("lon"),
         )
-        notify(user.id, "trip_created", f"New trip: {trip.name}",
-               "Created from a document in your inbox. You can rename it or move records to another trip.",
+        notify(user.id, "trip_created", T("New trip: {name}", name=trip.name),
+               T("Created from a document in your inbox. You can rename it or move bookings to another trip."),
                link=f"/trips/{trip.id}", dedupe_key=f"trip_created:{trip.id}")
         return trip, {**proposal, "trip_id": str(trip.id)}
     trip = db.session.get(Trip, proposal["trip_id"])
@@ -406,12 +409,14 @@ def _jsonable(v):
 
 
 def summarise_changes(res: Reservation, changes: dict) -> str:
+    loc = locale_of(res.user_id)
     labels = {"start_at": "start time", "end_at": "end time", "status": "status", "address": "address",
               "location_name": "location", "price": "price", "details.gate": "gate", "details.terminal": "terminal",
               "details.seat": "seat", "details.meeting_point": "meeting point", "cancellation_deadline":
               "cancellation deadline"}
-    parts = [labels.get(k, k.replace("details.", "").replace("_", " ")) for k in changes]
-    return f"{res.title}: {', '.join(parts)} changed" if parts else f"{res.title}: no changes"
+    parts = [tr(labels[k], loc) if k in labels else k.replace("details.", "").replace("_", " ") for k in changes]
+    return tr("{title}: {fields} changed", loc, title=res.title, fields=", ".join(parts)) if parts \
+        else tr("{title}: no changes", loc, title=res.title)
 
 
 def record_change(user: User, res: Reservation, record: ExtractedRecord, changes: dict) -> ReservationChange:
@@ -419,7 +424,7 @@ def record_change(user: User, res: Reservation, record: ExtractedRecord, changes
                                extracted_record_id=record.id, changes=changes, summary=summarise_changes(res, changes))
     db.session.add(change)
     db.session.flush()
-    notify(user.id, "reservation_changed", "Reservation update detected", change.summary,
+    notify(user.id, "reservation_changed", T("Booking update detected"), change.summary,
            link=f"/inbox/{record.document_id}", severity="warning", dedupe_key=f"change:{change.id}")
     return change
 

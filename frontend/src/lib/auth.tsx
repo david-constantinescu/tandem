@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, isNetworkError, setCsrf } from "./api";
-import { setLocale } from "./i18n";
+import { isLocale, useT, type Locale } from "./i18n";
 import { clearOffline, offlineUser, persistOffline, restoreOffline } from "./offline";
 import type { User } from "./types";
 
@@ -15,6 +15,8 @@ type AuthState = {
   startDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Switch the interface language; saved to the account when signed in so server text follows. */
+  setLanguage: (l: Locale) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -23,12 +25,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const qc = useQueryClient();
+  const { locale, setLocale } = useT();
 
+  // Signed in, the account's language wins; signed out, the device's last choice stays.
   const apply = useCallback((s: Session) => {
     setCsrf(s.csrf_token);
     setUser(s.user);
-    if (s.user) setLocale(s.user.locale);
-  }, []);
+    if (s.user && isLocale(s.user.locale)) setLocale(s.user.locale);
+  }, [setLocale]);
 
   const refresh = useCallback(async () => {
     try {
@@ -75,11 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     register: async (email, password, display_name) => {
       reset();
-      apply(await api.post<Session>("/auth/register", { email, password, display_name }));
+      apply(await api.post<Session>("/auth/register", { email, password, display_name, locale }));
     },
     startDemo: async () => {
       reset();
-      apply(await api.post<Session>("/auth/demo"));
+      apply(await api.post<Session>("/auth/demo", { locale }));
     },
     logout: async () => {
       try {
@@ -88,6 +92,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         reset();
         apply({ user: null, csrf_token: null });
       }
+    },
+    setLanguage: async (l) => {
+      if (l === locale) return;
+      setLocale(l);
+      if (user) {
+        try {
+          await api.patch("/settings/profile", { locale: l });
+          setUser({ ...user, locale: l });
+        } catch {
+          // Offline or signed out meanwhile: the device keeps the choice and the account catches up next time.
+        }
+      }
+      // Conflicts, notifications and assistant text come from the server in the account's language.
+      qc.invalidateQueries();
     },
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

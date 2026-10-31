@@ -11,6 +11,7 @@ import re
 from datetime import date, timedelta
 
 from app.extensions import db
+from app.i18n import When, locale_of, month_year, tr
 from app.models import Reservation, Trip, User
 from app.services import geo
 from app.utils.timeutil import parse_iso_datetime, to_local
@@ -53,8 +54,11 @@ def trip_places(trip: Trip) -> list[tuple[str, float | None, float | None]]:
 
 
 def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
+    # Reasons are shown to the user and stored with the proposal, so they're written in the user's language.
+    loc = locale_of(user)
     reasons: list[str] = []
     score = 0.0
+    ref_match = False
     start, end = record_dates(data)
     ref = _norm(data.get("booking_reference"))
     if ref:
@@ -64,7 +68,8 @@ def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
         ).scalars().all()
         if any(_norm(r) == ref for r in shared):
             score += 0.6
-            reasons.append(f"Shares booking reference {data.get('booking_reference')}")
+            ref_match = True
+            reasons.append(tr("Shares booking reference {ref}", loc, ref=data.get("booking_reference")))
 
     date_ok = False
     if start and trip.start_date and trip.end_date:
@@ -72,11 +77,12 @@ def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
         if lo <= start <= hi or (end and lo <= end <= hi):
             score += 0.35
             date_ok = True
-            reasons.append(f"Dates fall within the trip ({trip.start_date:%d %b} – {trip.end_date:%d %b})")
+            reasons.append(tr("Dates fall within the trip ({start} – {end})", loc,
+                              start=When(trip.start_date, with_time=False), end=When(trip.end_date, with_time=False)))
         elif trip.start_date - timedelta(days=4) <= start <= trip.end_date + timedelta(days=4):
             score += 0.15
             date_ok = True
-            reasons.append("Dates are within a few days of the trip")
+            reasons.append(tr("Dates are within a few days of the trip", loc))
 
     city, lat, lon = record_destination(data, user)
     place_ok = False
@@ -84,26 +90,25 @@ def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
         if city and _norm(name) and (_norm(name) == _norm(city) or _norm(city) in _norm(name)):
             score += 0.4
             place_ok = True
-            reasons.append(f"Same destination ({city})")
+            reasons.append(tr("Same destination ({city})", loc, city=city))
             break
         if lat is not None and plat is not None and geo.haversine_km(lat, lon, plat, plon) < 60:
             score += 0.35
             place_ok = True
-            reasons.append(f"Within 60 km of {name}")
+            reasons.append(tr("Within 60 km of {name}", loc, name=name))
             break
     # Outbound/return flights from home: the home-side city matches via arrival/departure city above.
     names = {_norm(n) for n in data.get("travellers") or []}
     if names and any(_norm(t.full_name) in names for t in trip.travellers):
         score += 0.05
-        reasons.append("Same traveller")
-    ref_match = any(r.startswith("Shares booking reference") for r in reasons)
+        reasons.append(tr("Same traveller", loc))
     if ref_match:
         return round(min(score, 1.0), 2), reasons
     if not date_ok:
-        return min(score, 0.4), reasons + ["Dates do not match"]
+        return min(score, 0.4), reasons + [tr("Dates do not match", loc)]
     if not place_ok:
         # Similar dates alone are never enough to group records.
-        return min(score, 0.3), reasons + ["No destination match"]
+        return min(score, 0.3), reasons + [tr("No destination match", loc)]
     return round(min(score, 1.0), 2), reasons
 
 
@@ -121,11 +126,12 @@ def propose(user: User, data: dict) -> dict:
                 "reasons": best[2]}
     city, lat, lon = record_destination(data, user)
     start, end = record_dates(data)
-    name = f"{city} trip" if city else "New trip"
+    loc = locale_of(user)
+    name = tr("{city} trip", loc, city=city) if city else tr("New trip", loc)
     if start:
-        name = f"{city or 'Trip'} · {start:%b %Y}" if city else f"Trip · {start:%b %Y}"
+        name = f"{city or tr('Trip', loc)} · {month_year(start, loc)}"
     return {
-        "action": "create", "score": best[0], "reasons": (best[2] if best[1] else []) or ["No matching trip found"],
+        "action": "create", "score": best[0], "reasons": (best[2] if best[1] else []) or [tr("No matching trip found", loc)],
         "closest_trip_id": str(best[1].id) if best[1] else None,
         "new_trip": {"name": name, "destination": city, "lat": lat, "lon": lon,
                      "start_date": start.isoformat() if start else None,

@@ -21,6 +21,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.i18n import T, locale_of, render, tr
 from app.extensions import db
 from app.models import AgentAction, BrowserTask, Trip, User
 from app.services import geo
@@ -98,7 +99,8 @@ def _clean_params(site: Site, params: dict) -> dict:
     return out
 
 
-def _handoff(task: BrowserTask, site: Site, reason: str, url: str | None = None) -> None:
+def _handoff(task: BrowserTask, site: Site, reason: T | str, url: str | None = None) -> None:
+    reason = render(reason, locale_of(task.user_id))
     task.state = "requires_manual"
     task.engine = task.engine or "none"
     task.stop_reason = reason[:300]
@@ -106,8 +108,10 @@ def _handoff(task: BrowserTask, site: Site, reason: str, url: str | None = None)
     _log(task, "handoff", reason, url=task.handoff_url)
 
 
-def _log(task: BrowserTask, action: str, reason: str, *, url: str | None = None, title: str | None = None,
+def _log(task: BrowserTask, action: str, reason: T | str, *, url: str | None = None, title: str | None = None,
          snap: Snapshot | None = None, engine: Engine | None = None) -> None:
+    # The step log is stored and shown to the owner, so it's written in their language.
+    reason = render(reason, locale_of(task.user_id))
     entry = {"step": len(task.log or []) + 1, "action": action, "reason": reason[:400], "at": utcnow().isoformat(),
              "url": (engine.public_url(snap.url) if engine and snap else url), "title": snap.title if snap else title}
     if snap is not None and engine is not None:
@@ -174,7 +178,7 @@ def _simulated_search_and_select(task: BrowserTask, site: Site, engine: Engine, 
     p = task.params
     kind = KIND_FOR_SITE[site.key]
     snap = engine.goto(site.homepage)
-    _log(task, "open", f"Opened {site.name}", snap=snap, engine=engine)
+    _log(task, "open", T("Opened {site}", site=site.name), snap=snap, engine=engine)
     task.state = "navigating"
     fields = (("venue", p.get("venue")), ("date", p["date"]), ("adults", str(p["adults"]))) if kind == "museum" else \
         (("origin", p["origin"]), ("destination", p["destination"]), ("date", p["date"]), ("adults", str(p["adults"])))
@@ -192,7 +196,7 @@ def _simulated_search_and_select(task: BrowserTask, site: Site, engine: Engine, 
             engine.fill(el["id"], value)
     submit = snap.find(tag="button")
     snap = engine.click(submit["id"])
-    _log(task, "search", "Submitted the search form with your trip details", snap=snap, engine=engine)
+    _log(task, "search", T("Submitted the search form with your trip details"), snap=snap, engine=engine)
     if (stop := _guard(task, snap)):
         raise PolicyViolation(stop, "challenge")
 
@@ -200,18 +204,19 @@ def _simulated_search_and_select(task: BrowserTask, site: Site, engine: Engine, 
     task.result = {**(task.result or {}), "offers": offers[:8]}
     if not offers:
         task.state = "completed"
-        task.stop_reason = "No availability for that search"
-        _log(task, "done", "No availability on the site for that search", snap=snap, engine=engine)
+        task.stop_reason = tr("No availability for that search", locale_of(task.user_id))
+        _log(task, "done", T("No availability on the site for that search"), snap=snap, engine=engine)
         return
     chosen, why = _choose(offers, p, task)
     button = next(e for e in snap.elements if e["tag"] == "button" and e.get("text", "").endswith(chosen["depart"]))
     snap = engine.click(button["id"])
     task.state_url = snap.url
     task.result = {**task.result, "selected": chosen, "selection_reason": why}
-    _log(task, "select", f"Selected {chosen['offer_id']} at {chosen['depart']}: {why}", snap=snap, engine=engine)
+    _log(task, "select", T("Selected {offer} at {time}: {why}", offer=chosen["offer_id"], time=chosen["depart"], why=why),
+         snap=snap, engine=engine)
     if task.goal != "book":
         task.state = "completed"
-        _log(task, "done", "Search complete; nothing was booked")
+        _log(task, "done", T("Search complete; nothing was booked"))
         return
     _request_checkout_approval(task, site, user, chosen, snap)
 
@@ -248,12 +253,15 @@ def _choose(offers: list[dict], params: dict, task: BrowserTask) -> tuple[dict, 
         fitting = [o for o in offers if any(w[0] <= o["depart"] and o["arrive"] <= w[1] for w in free)]
         if fitting:
             candidates = fitting
+    loc = locale_of(task.user_id)
+    fits = free is not None and candidates is not offers
     if preferred:
         later = sorted((o for o in candidates if o["depart"] >= preferred), key=lambda o: o["depart"])
         if later:
-            return later[0], f"first departure from {preferred}" + (" that fits your free time" if candidates is not offers else "")
+            return later[0], tr("first departure from {time} that fits your free time" if fits else "first departure from {time}",
+                                loc, time=preferred)
     best = min(candidates, key=lambda o: o["total"])
-    return best, "cheapest option" + (" that fits your free time" if free is not None and candidates is not offers else "")
+    return best, tr("cheapest option that fits your free time" if fits else "cheapest option", loc)
 
 
 def _free_windows(task: BrowserTask) -> list[tuple[str, str]] | None:
@@ -285,7 +293,9 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
 
     names = _travellers(task, user)
     kind = KIND_FOR_SITE[site.key]
-    what = (f"{task.result.get('venue_name', 'Museum entry')}, {task.params['date']} at {offer['depart']}" if kind == "museum"
+    loc = locale_of(user)
+    what = (tr("{venue}, {date} at {time}", loc, venue=task.result.get("venue_name") or tr("Museum entry", loc),
+               date=task.params["date"], time=offer["depart"]) if kind == "museum"
             else f"{offer['offer_id']} {task.params['origin']} → {task.params['destination']}, {task.params['date']} "
                  f"{offer['depart']}–{offer['arrive']}")
     payload = {"task_id": str(task.id), "site": site.key, "site_name": site.name, "simulated": True, "offer": offer,
@@ -293,8 +303,9 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
                "trip_id": str(task.trip_id) if task.trip_id else None}
     action = _new_action(
         user, trip_id=task.trip_id, conversation_id=task.conversation_id, action_type="browser_checkout",
-        provider=site.key, status="awaiting_approval", title=f"Book {what} on {site.name}",
-        description=f"{len(names)} × €{offer['unit_price']:.2f} · selected by the browser agent ({task.result.get('selection_reason')})",
+        provider=site.key, status="awaiting_approval", title=tr("Book {what} on {site}", loc, what=what, site=site.name),
+        description=tr("{n} × €{price} · selected by the browser agent ({why})", loc, n=len(names),
+                       price=f"{offer['unit_price']:.2f}", why=task.result.get("selection_reason")),
         payload=payload, cost=Decimal(str(offer["total"])), currency=offer["currency"], external=True,
         created_by="assistant", expires_at=utcnow() + timedelta(minutes=30),
         consequences=[f"The browser agent types these names on {site.name}: {', '.join(names)}.",
@@ -303,9 +314,9 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
         cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
     task.action_id = action.id
     task.state = "awaiting_approval"
-    task.stop_reason = "Waiting for your approval before entering traveller details"
-    _log(task, "awaiting_approval", f"Paused before entering personal details. Approve to continue ({action.title}).")
-    notify(user.id, "approval_required", f"Approval needed: {action.title}", action.description, link="/approvals",
+    task.stop_reason = tr("Waiting for your approval before entering traveller details", locale_of(user))
+    _log(task, "awaiting_approval", T("Paused before entering personal details. Approve to continue ({title}).", title=action.title))
+    notify(user.id, "approval_required", T("Approval needed: {title}", title=action.title), action.description, link="/inbox",
            dedupe_key=f"approval:{action.id}")
 
 
@@ -321,7 +332,7 @@ def complete_checkout(user: User, action: AgentAction) -> None:
     try:
         task.state = "submitting"
         snap = engine.goto(task.state_url)
-        _log(task, "resume", "Approval received; returned to the passenger details page", snap=snap, engine=engine)
+        _log(task, "resume", T("Approval received; returned to the passenger details page"), snap=snap, engine=engine)
         summary_total = _total_on_page(engine)
         if summary_total is not None and abs(summary_total - float(p["total"])) > 0.001:
             raise _Mismatch(f"Price on the site is now €{summary_total:.2f}, not the approved €{p['total']:.2f}")
@@ -334,7 +345,7 @@ def complete_checkout(user: User, action: AgentAction) -> None:
                     raise RuntimeError(f"Expected traveller field {field_name}")
                 engine.fill(el["id"], value)
         snap = engine.click(snap.find(tag="button")["id"])
-        _log(task, "details", f"Entered {len(p['travellers'])} approved traveller name(s)", snap=snap, engine=engine)
+        _log(task, "details", T("Entered the approved traveller names ({n})", n=len(p["travellers"])), snap=snap, engine=engine)
         pay_button = snap.find(name="pay")
         if pay_button is None or abs(float(pay_button["data"].get("total", "nan")) - float(p["total"])) > 0.001:
             raise _Mismatch("The payment amount differs from what you approved")
@@ -342,21 +353,21 @@ def complete_checkout(user: User, action: AgentAction) -> None:
             raise PolicyViolation("Unexpected card fields on a simulated site", "payment_fields")
         task.state = "verifying"
         snap = engine.click(pay_button["id"])
-        _log(task, "pay", f"Confirmed the simulated payment of €{p['total']:.2f}", snap=snap, engine=engine)
+        _log(task, "pay", T("Confirmed the simulated payment of €{total}", total=f"{p['total']:.2f}"), snap=snap, engine=engine)
         record = _read_confirmation(engine)
         _verify_confirmation(record, p)
         reservation = _import_reservation(user, task, site, record)
         task.state = "completed"
         task.result = {**(task.result or {}), "confirmation": record, "reservation_id": str(reservation.id)}
         task.stop_reason = None
-        _log(task, "done", f"Booking {record['ref']} confirmed on the site and added to your trip")
+        _log(task, "done", T("Booking {ref} confirmed on the site and added to your trip", ref=record["ref"]))
         action.status = "completed"
         action.executed_at = utcnow()
         action.result = {"provider_booking_id": record["ref"], "reservation_id": str(reservation.id), "simulated": True,
                          "verified_at": utcnow().isoformat(), "browser_task_id": str(task.id)}
-        notify(user.id, "booking_result", f"Booked (simulated): {action.title}",
-               f"Confirmation {record['ref']} read back from {site.name}.",
-               link=f"/trips/{task.trip_id}" if task.trip_id else "/websites", severity="success",
+        notify(user.id, "booking_result", T("Booked (simulated): {title}", title=action.title),
+               T("Confirmation {ref} read back from {site}.", ref=record["ref"], site=site.name),
+               link=f"/trips/{task.trip_id}" if task.trip_id else "/explore?tab=tickets", severity="success",
                dedupe_key=f"browser_ok:{task.id}")
     except _Mismatch as exc:
         task.state, task.stop_reason = "failed", str(exc)
@@ -485,7 +496,7 @@ def _assisted_search(task: BrowserTask, site: Site, engine: Engine, user: User) 
     p = task.params
     values = {**p, "date_dmy": datetime.fromisoformat(p["date"]).strftime("%d/%m/%Y") if p.get("date") else None}
     snap = engine.goto(handoff_url(site, p))
-    _log(task, "open", f"Opened {site.name}", snap=snap, engine=engine)
+    _log(task, "open", T("Opened {site}", site=site.name), snap=snap, engine=engine)
     router = AIRouter()
     for _ in range(MAX_STEPS):
         if (stop := _guard(task, snap)):

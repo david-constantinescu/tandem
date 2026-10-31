@@ -1,23 +1,29 @@
+/**
+ * Navigation. Four places plus one action: Home (what's next and what needs you), Trips (each trip is the hub for
+ * everything about it), Explore (things to do and tickets to book), Assistant — and Add, in the middle, for anything
+ * new. The Inbox (documents, approvals, email) sits in the header with a badge when something waits for you.
+ */
 import * as Popover from "@radix-ui/react-popover";
 import { clsx } from "clsx";
-import {
-  Bell, CheckCheck, Compass, Globe, Home, Inbox, LogOut, Map, MessageCircle, Settings, ShieldCheck, Sparkles,
-} from "lucide-react";
+import { Bell, CheckCheck, Compass, Home, Inbox, LogOut, Map, MessageCircle, Plus, Settings, Sparkles } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
+import { AddProvider, useAdd } from "@/components/AddSheet";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { spring } from "@/components/motion";
 import { OfflineBanner } from "@/components/pwa";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { keys, useApprovals, useInbox, useNotifications } from "@/lib/queries";
 
 export function Logo({ className }: { className?: string }) {
+  const { t } = useT();
   return (
-    <Link to="/" className={clsx("flex items-center gap-2.5", className)} aria-label="Tandem home">
+    <Link to="/" className={clsx("flex items-center gap-2.5", className)} aria-label={t("nav.homeLabel")}>
       <svg viewBox="0 0 64 64" className="h-8 w-8" aria-hidden>
         <rect width="64" height="64" rx="16" fill="#14363a" />
         <circle cx="25" cy="32" r="11" fill="none" stroke="#f3e9dc" strokeWidth="5" />
@@ -26,6 +32,14 @@ export function Logo({ className }: { className?: string }) {
       <span className="display text-[21px] font-semibold tracking-tight text-ink-900">Tandem</span>
     </Link>
   );
+}
+
+/** Things waiting for the user: documents to check and bookings to approve. */
+export function useWaitingCount() {
+  const inbox = useInbox();
+  const approvals = useApprovals("awaiting_approval");
+  const review = (inbox.data?.data ?? []).filter((d) => d.status === "awaiting_review").length;
+  return review + (approvals.data?.length ?? 0);
 }
 
 function NavItem({ to, icon, label, count, end }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean }) {
@@ -43,12 +57,12 @@ function NavItem({ to, icon, label, count, end }: { to: string; icon: ReactNode;
   );
 }
 
-function IconLink({ to, label, children, badge }: { to: string; label: string; children: ReactNode; badge?: boolean }) {
+function HeaderLink({ to, label, children, count }: { to: string; label: string; children: ReactNode; count?: number }) {
   return (
-    <Link to={to} aria-label={label} className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-600 transition active:scale-90 active:bg-sand-100 lg:hidden [&>svg]:h-[21px] [&>svg]:w-[21px]">
+    <NavLink to={to} aria-label={label} className={({ isActive }) => clsx("relative flex h-11 w-11 items-center justify-center rounded-full transition active:scale-90 active:bg-sand-100 lg:hidden [&>svg]:h-[21px] [&>svg]:w-[21px]", isActive ? "text-clay-600" : "text-ink-600")}>
       {children}
-      {badge && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-paper" />}
-    </Link>
+      {!!count && <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-clay-500 px-1 text-[10.5px] font-bold text-white ring-2 ring-paper">{count > 9 ? "9+" : count}</span>}
+    </NavLink>
   );
 }
 
@@ -56,6 +70,7 @@ function Notifications() {
   const { data } = useNotifications();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { t, tp } = useT();
   const unread = data?.meta?.unread ?? 0;
   const items = data?.data ?? [];
   const markAll = async () => {
@@ -64,22 +79,23 @@ function Notifications() {
   };
   return (
     <Popover.Root>
-      <Popover.Trigger className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-600 transition hover:bg-sand-100 hover:text-ink-800 active:scale-90" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}>
+      <Popover.Trigger className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-600 transition hover:bg-sand-100 hover:text-ink-800 active:scale-90"
+        aria-label={unread ? tp("notif.labelUnread", unread) : t("notif.title")}>
         <Bell className="h-5 w-5" />
         {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-paper" />}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content align="end" sideOffset={8} collisionPadding={12} className="z-50 w-[min(94vw,380px)] rounded-[22px] border border-sand-200 bg-white p-2 shadow-[var(--shadow-float)] data-[state=open]:animate-[fade-in_.18s_ease-out]">
           <div className="flex items-center justify-between px-2 py-1.5">
-            <p className="text-[13px] font-semibold">Notifications</p>
+            <p className="text-[13px] font-semibold">{t("notif.title")}</p>
             {unread > 0 && (
-              <button onClick={markAll} className="flex items-center gap-1 text-[12px] text-lagoon-600 hover:underline">
-                <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+              <button onClick={markAll} className="flex min-h-9 items-center gap-1 text-[12.5px] text-lagoon-600 hover:underline">
+                <CheckCheck className="h-3.5 w-3.5" /> {t("notif.markAll")}
               </button>
             )}
           </div>
           <div className="max-h-[60vh] overflow-y-auto">
-            {items.length === 0 && <p className="px-3 py-8 text-center text-[13px] text-ink-400">You're all caught up.</p>}
+            {items.length === 0 && <p className="px-3 py-8 text-center text-[13px] text-ink-400">{t("notif.empty")}</p>}
             {items.map((n) => (
               <Popover.Close asChild key={n.id}>
                 <button
@@ -109,12 +125,15 @@ function Notifications() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return <AddProvider><Shell>{children}</Shell></AddProvider>;
+}
+
+function Shell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const { openAdd } = useAdd();
+  const { t } = useT();
   const navigate = useNavigate();
-  const inbox = useInbox();
-  const approvals = useApprovals("awaiting_approval");
-  const reviewCount = (inbox.data?.data ?? []).filter((d) => d.status === "awaiting_review").length;
-  const approvalCount = approvals.data?.length ?? 0;
+  const waiting = useWaitingCount();
   const headerRef = useRef<HTMLElement>(null);
   // Expose the header height so sticky section headers can sit right below it.
   useEffect(() => {
@@ -127,8 +146,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const tabs = [
     { to: "/", icon: <Home />, label: t("nav.home"), end: true },
     { to: "/trips", icon: <Map />, label: t("nav.trips") },
-    { to: "/inbox", icon: <Inbox />, label: t("nav.inbox"), count: reviewCount },
-    { to: "/discover", icon: <Compass />, label: t("nav.discover") },
+    null, // the Add button
+    { to: "/explore", icon: <Compass />, label: t("nav.explore") },
     { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant") },
   ];
 
@@ -136,26 +155,31 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh lg:flex">
       <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sand-200/70 bg-sand-50/80 px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
         <Logo className="px-2" />
-        <nav className="mt-8 flex flex-col gap-1" aria-label="Main">
+        <button onClick={openAdd} className="mt-7 flex h-11 items-center justify-center gap-2 rounded-xl bg-lagoon-900 text-[14px] font-medium text-white shadow-sm transition hover:bg-ink-800 active:scale-[0.98]">
+          <Plus className="h-4 w-4" /> {t("nav.add")}
+        </button>
+        <nav className="mt-6 flex flex-col gap-1" aria-label={t("nav.main")}>
           <NavItem to="/" end icon={<Home />} label={t("nav.home")} />
           <NavItem to="/trips" icon={<Map />} label={t("nav.trips")} />
-          <NavItem to="/inbox" icon={<Inbox />} label={t("nav.inbox")} count={reviewCount} />
-          <NavItem to="/discover" icon={<Compass />} label={t("nav.discover")} />
-          <NavItem to="/websites" icon={<Globe />} label={t("nav.websites")} />
+          <NavItem to="/explore" icon={<Compass />} label={t("nav.explore")} />
           <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} />
-          <NavItem to="/approvals" icon={<ShieldCheck />} label={t("nav.approvals")} count={approvalCount} />
+          <NavItem to="/inbox" icon={<Inbox />} label={t("nav.inbox")} count={waiting} />
         </nav>
         <div className="mt-auto flex flex-col gap-1">
           <NavItem to="/settings" icon={<Settings />} label={t("nav.settings")} />
+          <div className="mt-2 flex items-center justify-between px-3">
+            <span className="text-[12.5px] text-ink-400">{t("lang.label")}</span>
+            <LanguageSwitch size="sm" />
+          </div>
           <div className="mt-3 flex items-center gap-3 rounded-xl px-3 py-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-lagoon-900 text-[13px] font-semibold text-white">
               {(user?.display_name || user?.email || "?").slice(0, 1).toUpperCase()}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-ink-800">{user?.display_name || "Traveller"}</span>
-              <span className="block truncate text-[11.5px] text-ink-400">{user?.is_demo ? "Demo workspace" : user?.email}</span>
+              <span className="block truncate text-[13px] font-medium text-ink-800">{user?.display_name || t("common.traveller")}</span>
+              <span className="block truncate text-[11.5px] text-ink-400">{user?.is_demo ? t("demo.workspace") : user?.email}</span>
             </span>
-            <button onClick={async () => { await logout(); navigate("/login"); }} className="rounded-lg p-1.5 text-ink-400 hover:bg-white hover:text-ink-700" aria-label="Sign out">
+            <button onClick={async () => { await logout(); navigate("/login"); }} className="rounded-lg p-1.5 text-ink-400 hover:bg-white hover:text-ink-700" aria-label={t("auth.signOut")}>
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -167,7 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {user?.is_demo && (
             <div className="flex items-center justify-center gap-2 bg-lagoon-900 px-4 py-1.5 text-center text-[12px] text-lagoon-50">
               <Sparkles className="h-3.5 w-3.5 shrink-0 text-apricot" />
-              <span className="sm:hidden">Demo · fictional trips, simulated bookings</span>
+              <span className="sm:hidden">{t("demo.bannerShort")}</span>
               <span className="hidden sm:inline">{t("demo.banner")}</span>
             </div>
           )}
@@ -175,19 +199,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex h-[52px] items-center justify-between px-3 lg:h-auto lg:justify-end lg:px-8 lg:pt-5">
             <Logo className="pl-1 lg:hidden" />
             <div className="flex items-center">
-              <IconLink to="/websites" label="Book on websites"><Globe /></IconLink>
-              <IconLink to="/approvals" label={`Approvals${approvalCount ? `, ${approvalCount} waiting` : ""}`} badge={approvalCount > 0}><ShieldCheck /></IconLink>
+              <HeaderLink to="/inbox" label={waiting ? t("nav.inboxWaiting", { n: waiting }) : t("nav.inbox")} count={waiting}><Inbox /></HeaderLink>
               <Notifications />
-              <IconLink to="/settings" label="Settings"><Settings /></IconLink>
+              <HeaderLink to="/settings" label={t("nav.settings")}><Settings /></HeaderLink>
             </div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-36 pt-5 sm:px-6 lg:px-10 lg:pb-14 lg:pt-2">{children}</main>
       </div>
 
-      <nav aria-label="Main mobile" className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden">
-        <div className="glass mx-auto grid max-w-md grid-cols-5 rounded-[28px] p-1.5 shadow-[var(--shadow-float)]">
-          {tabs.map((item) => (
+      <nav aria-label={t("nav.main")} className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden">
+        <div className="glass mx-auto grid max-w-md grid-cols-5 items-center rounded-[28px] p-1.5 shadow-[var(--shadow-float)]">
+          {tabs.map((item) => item === null ? (
+            <motion.button key="add" onClick={openAdd} whileTap={{ scale: 0.9 }} aria-label={t("nav.addLabel")}
+              className="mx-auto flex h-[54px] w-[54px] items-center justify-center rounded-full bg-clay-500 text-white shadow-[0_6px_16px_-4px_rgba(200,98,58,0.55)]">
+              <Plus className="h-6 w-6" strokeWidth={2.4} />
+            </motion.button>
+          ) : (
             <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-[54px] flex-col items-center justify-center gap-0.5 rounded-[22px] text-[10.5px] font-semibold">
               {({ isActive }) => (
                 <>
@@ -196,7 +224,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <span className="[&>svg]:h-[21px] [&>svg]:w-[21px]">{item.icon}</span>
                     {item.label}
                   </motion.span>
-                  {!!item.count && <span className="absolute right-[18%] top-1.5 z-10 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-white" />}
                 </>
               )}
             </NavLink>

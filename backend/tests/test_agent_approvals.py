@@ -22,7 +22,7 @@ from tests.conftest import upload
 def _demo_user() -> tuple[User, Trip]:
     from app.services.demo.seed import create_demo_workspace
 
-    user = create_demo_workspace()
+    user = create_demo_workspace(locale="en")
     db.session.commit()
     trip = db.session.execute(db.select(Trip).where(Trip.user_id == user.id)).scalar_one()
     return user, trip

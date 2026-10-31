@@ -19,6 +19,8 @@ from urllib.parse import quote
 
 from flask import current_app
 
+from app.i18n import tr
+
 CATEGORIES = ("train", "bus", "flight", "museum", "gallery", "attraction")
 
 
@@ -41,6 +43,8 @@ class Site:
 
     def to_dict(self) -> dict:
         d = asdict(self)
+        d["terms_note"] = tr(self.terms_note)  # shown in the reader's language
+        d["notes"] = [tr(n) for n in self.notes]
         d["policy"] = policy_for(self)
         d["agent_can"] = agent_capabilities(self)
         return d

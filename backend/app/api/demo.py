@@ -5,6 +5,7 @@ import io
 from flask import Blueprint, send_file
 
 from app.api._core import current_user, doc, login_required, ok
+from app.i18n import tr
 from app.extensions import db
 from app.schemas.serializers import document_dict
 from app.services.demo import documents as demo_docs
@@ -27,7 +28,7 @@ def _demo_user():
 @doc("Sample documents for the demo's live upload flow", tag="Demo")
 def samples():
     _demo_user()
-    return ok([{"key": k, "filename": v[0], "mime_type": v[1], "description": v[2]} for k, v in demo_docs.SAMPLES.items()])
+    return ok([{"key": k, "filename": v[0], "mime_type": v[1], "description": tr(v[2])} for k, v in demo_docs.SAMPLES.items()])
 
 
 @bp.get("/samples/<key>")

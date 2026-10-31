@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 
+from app.i18n import tr
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
@@ -99,13 +100,13 @@ def _register_error_handlers(app: Flask) -> None:
             return err
         code = {413: "payload_too_large", 429: "rate_limited", 404: "not_found", 405: "method_not_allowed"}.get(
             err.code or 500, "http_error")
-        return jsonify({"error": {"code": code, "message": err.description or err.name}}), err.code
+        return jsonify({"error": {"code": code, "message": tr(err.description or err.name)}}), err.code
 
     @app.errorhandler(Exception)
     def handle_unexpected(err: Exception):
         db.session.rollback()
         app.logger.exception("unhandled error on %s %s", request.method, request.path)
-        return jsonify({"error": {"code": "internal_error", "message": "Something went wrong on our side."}}), 500
+        return jsonify({"error": {"code": "internal_error", "message": tr("Something went wrong on our side.")}}), 500
 
 
 def _register_security_headers(app: Flask) -> None:

@@ -21,12 +21,12 @@ def normalise_email(email: str) -> str:
 
 
 def create_user(email: str, password: str, display_name: str = "", *, is_demo: bool = False,
-                demo_tenant_id=None, ai_mode: str | None = None) -> User:
+                demo_tenant_id=None, ai_mode: str | None = None, locale: str = "ro") -> User:
     email = normalise_email(email)
     if db.session.execute(db.select(User.id).where(User.email == email)).first():
         raise Conflict("An account with this email already exists", code="email_taken")
     user = User(email=email, password_hash=generate_password_hash(password), display_name=display_name.strip(),
-                is_demo=is_demo, demo_tenant_id=demo_tenant_id)
+                is_demo=is_demo, demo_tenant_id=demo_tenant_id, locale=locale if locale in ("ro", "en") else "ro")
     user.preferences = UserPreference()
     user.ai_settings = UserAISettings()
     if ai_mode:

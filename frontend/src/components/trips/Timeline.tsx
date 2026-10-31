@@ -5,6 +5,7 @@ import { Badge, StatusPill } from "@/components/ui";
 import { dayKey, fmtDayHeading, fmtTime, offsetLabel, tzCity } from "@/lib/format";
 import type { Conflict, ItineraryEvent } from "@/lib/types";
 import { Stagger, StaggerItem } from "@/components/motion";
+import { useT } from "@/lib/i18n";
 import { EventIcon } from "./EventIcon";
 
 type Props = {
@@ -54,6 +55,7 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
   const showTz = (tripTz && e.start_tz !== tripTz) || crossTz;
   const worst = flags.some((f) => f.severity === "critical") ? "critical" : flags.length ? "warning" : null;
   const editable = !e.reservation_id;
+  const { t } = useT();
 
   return (
     <StaggerItem as="li" className="relative">
@@ -83,12 +85,12 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
           )}
           {showTz && (
             <p className="mt-1 text-[12px] text-ink-400">
-              {tzCity(e.start_tz)} time ({offsetLabel(e.start_local)})
-              {crossTz && <> → arrives {fmtTime(e.end_local)} {tzCity(e.end_tz)} time ({offsetLabel(e.end_local)})</>}
+              {t("timeline.localTime", { city: tzCity(e.start_tz), offset: offsetLabel(e.start_local) })}
+              {crossTz && <> → {t("timeline.arrives", { time: fmtTime(e.end_local), city: tzCity(e.end_tz), offset: offsetLabel(e.end_local) })}</>}
             </p>
           )}
           {e.notes && <p className="mt-1.5 text-[13px] text-ink-500">{e.notes}</p>}
-          {e.details?.booking_reference && <p className="mt-1.5 text-[12px] text-ink-400">Ref <span className="font-mono text-ink-600">{e.details.booking_reference}</span></p>}
+          {e.details?.booking_reference && <p className="mt-1.5 text-[12px] text-ink-400">{t("timeline.ref")} <span className="font-mono text-ink-600">{e.details.booking_reference}</span></p>}
           {flags.map((f) => (
             <p key={f.key} className={clsx("mt-2 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px]",
               f.severity === "critical" ? "bg-rose-soft text-rose-ink" : "bg-amber-soft text-amber-ink")}>
@@ -98,29 +100,29 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
         </div>
         {(onEdit || onDelete || onStatus) && (
           <Menu.Root>
-            <Menu.Trigger className="-mr-1.5 -mt-1.5 h-10 w-10 shrink-0 rounded-full text-ink-400 hover:bg-sand-100 hover:text-ink-700 active:scale-90 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={`Actions for ${e.title}`}>
+            <Menu.Trigger className="-mr-1.5 -mt-1.5 h-10 w-10 shrink-0 rounded-full text-ink-400 hover:bg-sand-100 hover:text-ink-700 active:scale-90 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={t("timeline.actionsFor", { title: e.title })}>
               <MoreHorizontal className="mx-auto h-4 w-4" />
             </Menu.Trigger>
             <Menu.Portal>
-              <Menu.Content align="end" className="z-50 min-w-[190px] rounded-xl border border-sand-200 bg-white p-1 text-[13.5px] shadow-[var(--shadow-lift)]">
+              <Menu.Content align="end" className="z-50 min-w-[210px] rounded-xl border border-sand-200 bg-white p-1 text-[14px] shadow-[var(--shadow-lift)]">
                 {suggested && onStatus && (
-                  <Menu.Item onSelect={() => onStatus(e, "unbooked")} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-[highlighted]:bg-sand-50">
-                    <Check className="h-4 w-4 text-lagoon-600" /> Keep in plan (not booked)
+                  <Menu.Item onSelect={() => onStatus(e, "unbooked")} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50">
+                    <Check className="h-4 w-4 text-lagoon-600" /> {t("timeline.keep")}
                   </Menu.Item>
                 )}
                 {e.status !== "completed" && onStatus && !suggested && (
-                  <Menu.Item onSelect={() => onStatus(e, "completed")} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-[highlighted]:bg-sand-50">
-                    <Check className="h-4 w-4" /> Mark completed
+                  <Menu.Item onSelect={() => onStatus(e, "completed")} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50">
+                    <Check className="h-4 w-4" /> {t("timeline.complete")}
                   </Menu.Item>
                 )}
                 {onEdit && (
-                  <Menu.Item onSelect={() => onEdit(e)} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-[highlighted]:bg-sand-50">
-                    <Pencil className="h-4 w-4" /> {editable ? "Edit" : "Edit notes"}
+                  <Menu.Item onSelect={() => onEdit(e)} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50">
+                    <Pencil className="h-4 w-4" /> {editable ? t("common.edit") : t("timeline.editNotes")}
                   </Menu.Item>
                 )}
                 {editable && onDelete && (
-                  <Menu.Item onSelect={() => onDelete(e)} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-rose-ink outline-none data-[highlighted]:bg-rose-soft">
-                    {suggested ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />} {suggested ? "Dismiss suggestion" : "Delete"}
+                  <Menu.Item onSelect={() => onDelete(e)} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-rose-ink outline-none data-[highlighted]:bg-rose-soft">
+                    {suggested ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />} {suggested ? t("timeline.dismiss") : t("common.delete")}
                   </Menu.Item>
                 )}
               </Menu.Content>
@@ -133,12 +135,13 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
 }
 
 export function TimelineLegend() {
+  const { t } = useT();
   return (
     <div className="flex flex-wrap gap-2 text-[12px] text-ink-500">
-      <Badge tone="lagoon">Confirmed</Badge>
-      <Badge tone="amber">Pending</Badge>
-      <Badge tone="violet">Suggestion</Badge>
-      <Badge tone="outline">Not booked</Badge>
+      <Badge tone="lagoon">{t("status.confirmed")}</Badge>
+      <Badge tone="amber">{t("status.pending")}</Badge>
+      <Badge tone="violet">{t("status.suggested")}</Badge>
+      <Badge tone="outline">{t("status.unbooked")}</Badge>
     </div>
   );
 }

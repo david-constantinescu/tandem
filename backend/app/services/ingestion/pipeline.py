@@ -12,6 +12,7 @@ import uuid
 
 from flask import current_app
 
+from app.i18n import T, locale_of, tr
 from app.extensions import db
 from app.models import Document, ExtractedField, ExtractedRecord, ProcessingJob, User
 from app.models.user import AI_MODE_OFF
@@ -252,15 +253,16 @@ def persist_result(user: User, doc: Document, result: ExtractionResult, method: 
     doc.processed_at = utcnow()
     if needs_review:
         doc.status = "awaiting_review"
-        doc.status_detail = f"{len(needs_review)} item(s) to review"
-        notify(user.id, "reservation_detected", f"Found {len(needs_review)} travel item(s) in {doc.filename}",
-               "Review the extracted details before they are added to a trip.", link=f"/inbox/{doc.id}",
+        loc = locale_of(user)
+        doc.status_detail = tr("1 item to check", loc) if len(needs_review) == 1 else tr("{n} items to check", loc, n=len(needs_review))
+        notify(user.id, "reservation_detected", T("Found travel details in {name}", name=doc.filename),
+               T("Check the details before they are added to a trip."), link=f"/inbox/{doc.id}",
                dedupe_key=f"doc_review:{doc.id}")
     else:
         doc.status = "processed"
-        doc.status_detail = ("No travel details found" if not result.is_travel_related else
-                             "Already up to date" if created else "Travel related, but no bookings recognised")
-        notify(user.id, "document_processed", f"Processed {doc.filename}", doc.status_detail,
+        doc.status_detail = tr("No travel details found" if not result.is_travel_related else
+                               "Already up to date" if created else "Travel related, but no bookings recognised", locale_of(user))
+        notify(user.id, "document_processed", T("Processed {name}", name=doc.filename), doc.status_detail,
                link=f"/inbox/{doc.id}", dedupe_key=f"doc_done:{doc.id}")
     db.session.commit()
 
@@ -284,7 +286,7 @@ def _queue_attachments(user: User, parent: Document, attachments) -> None:
 def _fail(doc: Document, message: str) -> None:
     doc.status = "failed"
     doc.status_detail = message[:500]
-    notify(doc.user_id, "document_failed", f"Couldn't process {doc.filename}", message, link=f"/inbox/{doc.id}",
+    notify(doc.user_id, "document_failed", T("Couldn't process {name}", name=doc.filename), message, link=f"/inbox/{doc.id}",
            severity="warning", dedupe_key=f"doc_failed:{doc.id}")
     db.session.commit()
 

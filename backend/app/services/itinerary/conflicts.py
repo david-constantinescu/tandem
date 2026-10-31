@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from flask import current_app
 
 from app.extensions import db
+from app.i18n import T, When, render
 from app.models import ItineraryEvent, Reservation, ReservationChange, Trip, User
 from app.services import geo
 from app.services.notifications.service import notify
@@ -28,8 +29,8 @@ SURFACE_KMH = 110.0
 class ConflictItem:
     type: str
     severity: str  # critical | warning | info
-    title: str
-    detail: str
+    title: T | str  # rendered in the reader's language (see as_dicts / notify)
+    detail: T | str
     event_ids: list[str] = field(default_factory=list)
     reservation_ids: list[str] = field(default_factory=list)
     key: str = ""
@@ -40,8 +41,8 @@ class ConflictItem:
         return self
 
 
-def _fmt(dt: datetime, tz: str) -> str:
-    return to_local(dt, tz).strftime("%a %d %b %H:%M")
+def _fmt(dt: datetime, tz: str) -> When:
+    return When(to_local(dt, tz))
 
 
 def _end(e: ItineraryEvent) -> datetime:
@@ -85,9 +86,10 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
             suggestion = "suggested" in (a.status, b.status)
             out.append(ConflictItem(
                 "overlap", "warning" if suggestion else "critical",
-                f"{a.title} overlaps {b.title}",
-                f"They overlap by {minutes} min ({_fmt(b.start_at, b.start_tz)} – {_fmt(min(a.end_at, b.end_at), a.end_tz or a.start_tz)})."
-                + (" One of them is only a suggestion." if suggestion else ""),
+                T("{a} overlaps {b}", a=a.title, b=b.title),
+                T("They overlap by {minutes} min ({start} – {end}). One of them is only a suggestion." if suggestion
+                  else "They overlap by {minutes} min ({start} – {end}).", minutes=minutes,
+                  start=_fmt(b.start_at, b.start_tz), end=_fmt(min(a.end_at, b.end_at), a.end_tz or a.start_tz)),
                 [str(a.id), str(b.id)]))
 
     # 2/3. Sequence checks between consecutive located events
@@ -103,9 +105,9 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
                 and b.type not in ("hotel_checkout",) and gap_min < cfg["AIRPORT_EXIT_BUFFER_MINUTES"] \
                 and (city2 is None or _same_city(city1, city2)):
             out.append(ConflictItem(
-                "tight_after_arrival", "warning", f"Little time after {a.title}",
-                f"{b.title} starts {int(gap_min)} min after you arrive. Allow at least "
-                f"{cfg['AIRPORT_EXIT_BUFFER_MINUTES']} min to leave the station or airport.",
+                "tight_after_arrival", "warning", T("Little time after {a}", a=a.title),
+                T("{b} starts {gap} min after you arrive. Allow at least {buffer} min to leave the station or airport.",
+                  b=b.title, gap=int(gap_min), buffer=cfg["AIRPORT_EXIT_BUFFER_MINUTES"]),
                 [str(a.id), str(b.id)]))
             continue
         if None in (lat1, lon1, lat2, lon2):
@@ -117,21 +119,21 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
         transported = b.type in TRANSPORT_EVENTS and _same_city(city1, b.city)
         if not transported and gap_min < lower_bound:
             out.append(ConflictItem(
-                "impossible_sequence", "critical", f"Can't get from {a.title} to {b.title} in time",
-                f"The locations are {km:.0f} km apart but only {int(gap_min)} min separate them.",
+                "impossible_sequence", "critical", T("Can't get from {a} to {b} in time", a=a.title, b=b.title),
+                T("The places are {km} km apart but only {gap} min separate them.", km=round(km), gap=int(gap_min)),
                 [str(a.id), str(b.id)]))
             continue
         routed = geo.travel_time_minutes(lat1, lon1, lat2, lon2)
         if routed is not None and gap_min < routed + 10:
             out.append(ConflictItem(
-                "insufficient_transfer", "warning", f"Tight transfer to {b.title}",
-                f"Routed travel time is about {int(routed)} min; you have {int(gap_min)} min.",
+                "insufficient_transfer", "warning", T("Tight transfer to {b}", b=b.title),
+                T("Travel time is about {routed} min; you have {gap} min.", routed=int(routed), gap=int(gap_min)),
                 [str(a.id), str(b.id)]))
         elif routed is None and km >= 2 and gap_min < cfg["MIN_TRANSFER_BUFFER_MINUTES"] and not transported:
             out.append(ConflictItem(
-                "possible_tight_transfer", "info", f"Check travel time to {b.title}",
-                f"{b.title} is {km:.1f} km away and starts {int(gap_min)} min later. Travel time is unknown "
-                "(no routing provider configured).", [str(a.id), str(b.id)]))
+                "possible_tight_transfer", "info", T("Check travel time to {b}", b=b.title),
+                T("{b} is {km} km away and starts {gap} min later. Travel time is unknown (no routing provider configured).",
+                  b=b.title, km=round(km, 1), gap=int(gap_min)), [str(a.id), str(b.id)]))
 
     # 4. Activities after leaving a city / missing travel segments
     transports = [e for e in events if e.type in TRANSPORT_EVENTS and e.end_city and e.city
@@ -144,8 +146,9 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
                 continue
             if e.start_at >= t.start_at and (later_arrival_back is None or e.start_at < later_arrival_back):
                 out.append(ConflictItem(
-                    "after_departure", "critical", f"{e.title} is after you leave {t.city}",
-                    f"{t.title} departs {_fmt(t.start_at, t.start_tz)}, before {e.title} at {_fmt(e.start_at, e.start_tz)}.",
+                    "after_departure", "critical", T("{e} is after you leave {city}", e=e.title, city=t.city),
+                    T("{t} departs {when}, before {e} at {at}.", t=t.title, when=_fmt(t.start_at, t.start_tz),
+                      e=e.title, at=_fmt(e.start_at, e.start_tz)),
                     [str(t.id), str(e.id)]))
     located = [e for e in events if e.city and e.type not in TRANSPORT_EVENTS and e.type != "reminder"]
     for a, b in zip(located, located[1:]):
@@ -154,9 +157,9 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
         between = [t for t in transports if _end(a) <= t.start_at <= b.start_at]
         if not between:
             out.append(ConflictItem(
-                "missing_transport", "warning", f"No transport from {a.city} to {b.city}",
-                f"You're in {a.city} for {a.title} and in {b.city} for {b.title}, but no journey between them "
-                "is in the itinerary.", [str(a.id), str(b.id)]))
+                "missing_transport", "warning", T("No transport from {a} to {b}", a=a.city, b=b.city),
+                T("You're in {a_city} for {a} and in {b_city} for {b}, but no journey between them is in the itinerary.",
+                  a_city=a.city, a=a.title, b_city=b.city, b=b.title), [str(a.id), str(b.id)]))
 
     # 5. Hotel coverage, check-out after departure, missing check-in details
     hotels = [r for r in reservations if r.type == "hotel" and r.start_at and r.end_at]
@@ -174,8 +177,8 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
         if uncovered:
             out.append(ConflictItem(
                 "missing_accommodation", "info",
-                f"No accommodation for {len(uncovered)} night{'s' if len(uncovered) > 1 else ''}",
-                "Nights without a stay: " + ", ".join(n.strftime("%a %d %b") for n in uncovered[:7]) + ".",
+                T("No accommodation for 1 night") if len(uncovered) == 1 else T("No accommodation for {n} nights", n=len(uncovered)),
+                T("Nights without a stay: {nights}.", nights=[When(n, with_time=False) for n in uncovered[:7]]),
                 [], []))
     for h in hotels:
         departures = [t for t in transports if _same_city(t.city, h.city)
@@ -183,32 +186,34 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
         for t in departures:
             if h.end_at > t.start_at:
                 out.append(ConflictItem(
-                    "checkout_after_departure", "critical", f"Check-out at {h.title} is after {t.title} departs",
-                    f"Check-out {_fmt(h.end_at, h.end_tz or h.start_tz)}, departure {_fmt(t.start_at, t.start_tz)}.",
+                    "checkout_after_departure", "critical", T("Check-out at {h} is after {t} departs", h=h.title, t=t.title),
+                    T("Check-out {out}, departure {dep}.", out=_fmt(h.end_at, h.end_tz or h.start_tz), dep=_fmt(t.start_at, t.start_tz)),
                     [str(t.id)], [str(h.id)]))
         if not (h.details or {}).get("check_in_from") or not h.address:
-            missing = [x for x, ok in (("check-in time", (h.details or {}).get("check_in_from")), ("address", h.address)) if not ok]
-            out.append(ConflictItem("missing_checkin_info", "info", f"Missing {' and '.join(missing)} for {h.title}",
-                                    "Add it from the confirmation so arrival planning is accurate.", [], [str(h.id)]))
+            no_time, no_address = not (h.details or {}).get("check_in_from"), not h.address
+            title = (T("Missing check-in time and address for {h}", h=h.title) if no_time and no_address
+                     else T("Missing check-in time for {h}", h=h.title) if no_time else T("Missing address for {h}", h=h.title))
+            out.append(ConflictItem("missing_checkin_info", "info", title,
+                                    T("Add it from the confirmation so arrival planning is accurate."), [], [str(h.id)]))
 
     # 6. Reservation status and deadlines
     for r in reservations:
         if r.status in ("pending", "unknown"):
             out.append(ConflictItem(
-                "unconfirmed", "info", f"{r.title} is not confirmed",
-                "The source document does not show this booking as confirmed." if r.status == "unknown"
-                else "This booking is pending with the provider.", [], [str(r.id)]))
+                "unconfirmed", "info", T("{r} is not confirmed", r=r.title),
+                T("The source document does not show this booking as confirmed.") if r.status == "unknown"
+                else T("This booking is pending with the provider."), [], [str(r.id)]))
         if r.cancellation_deadline and now < r.cancellation_deadline <= now + timedelta(hours=72):
             hours = int((r.cancellation_deadline - now).total_seconds() // 3600)
             out.append(ConflictItem(
-                "cancellation_deadline", "warning", f"Free cancellation for {r.title} ends soon",
-                f"Deadline in about {hours} h ({_fmt(r.cancellation_deadline, r.start_tz or 'UTC')}).",
+                "cancellation_deadline", "warning", T("Free cancellation for {r} ends soon", r=r.title),
+                T("Deadline in about {hours} h ({when}).", hours=hours, when=_fmt(r.cancellation_deadline, r.start_tz or "UTC")),
                 [], [str(r.id)]))
     pending_changes = db.session.execute(db.select(ReservationChange).where(
         ReservationChange.status == "pending",
         ReservationChange.reservation_id.in_([r.id for r in reservations] or [None]))).scalars().all()
     for c in pending_changes:
-        out.append(ConflictItem("pending_change", "warning", "Reservation update waiting for review", c.summary,
+        out.append(ConflictItem("pending_change", "warning", T("Booking update waiting for review"), c.summary,
                                 [], [str(c.reservation_id)]))
 
     # 7. Verified opening hours (only when a provider supplied verified hours)
@@ -219,8 +224,8 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
         local = to_local(e.start_at, e.start_tz)
         if hours.get("open") and local.strftime("%H:%M") < hours["open"] or \
                 hours.get("close") and local.strftime("%H:%M") >= hours["close"]:
-            out.append(ConflictItem("outside_opening_hours", "warning", f"{e.title} is outside opening hours",
-                                    f"Verified hours: {hours.get('open')}–{hours.get('close')}.", [str(e.id)]))
+            out.append(ConflictItem("outside_opening_hours", "warning", T("{e} is outside opening hours", e=e.title),
+                                    T("Verified hours: {open}–{close}.", open=hours.get("open"), close=hours.get("close")), [str(e.id)]))
 
     severity_rank = {"critical": 0, "warning": 1, "info": 2}
     items = [c.finalise() for c in out]
@@ -228,8 +233,14 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
     return sorted(unique.values(), key=lambda c: (severity_rank[c.severity], c.type))
 
 
-def as_dicts(items: list[ConflictItem]) -> list[dict]:
-    return [asdict(c) for c in items]
+def as_dicts(items: list[ConflictItem], locale: str | None = None) -> list[dict]:
+    """Plain dicts with title and detail rendered in the reader's language."""
+    out = []
+    for c in items:
+        d = asdict(c)
+        d["title"], d["detail"] = render(c.title, locale), render(c.detail, locale)
+        out.append(d)
+    return out
 
 
 def check_and_notify(trip: Trip, user: User) -> list[ConflictItem]:

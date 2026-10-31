@@ -19,6 +19,7 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from app.i18n import T, locale_of, tr
 from app.extensions import db
 from app.models import AgentAction, Approval, ItineraryEvent, ProviderBooking, ReservationChange, Trip, User
 from app.services.audit import audit
@@ -56,6 +57,7 @@ def propose_booking(user: User, *, provider: str, item_id: str, day: str, time: 
                     replaces_event_id: str | None = None) -> AgentAction:
     if participants < 1 or participants > 20:
         raise ValidationFailed("Participants must be between 1 and 20", code="invalid_participants")
+    loc = locale_of(user)  # titles and consequences are stored with the action and shown to its owner
     adapter = get_adapter(user, provider)
     caps = adapter.capabilities()
     details = None
@@ -67,11 +69,12 @@ def propose_booking(user: User, *, provider: str, item_id: str, day: str, time: 
         url = details.booking_url if details else None
         return _new_action(
             user, trip_id=trip.id if trip else None, conversation_id=conversation_id, action_type="link_out",
-            provider=provider, status="requires_manual", title=f"Book {details.title if details else item_id} on {adapter.name}",
-            description=f"{adapter.name} does not allow booking through Tandem ({caps['state'].replace('_', ' ')}). "
-                        "Open the provider's page to book, then forward the confirmation to your Tandem inbox.",
+            provider=provider, status="requires_manual",
+            title=tr("Book {what} on {site}", loc, what=details.title if details else item_id, site=adapter.name),
+            description=tr("{site} doesn't allow booking through Tandem. Open the provider's page to book, then forward "
+                           "the confirmation to your Tandem inbox.", loc, site=adapter.name),
             payload={"provider": provider, "provider_item_id": item_id, "booking_url": url, "date": day, "time": time},
-            external=False, created_by=created_by, consequences=["Nothing is booked by Tandem."])
+            external=False, created_by=created_by, consequences=[tr("Nothing is booked by Tandem.", loc)])
     quote = adapter.check_availability(item_id, day, time, participants)
     if not quote.available:
         raise Conflict(f"{quote.title} is not available on {day} at {quote.time} for {participants}",
@@ -88,21 +91,21 @@ def propose_booking(user: User, *, provider: str, item_id: str, day: str, time: 
         "replaces_event_id": replaces_event_id, "simulated": adapter.simulated,
     }
     consequences = [
-        f"Books {participants} place{'s' if participants > 1 else ''} for {quote.title} on {quote.date} at {quote.time}"
-        f" ({quote.timezone}).",
-        f"Total {quote.total_price:.2f} {quote.currency}" + (" — simulated, no money is charged." if adapter.simulated
-                                                            else " charged by the provider."),
-        "Shares your name with the provider as lead traveller.",
+        tr("Books {n} places for {title} on {date} at {time} ({tz}).", loc, n=participants, title=quote.title,
+           date=quote.date, time=quote.time, tz=quote.timezone),
+        tr("Total {total} {currency} — simulated, no money is charged." if adapter.simulated
+           else "Total {total} {currency}, charged by the provider.", loc, total=f"{quote.total_price:.2f}", currency=quote.currency),
+        tr("Shares your name with the provider as lead traveller.", loc),
     ]
     action = _new_action(
         user, trip_id=trip.id if trip else None, conversation_id=conversation_id, action_type="book_activity",
-        provider=provider, status="awaiting_approval", title=f"Book {quote.title}",
+        provider=provider, status="awaiting_approval", title=tr("Book {title}", loc, title=quote.title),
         description=f"{quote.date} at {quote.time} · {participants} × {quote.unit_price:.2f} {quote.currency}",
         payload=payload, cost=Decimal(str(quote.total_price)), currency=quote.currency, consequences=consequences,
         cancellation_policy=quote.cancellation_policy, external=True, created_by=created_by,
         expires_at=utcnow() + APPROVAL_TTL)
-    notify(user.id, "approval_required", f"Approval needed: {action.title}", action.description,
-           link="/approvals", dedupe_key=f"approval:{action.id}")
+    notify(user.id, "approval_required", T("Approval needed: {title}", title=action.title), action.description,
+           link="/inbox", dedupe_key=f"approval:{action.id}")
     audit(user.id, "action.proposed", actor=created_by, resource_type="agent_action", resource_id=action.id,
           action_type="book_activity", provider=provider)
     return action
@@ -114,14 +117,15 @@ def propose_itinerary_change(user: User, *, trip: Trip, kind: str, event: Itiner
         raise ValidationFailed("Unknown itinerary change", code="invalid_change")
     payload = {"trip_id": str(trip.id), "kind": kind, "event_id": str(event.id) if event else None,
                "changes": changes, "before": _event_snapshot(event) if event else None}
-    title = {"update": f"Change {event.title if event else 'event'}", "delete": f"Remove {event.title if event else 'event'}",
-             "create": f"Add {changes.get('title', 'event')}"}[kind]
+    loc = locale_of(user)
+    subject = event.title if event else changes.get("title") or tr("event", loc)
+    title = tr({"update": "Change {subject}", "delete": "Remove {subject}", "create": "Add {subject}"}[kind], loc, subject=subject)
     action = _new_action(
         user, trip_id=trip.id, conversation_id=conversation_id, action_type=f"itinerary_{kind}", provider=None,
         status="awaiting_approval", title=title, description=reason[:1000], payload=payload, external=False,
-        created_by=created_by, consequences=["Changes your Tandem itinerary only. No provider is contacted."],
+        created_by=created_by, consequences=[tr("Changes your Tandem itinerary only. No provider is contacted.", loc)],
         expires_at=utcnow() + timedelta(days=2))
-    notify(user.id, "approval_required", f"Review proposed change: {title}", reason[:300], link="/approvals",
+    notify(user.id, "approval_required", T("Review proposed change: {title}", title=title), reason[:300], link="/inbox",
            dedupe_key=f"approval:{action.id}")
     return action
 
@@ -258,9 +262,10 @@ def _execute_booking(user: User, action: AgentAction) -> None:
         action.cost = Decimal(str(quote.total_price))
         action.status = "awaiting_approval"
         action.expires_at = utcnow() + APPROVAL_TTL
-        action.result = {"requote": f"Price changed from {p['total_price']} to {quote.total_price} {quote.currency}"}
-        notify(user.id, "approval_required", f"Price changed: {action.title}",
-               "The provider's price changed, so the booking needs your approval again.", link="/approvals",
+        action.result = {"requote": tr("Price changed from {old} to {new} {currency}", locale_of(user), old=p["total_price"],
+                                       new=quote.total_price, currency=quote.currency)}
+        notify(user.id, "approval_required", T("Price changed: {title}", title=action.title),
+               T("The provider's price changed, so the booking needs your approval again."), link="/inbox",
                severity="warning", dedupe_key=f"requote:{action.id}:{action.payload_hash}")
         return
     # 2. Submit with an idempotency key so retries can't double-book.
@@ -335,11 +340,11 @@ def _execute_booking(user: User, action: AgentAction) -> None:
 
 def _notify_result(user: User, action: AgentAction, ok: bool) -> None:
     if ok:
-        sim = " (simulated)" if action.result.get("simulated") else ""
-        notify(user.id, "booking_result", f"Booked{sim}: {action.payload.get('title')}",
-               f"Confirmation {action.result.get('provider_booking_id')}, verified with the provider.",
-               link=f"/trips/{action.trip_id}" if action.trip_id else "/approvals", severity="success",
+        notify(user.id, "booking_result", T("Booked (simulated): {title}" if action.result.get("simulated") else "Booked: {title}",
+                                             title=action.payload.get("title")),
+               T("Confirmation {ref}, verified with the provider.", ref=action.result.get("provider_booking_id")),
+               link=f"/trips/{action.trip_id}" if action.trip_id else "/inbox?tab=approvals", severity="success",
                dedupe_key=f"booking_ok:{action.id}")
     else:
-        notify(user.id, "booking_result", f"Not booked: {action.payload.get('title', action.title)}",
-               action.error or "", link="/approvals", severity="warning", dedupe_key=f"booking_fail:{action.id}")
+        notify(user.id, "booking_result", T("Not booked: {title}", title=action.payload.get("title", action.title)),
+               action.error or "", link="/inbox?tab=approvals", severity="warning", dedupe_key=f"booking_fail:{action.id}")
