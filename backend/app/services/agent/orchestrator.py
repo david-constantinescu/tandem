@@ -98,6 +98,8 @@ How you work:
   flight that fits, stop for their OK before typing names, and stop again on the payment page before paying. If they
   say yes, call start_website_task with site demo_air and the same route, date and travellers. To the user it is
   "Tandem's practice airline"; never show internal site keys such as demo_air.
+- After start_website_task, say which option the agent picked (time and total) and that the approval card is right
+  below; don't ask the user to choose from a list, the agent already chose one that fits the plan.
 - The browser agent always waits for the user's approval twice: before entering personal details, and before paying.
   Point them to the approval card in the chat; never say something is bought until a completed status says so.
 - Bookings: create_booking_proposal only prepares a proposal. Nothing is booked until the user approves it in
@@ -199,8 +201,12 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
                                     tool_calls=resp.tool_calls, provider_state=resp.provider_state))
         for call in resp.tool_calls:
             calls += 1
+            same = sum(1 for t in tool_log if t["name"] == call.name)
             if calls > MAX_TOOL_CALLS:
                 status, result = "error", {"error": "Tool-call budget reached; answer with what you have."}
+            elif same >= 3:
+                # modelele mici uneori cauta la nesfarsit; dupa 3 incercari raspunde cu ce are
+                status, result = "error", {"error": f"You already called {call.name} {same} times. Answer the user now with what you have."}
             else:
                 status, result = run_tool(ctx, call.name, call.arguments)
             permission = TOOLS[call.name].permission if call.name in TOOLS else "unknown"

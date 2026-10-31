@@ -102,6 +102,10 @@ class GeminiProvider(AIProvider):
         else:
             names = fallbacks.split(",")
         chain += [m.strip() for m in names if m.strip() and m.strip() != model]
+        # modelul care a mers ultima data trece primul (asa nu pierdem timp cu cel mai nou daca azi e aglomerat)
+        good = self._last_good(request.role)
+        if good and good in chain and good != chain[0] and not request.has_files:
+            chain = [good] + [m for m in chain if m != good]
         last: Exception | None = None
         resting = self._resting(chain)
         for i, name in enumerate(chain):
@@ -117,9 +121,11 @@ class GeminiProvider(AIProvider):
                 req = replace(request, messages=flatten_tool_turns(request.messages))
             if request.deadline is not None and i + 1 < len(chain):
                 # un model lent azi nu trebuie sa manance tot timpul: 15s in chat, 20s la documente, apoi urmatorul
-                req = replace(req, deadline=min(request.deadline, time.monotonic() + (15 if request.task == "agent" else 20)))
+                req = replace(req, deadline=min(request.deadline, time.monotonic() + (10 if request.task == "agent" else 20)))
             try:
-                return self._generate_one(req, name)
+                out = self._generate_one(req, name)
+                self._remember_good(request.role, name)
+                return out
             except (QuotaExceeded, ProviderUnavailable, ProviderTimeout, ProviderError) as exc:
                 last = exc
                 # fara cota: mai incercam peste un minut. ocupat sau prea lent (503/504): il lasam 10 minute,
@@ -138,6 +144,24 @@ class GeminiProvider(AIProvider):
             return {m.strip() for m in chain if cache_get("gemini_rest", m.strip())}
         except Exception:  # noqa: BLE001 - the cache is an optimisation
             return set()
+
+    @staticmethod
+    def _last_good(role: str) -> str | None:
+        from app.services.cache import cache_get
+
+        try:
+            return cache_get("gemini_good", role or "reasoning")
+        except Exception:  # noqa: BLE001
+            return None
+
+    @staticmethod
+    def _remember_good(role: str, model: str) -> None:
+        from app.services.cache import cache_set
+
+        try:
+            cache_set("gemini_good", role or "reasoning", model, ttl_hours=0.25)
+        except Exception:  # noqa: BLE001
+            pass
 
     @staticmethod
     def _rest(model: str, minutes: float = 1) -> None:

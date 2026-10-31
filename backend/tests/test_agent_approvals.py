@@ -152,7 +152,9 @@ def test_agent_tool_budget_is_bounded(app, scripted):
     db.session.add(conv)
     db.session.commit()
     msg = orchestrator.respond(user, conv, "loop forever")
-    assert len([t for t in msg.tool_calls if t["status"] == "ok"]) == orchestrator.MAX_TOOL_CALLS
+    # the same tool runs at most 3 times; after that it's told to answer, and the overall budget still applies
+    assert len([t for t in msg.tool_calls if t["status"] == "ok"]) == 3
+    assert any("already called list_trips" in (t["summary"] or "") for t in msg.tool_calls)
     assert p.seen[-1].tools is None  # tools withdrawn once the budget is spent
 
 

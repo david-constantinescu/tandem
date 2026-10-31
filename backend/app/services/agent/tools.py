@@ -288,7 +288,8 @@ def create_itinerary_event(ctx: ToolContext, args: CreateEventArgs):
 
 
 class AskArgs(BaseModel):
-    question: str = Field(description="One short question, in the user's language")
+    question: str = Field(description="One short question, in the user's language, that states the facts it is about "
+                                       "(e.g. which two events clash and at what times), so it makes sense on its own")
     options: list[str] = Field(min_length=2, max_length=4, description="2 to 4 short answers the user can tap; "
                                "they are sent back as the user's reply, so write them as the user would say them")
 
@@ -579,8 +580,8 @@ class JourneyArgs(BaseModel):
     date: str | None = Field(default=None, description="YYYY-MM-DD")
     mode: Literal["train", "bus", "flight"] | None = None
     depart_time: str | None = Field(default=None, description="HH:MM local, to add the journey to the plan")
-    add_to_plan: bool = Field(default=False, description="True when the user asked to plan or book this journey: it is "
-                              "added to the itinerary as not booked, with the links in its notes")
+    add_to_plan: bool = Field(default=False, description="Only when the user explicitly asked to add or plan this journey "
+                              "(\"add the train to my plan\"). A question like \"how do I get there?\" is NOT a request to add.")
     trip_id: str | None = None
 
 

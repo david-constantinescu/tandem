@@ -38,7 +38,7 @@ DEFAULT_ORDER = {
     TASK_CLASSIFICATION: ["groq", "gemini", "zai"],
     TASK_SUMMARY: ["groq", "gemini", "zai"],
     TASK_EXPLANATION: ["groq", "gemini", "zai"],
-    TASK_AGENT: ["gemini", "zai", "groq"],
+    TASK_AGENT: ["gemini", "groq", "zai"],  # groq e rapid si sigur; z.ai e des aglomerat
 }
 GROQ_FORBIDDEN_TASKS = {TASK_DOCUMENT_EXTRACTION, TASK_DOCUMENT_TEXT_EXTRACTION}
 FILE_DERIVED_TASKS = {TASK_DOCUMENT_TEXT_EXTRACTION}
