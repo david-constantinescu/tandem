@@ -85,6 +85,28 @@ def _resolve_day(text: str, user, trip_start: date | None, trip_end: date | None
     return None
 
 
+_DAY_WORDS = (r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|tonight|luni|marti|miercuri"
+              r"|joi|vineri|sambata|duminica|maine|azi|astazi|diseara")
+_MONTH_WORDS = "|".join(sorted({m for pair in MONTHS for m in pair}))
+
+
+def _event_title(text: str) -> str:
+    """"Add dinner at Roscioli on Saturday at 20:00" → "Dinner at Roscioli"."""
+    t = _plain(text)
+    keep = [True] * len(t)  # _plain keeps length for Romanian/Latin text, so spans map back onto the original
+    for pattern in (r"^\s*(add|put|schedule|plan|adauga|pune|programeaza|planifica)\s+(an?\s+|un\s+|o\s+)?",
+                    rf"\s*\b(on|pe|this|next|in|for)?\s*\b({_DAY_WORDS})\b",
+                    rf"\s*\b(on|pe)?\s*\b\d{{1,2}}\s+({_MONTH_WORDS})[a-z]*\b",
+                    r"\s*\b(at|la|ora|@)\s*\d{1,2}([:.]\d{2})?\s*(am|pm)?\b", r"\s*\b\d{1,2}[:.]\d{2}\b",
+                    r"\s*\b(to|in|la)\s+(my\s+|the\s+|our\s+)?(plan|planul|itinerar\w*|itinerary|program\w*)\b"):
+        for m in re.finditer(pattern, t):
+            for i in range(m.start(), m.end()):
+                keep[i] = False
+    src = text if len(text) == len(t) else t
+    title = re.sub(r"\s+", " ", "".join(c for c, k in zip(src, keep) if k)).strip(" ,.!?;:-")
+    return title[:1].upper() + title[1:120]
+
+
 def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) -> str:
     lower = _plain(text)
     loc = locale_of(user)
@@ -125,6 +147,33 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
         lines = [f"- **{c['title']}** ({tr(SEVERITY.get(c['severity'], c['severity']), loc)}): {c['detail']}" for c in items[:8]]
         return header + tr("I found {n} things to look at:", loc, n=len(items)) + "\n" + "\n".join(lines)
 
+    add = re.match(r"\s*(add|put|schedule|plan|adauga|pune|programeaza|planifica)\b", lower)
+    at = re.search(r"\b(?:at|la|ora|@)\s*(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?\b|\b(\d{1,2})[:.](\d{2})\b", lower)
+    if add and at:
+        day = _resolve_day(text, user, t_start, t_end)
+        if not day:
+            return header + tr("Which day? e.g. *on Sunday* or *on 15 November*.", loc)
+        hour, minute = int(at.group(1) or at.group(4)), int(at.group(2) or at.group(5) or 0)
+        if at.group(3) == "pm" and hour < 12:
+            hour += 12
+        title = _event_title(text)
+        if not title or hour > 23 or minute > 59:
+            return header + tr("Tell me what and when, e.g. *add dinner at Roscioli on Saturday at 20:00*.", loc)
+        kind = "restaurant" if re.search(r"dinner|lunch|breakfast|brunch|cina|pranz|mic dejun|restaurant|trattoria|osteria"
+                                         r"|pizz|cafe|gelat|aperitiv|drinks|bar\b", lower) else "activity"
+        start = datetime(day.year, day.month, day.day, hour, minute)
+        end = start + timedelta(minutes=90 if kind == "restaurant" else 60)  # a sensible length, so clashes show
+        made = call("create_itinerary_event", trip_id=tid, title=title, type=kind, requested_by_user=True,
+                    start_local=start.strftime("%Y-%m-%dT%H:%M"), end_local=end.strftime("%Y-%m-%dT%H:%M"))
+        if not made:
+            return header + tr("I couldn't add that to the plan.", loc)
+        out = header + tr("Added **{title}** to your plan: {when}.", loc, title=title,
+                          when=_fmt_time(made["created"]["start_local"], loc))
+        clashes = [c for c in (call("detect_conflicts", trip_id=tid) or []) if title.lower() in c["title"].lower()]
+        if clashes:
+            out += "\n\n" + tr("Heads up:", loc) + "\n" + "\n".join(f"- **{c['title']}**: {c['detail']}" for c in clashes[:3])
+        return out
+
     booking = re.search(r"\b(book|buy|get|rezerva|cumpara|ia-mi|ia|ajung\w*|merg\w*|go|travel|calatoresc)\b.*"
                         r"\b(train|tren|rail|bus|autobuz|coach|autocar|flight|zbor|plane|avion|museum|muzeu|gallery"
                         r"|galerie)\w*", lower)
@@ -142,7 +191,8 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
                       date=day.isoformat() if day else None) or {"links": []}
         lines = [f"- [{link['name']}]({link['url']})" for link in result["links"][:6]]
         news = call("check_local_news", trip_id=tid, date=day.isoformat() if day else None) or {"items": []}
-        strikes = [i for i in news.get("items", []) if i["kind"] == "strike"][:2]
+        # Only strikes that name the travel day; older strike reports are about other days.
+        strikes = [i for i in news.get("items", []) if i["kind"] == "strike" and (i["mentions_dates"] or not day)][:2]
         warn = ""
         if strikes:
             warn = "\n\n" + tr("Heads up — recent news about strikes:", loc) + "\n" + "\n".join(

@@ -375,6 +375,11 @@ RO: dict[str, str] = {
     "None of these mention your trip dates, so they look like they're about other days.":
         "Niciuna nu menționează datele călătoriei, deci par să fie despre alte zile.",
     "tickets": "bilete",
+    "Tell me what and when, e.g. *add dinner at Roscioli on Saturday at 20:00*.":
+        "Spune-mi ce și când, de ex. *adaugă cină la Roscioli sâmbătă la 20:00*.",
+    "I couldn't add that to the plan.": "Nu am putut adăuga asta în plan.",
+    "Added **{title}** to your plan: {when}.": "Am adăugat **{title}** în plan: {when}.",
+    "Heads up:": "Atenție:",
     "These are news reports, not confirmed timetables: check the operator's site on the day.":
         "Sunt știri, nu orare confirmate: verifică site-ul operatorului în ziua respectivă.",
     "Weather in {place} (Open-Meteo):": "Vremea în {place} (Open-Meteo):",

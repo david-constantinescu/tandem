@@ -159,3 +159,21 @@ def test_offline_news_answer_says_whether_trip_dates_are_hit(api, live):
     reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages",
                      json={"content": "Is there a strike?"}).get_json()["data"]["reply"]["content"]
     assert "mention your trip dates" in reply
+
+
+@pytest.mark.parametrize("question, locale, title", [
+    ("Add dinner at Roscioli on Saturday at 8pm", "en", "Dinner at Roscioli"),
+    ("Adaugă cină la Roscioli sâmbătă la 19:15", "ro", "Cină la Roscioli"),
+])
+def test_offline_assistant_adds_what_you_ask_for(api, live, question, locale, title):
+    api.demo()
+    t = _trip(api)
+    conv = api.post("/api/v1/assistant/conversations", json={"trip_id": t["id"]}).get_json()["data"]
+    reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages", json={"content": question},
+                     headers={"X-Tandem-Locale": locale}).get_json()["data"]["reply"]["content"]
+    assert title in reply
+    events = api.get(f"/api/v1/trips/{t['id']}/itinerary").get_json()["data"]
+    added = next(e for e in events if e["title"] == title)
+    assert added["status"] == "unbooked"  # asked for, so in the plan, not a suggestion
+    if locale == "ro":  # 19:15 lands on the demo's 19:00 dinner
+        assert "se suprapune cu Cină la Roscioli" in reply
