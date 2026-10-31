@@ -47,7 +47,7 @@ export default function HomePage() {
         <p className="mt-2 text-[15px] text-ink-500">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p>
       </header>
 
-      <div className="-mx-4 mb-7 flex snap-x scroll-px-4 gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
+      <div className="-mx-4 mb-7 flex snap-x gap-2.5 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
         {QUICK.map((q, i) => (
           <motion.div key={q.to} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.05 * i }} className="shrink-0 snap-start">
             <Link to={q.to} className="group flex min-w-[150px] items-center gap-3 rounded-2xl border border-sand-200/80 bg-white px-3.5 py-3 shadow-[var(--shadow-card)] transition active:scale-[0.97] sm:min-w-0">

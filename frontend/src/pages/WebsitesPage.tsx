@@ -59,7 +59,7 @@ export default function WebsitesPage() {
         </details>
       </InfoNote>
 
-      <div className="-mx-4 mt-6 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label="Website categories">
+      <div className="-mx-4 mt-6 flex gap-1.5 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label="Website categories">
         {CATS.map((c) => (
           <button key={c.key} role="tab" aria-selected={cat === c.key} onClick={() => setCat(c.key)}
             className={clsx("relative inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-colors active:scale-95 pointer-coarse:h-10",
@@ -74,7 +74,7 @@ export default function WebsitesPage() {
         <section className="mt-6">
           <h2 className="display mb-1 text-[21px]">The agent can do these end to end</h2>
           <p className="mb-3 text-[13.5px] text-ink-500">Simulated booking sites — real flow, fake money.</p>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4">
             {simulated.map((s) => <div key={s.key} className="flex w-[80%] shrink-0 snap-start sm:w-auto"><SiteCard s={s} onRun={() => setRunSite(s)} featured /></div>)}
           </div>
         </section>

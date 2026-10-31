@@ -91,7 +91,7 @@ export default function TripDetailPage() {
               {t.created_via === "demo" && <Badge tone="violet">Demo trip</Badge>}
             </div>
           </div>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+          <div className="-mx-4 flex gap-2 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
             <Button variant="secondary" onClick={askAssistant} className="shrink-0" icon={<MessageCircle className="h-4 w-4" />}>Ask about this trip</Button>
             <LinkButton href={`/api/v1/calendar/trips/${t.id}.ics`} className="shrink-0" icon={<CalendarPlus className="h-4 w-4" />}>Add to Calendar</LinkButton>
             <LinkButton to={`/discover?trip=${t.id}`} className="shrink-0" icon={<Compass className="h-4 w-4" />}>Find activities</LinkButton>
@@ -108,7 +108,7 @@ export default function TripDetailPage() {
       </header>
 
       <Tabs.Root value={tab} onValueChange={setTab}>
-        <Tabs.List className="-mx-4 mb-6 flex snap-x gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" aria-label="Trip sections">
+        <Tabs.List className="-mx-4 mb-6 flex snap-x gap-1 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" aria-label="Trip sections">
           <Tab value="itinerary" current={tab}>Itinerary</Tab>
           <Tab value="reservations" current={tab}>Bookings <span className="opacity-50">{reservations.data?.length ?? ""}</span></Tab>
           <Tab value="alerts" current={tab}>Alerts {serious.length > 0 && <span className="rounded-full bg-clay-500 px-1.5 text-[11px] leading-[18px] text-white">{serious.length}</span>}</Tab>

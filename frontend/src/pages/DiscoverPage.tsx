@@ -80,7 +80,7 @@ export default function DiscoverPage() {
             <div><label className="label" htmlFor="dbefore">Done by</label><input id="dbefore" type="time" className="field" value={before} onChange={(e) => setBefore(e.target.value)} /></div>
           </div>
         </div>
-        <div className="-mx-4 mt-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Categories">
+        <div className="-mx-4 mt-4 flex gap-1.5 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Categories">
           {CATEGORIES.map((c) => (
             <button key={c} type="button" aria-pressed={cats.includes(c)} onClick={() => setCats(cats.includes(c) ? cats.filter((x) => x !== c) : [...cats, c])}
               className={clsx("h-9 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium capitalize transition active:scale-95 pointer-coarse:h-10", cats.includes(c) ? "bg-lagoon-900 text-white" : "bg-sand-50 text-ink-600 ring-1 ring-sand-200 hover:bg-sand-100")}>{c}</button>

@@ -39,7 +39,7 @@ export default function InboxItemPage() {
             <StatusPill status={d.status} /> {d.source} · {bytes(d.size_bytes)}{d.page_count ? ` · ${d.page_count} page${d.page_count > 1 ? "s" : ""}` : ""} · {relativeTime(d.created_at)}
           </p>
         </div>
-        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&>*]:shrink-0">
+        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&>*]:shrink-0">
           {d.has_original && <a href={`/api/v1/documents/${d.id}/download`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-sand-200 bg-white px-3 text-[13px] font-medium hover:bg-sand-50 pointer-coarse:h-10 pointer-coarse:px-3.5"><Download className="h-3.5 w-3.5" /> Original</a>}
           {!busy && d.has_original && <Button size="sm" variant="secondary" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => run(() => api.post(`/inbox/${d.id}/retry`), "Re-processing")}>Re-process</Button>}
           {d.status !== "ignored" && <Button size="sm" variant="ghost" icon={<EyeOff className="h-3.5 w-3.5" />} onClick={() => run(() => api.post(`/inbox/${d.id}/ignore`), "Marked as not relevant")}>Ignore</Button>}

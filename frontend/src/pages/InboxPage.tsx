@@ -53,7 +53,7 @@ export default function InboxPage() {
             <div className="space-y-6">
               <UploadZone />
               <div>
-                <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
+                <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
                   {filters.map((f) => {
                     const n = items.filter(f.match).length;
                     const on = filter === f.key;
