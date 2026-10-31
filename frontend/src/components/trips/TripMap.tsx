@@ -22,8 +22,10 @@ export function TripMap({ events }: { events: ItineraryEvent[] }) {
     return <p className="rounded-xl bg-sand-50 px-4 py-10 text-center text-[14px] text-ink-500">No mapped locations yet. Addresses from your bookings will appear here.</p>;
   }
   return (
-    <div className="h-[440px] overflow-hidden rounded-2xl border border-sand-200">
-      <MapContainer center={points[0]} zoom={13} scrollWheelZoom={false} className="h-full w-full">
+    // `isolate` keeps Leaflet's high z-indexes from painting over the sticky header and tab bar.
+    // On touch screens one-finger drags scroll the page; pinch still zooms the map.
+    <div className="isolate h-[360px] overflow-hidden rounded-[22px] border border-sand-200 sm:h-[440px]">
+      <MapContainer center={points[0]} zoom={13} scrollWheelZoom={false} dragging={!L.Browser.mobile} className="h-full w-full">
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <Polyline positions={points} pathOptions={{ color: "#c8623a", weight: 2, dashArray: "4 6", opacity: 0.6 }} />

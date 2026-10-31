@@ -51,14 +51,14 @@ export function UploadZone() {
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
-        className={clsx("rounded-[22px] border-2 border-dashed px-5 py-9 text-center transition sm:py-11",
-          drag ? "border-lagoon-500 bg-lagoon-50" : "border-sand-300 bg-white hover:border-sand-300/80")}
+        className={clsx("relative overflow-hidden rounded-[26px] border-2 border-dashed px-5 py-7 text-center transition sm:py-11",
+          drag ? "scale-[1.01] border-lagoon-500 bg-lagoon-50" : "border-sand-300 bg-white hover:border-clay-500/40")}
       >
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-lagoon-50 text-lagoon-600"><FileUp className="h-6 w-6" /></div>
-        <p className="display mt-4 text-[20px] text-ink-900">Drop booking confirmations here</p>
-        <p className="mt-1.5 text-[14px] text-ink-500">PDFs, screenshots, photos, emails (.eml), Word, HTML or text — up to 10 at once.</p>
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Button onClick={() => input.current?.click()} loading={busy} icon={<FileUp className="h-4 w-4" />}>Choose files</Button>
+        <div className="mx-auto flex h-14 w-14 rotate-[-6deg] items-center justify-center rounded-[18px] bg-apricot-soft text-clay-600 shadow-[var(--shadow-card)]"><FileUp className="h-6 w-6" /></div>
+        <p className="display mt-4 text-[22px] text-ink-900"><span className="pointer-coarse:hidden">Drop booking confirmations here</span><span className="hidden pointer-coarse:inline">Add a booking</span></p>
+        <p className="mx-auto mt-1.5 max-w-sm text-[14px] text-ink-500">PDFs, screenshots, photos, emails (.eml), Word, HTML or text — up to 10 at once.</p>
+        <div className="mx-auto mt-5 grid max-w-sm grid-cols-2 gap-2 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
+          <Button onClick={() => input.current?.click()} loading={busy} className="col-span-2" icon={<FileUp className="h-4 w-4" />}>Choose files or photos</Button>
           <Button variant="secondary" onClick={() => setDialog("paste")} icon={<ClipboardPaste className="h-4 w-4" />}>Paste text</Button>
           <Button variant="secondary" onClick={() => setDialog("url")} icon={<Link2 className="h-4 w-4" />}>Add a link</Button>
         </div>
@@ -94,7 +94,7 @@ function PasteDialog({ onClose }: { onClose: () => void }) {
       <form onSubmit={submit} className="space-y-4">
         <textarea className="field min-h-[220px] font-mono text-[13px]" value={text} onChange={(e) => setText(e.target.value)} placeholder="Booking reference: ..." aria-label="Pasted text" required />
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy}>Add to inbox</Button></div>
+        <div className="flex justify-end gap-2 pb-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy}>Add to inbox</Button></div>
       </form>
     </Dialog>
   );
@@ -124,7 +124,7 @@ function UrlDialog({ onClose }: { onClose: () => void }) {
       <form onSubmit={submit} className="space-y-4">
         <Field label="Link" htmlFor="u"><input id="u" type="url" required className="field" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" /></Field>
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy}>Import</Button></div>
+        <div className="flex justify-end gap-2 pb-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy}>Import</Button></div>
       </form>
     </Dialog>
   );

@@ -30,7 +30,7 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
   };
 
   return (
-    <article className={clsx("rounded-2xl border bg-white p-4 sm:p-5", awaiting ? "border-clay-100 shadow-[var(--shadow-lift)]" : "border-sand-200")}>
+    <article className={clsx("rounded-[22px] border bg-white p-4 sm:p-5", awaiting ? "border-clay-100 shadow-[var(--shadow-lift)]" : "border-sand-200")}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 gap-3">
           <span className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
@@ -40,12 +40,13 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
               : action.status === "in_progress" ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <ShieldCheck className="h-[18px] w-[18px]" />}
           </span>
           <div className="min-w-0">
+            <StatusPill status={action.status} className="mb-1.5 sm:hidden" />
             <p className="eyebrow">{isWebsite ? `Website purchase by the browser agent · ${p.site_name}` : isBooking ? `Booking proposal · ${p.provider_name ?? action.provider}` : action.action_type === "link_out" ? "Book with provider" : "Itinerary change"}</p>
             <h3 className="mt-0.5 text-[15.5px] font-semibold text-ink-900">{action.title}</h3>
             {action.description && <p className="mt-0.5 text-[13.5px] text-ink-500">{action.description}</p>}
           </div>
         </div>
-        <StatusPill status={action.status} />
+        <span className="hidden shrink-0 sm:block"><StatusPill status={action.status} className="whitespace-nowrap" /></span>
       </div>
 
       {isBooking && !compact && (

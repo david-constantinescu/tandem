@@ -2,6 +2,7 @@ import { ArrowRight, FileText, MessageCircle, ShieldCheck, Sparkles } from "luci
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Logo } from "@/components/layout/AppShell";
+import { RouteDoodle } from "@/components/motion";
 import { Button, ErrorNote, Field } from "@/components/ui";
 import { errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -48,7 +49,7 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+    <div className="grid grid-cols-1 min-h-screen lg:grid-cols-[1.05fr_1fr]">
       <section className="relative hidden overflow-hidden bg-lagoon-900 px-14 py-12 text-lagoon-50 lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-clay-500/20 blur-3xl" />
         <div className="absolute -bottom-32 left-10 h-96 w-96 rounded-full bg-lagoon-500/25 blur-3xl" />
@@ -60,8 +61,18 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
           </svg>
           <span className="display text-2xl font-semibold text-white">Tandem</span>
         </div>
+        {[
+          { t: "ROME · CONFIRMED", c: "left-[58%] top-[18%]", r: "-8deg" },
+          { t: "CHECK-IN 13:00", c: "left-[12%] top-[34%]", r: "5deg" },
+          { t: "FD668 · 16:05", c: "left-[64%] top-[42%]", r: "-3deg" },
+        ].map((s, i) => (
+          <span key={s.t} style={{ ["--r" as string]: s.r, animationDelay: `${i * 0.8}s` }}
+            className={`absolute ${s.c} animate-[float-y_6s_ease-in-out_infinite] rounded-md border-2 border-apricot/70 px-2.5 py-1 text-[11px] font-bold tracking-[0.16em] text-apricot/90`} aria-hidden>{s.t}</span>
+        ))}
         <div className="relative mt-auto max-w-lg">
-          <h1 className="display text-[44px] leading-[1.08] text-white">Every booking, one calm itinerary.</h1>
+          <RouteDoodle light className="mb-10 h-20 w-full max-w-md" from="HOME" to="ANYWHERE" />
+          <p className="kicker !text-apricot">Your travel, in tandem.</p>
+          <h1 className="display mt-2 text-[46px] leading-[1.04] tracking-[-0.02em] text-white">Every booking, one calm itinerary.</h1>
           <p className="mt-5 text-[16px] leading-relaxed text-lagoon-100/85">
             Drop in confirmations, tickets and screenshots. Tandem reads them, builds your trip, spots clashes, and
             finds things to do that actually fit — booking only when you say so.
@@ -76,7 +87,13 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
 
       <section className="flex flex-col justify-center px-5 py-10 sm:px-12">
         <div className="mx-auto w-full max-w-[400px]">
-          <Logo className="mb-10 lg:hidden" />
+          <Logo className="mb-6 lg:hidden" />
+          <div className="relative mb-8 overflow-hidden rounded-[26px] bg-lagoon-900 p-5 text-white lg:hidden">
+            <div className="absolute -right-10 -top-16 h-44 w-44 rounded-full bg-clay-500/30 blur-3xl" />
+            <p className="kicker relative !text-apricot">Your travel, in tandem.</p>
+            <p className="display relative mt-1 text-[26px] leading-[1.1]">Every booking, one calm itinerary.</p>
+            <RouteDoodle light className="relative mt-4 h-12 w-full" />
+          </div>
           <h2 className="display text-[30px] leading-tight">{mode === "login" ? "Welcome back" : "Create your account"}</h2>
           <p className="mt-2 text-[15px] text-ink-500">
             {mode === "login" ? "Sign in to your travel workspace." : "Start organising your trips in a minute."}

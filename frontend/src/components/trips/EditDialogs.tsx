@@ -123,26 +123,26 @@ export function ReservationDialog({ tripId, reservation, defaultTz, onClose }: {
     <Dialog open onOpenChange={(o) => !o && onClose()} title={reservation ? "Edit reservation" : "Add a reservation"} wide
       description="For bookings you made elsewhere. Uploading the confirmation instead keeps the source document.">
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Type" htmlFor="rt"><select id="rt" className="field" value={form.type} onChange={set("type")} disabled={!!reservation}>{RES_TYPES.map((t) => <option key={t} value={t}>{t.replace("_", " ")}</option>)}</select></Field>
           <div className="sm:col-span-2"><Field label="Title" htmlFor="rti"><input id="rti" required className="field" value={form.title} onChange={set("title")} /></Field></div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Status" htmlFor="rs"><select id="rs" className="field" value={form.status} onChange={set("status")}><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="unknown">Unconfirmed</option><option value="cancelled">Cancelled</option></select></Field>
           <Field label="Provider" htmlFor="rp"><input id="rp" className="field" value={form.provider_name} onChange={set("provider_name")} /></Field>
           <Field label="Booking reference" htmlFor="rr"><input id="rr" className="field font-mono" value={form.booking_reference} onChange={set("booking_reference")} /></Field>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Starts (local)" htmlFor="rsl"><input id="rsl" type="datetime-local" className="field" value={form.start_local} onChange={set("start_local")} /></Field>
           <Field label="Start timezone" htmlFor="rstz"><input id="rstz" className="field" value={form.start_tz} onChange={set("start_tz")} placeholder="Europe/Rome" /></Field>
           <Field label="Ends (local)" htmlFor="rel"><input id="rel" type="datetime-local" className="field" value={form.end_local} onChange={set("end_local")} /></Field>
           <Field label="End timezone" htmlFor="retz"><input id="retz" className="field" value={form.end_tz} onChange={set("end_tz")} /></Field>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="sm:col-span-2"><Field label="Address" htmlFor="ra"><input id="ra" className="field" value={form.address} onChange={set("address")} /></Field></div>
           <Field label="City" htmlFor="rc"><input id="rc" className="field" value={form.city} onChange={set("city")} /></Field>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Price" htmlFor="rpr"><input id="rpr" type="number" step="0.01" min="0" className="field" value={form.price} onChange={set("price")} /></Field>
           <Field label="Currency" htmlFor="rcu"><input id="rcu" maxLength={3} className="field uppercase" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></Field>
         </div>

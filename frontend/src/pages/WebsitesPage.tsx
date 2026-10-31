@@ -1,9 +1,11 @@
 import { clsx } from "clsx";
 import { Bot, Bus, ExternalLink, Image as ImageIcon, Landmark, Loader2, Palette, Plane, ShieldCheck, TrainFront, Ticket, XCircle } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionCard } from "@/components/activities/ActionCard";
+import { spring } from "@/components/motion";
 import { Badge, Button, EmptyState, ErrorNote, InfoNote, PageHeader, PageLoader, StatusPill } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
 import { api, errorMessage } from "@/lib/api";
@@ -30,12 +32,15 @@ export default function WebsitesPage() {
   const sites = useQuery({ queryKey: ["browser-sites"], queryFn: () => api.getWithMeta<BookingSite[]>("/browser/sites") });
   const tasks = useQuery({ queryKey: ["browser-tasks"], queryFn: () => api.get<BrowserTask[]>("/browser/tasks") });
   const openTask = params.get("task");
+  // The task panel renders at the top of the page; bring it into view when a run opens (matters on phones).
+  useEffect(() => { if (openTask) window.scrollTo({ top: 0, behavior: "smooth" }); }, [openTask]);
   if (sites.isLoading) return <PageLoader />;
   const all = sites.data?.data ?? [];
   const workerAvailable = !!sites.data?.meta?.browser_worker;
   const inCat = (s: BookingSite) => cat === "all" || s.category === cat || (cat === "museum" && s.category === "gallery");
   const simulated = all.filter((s) => s.simulated && inCat(s));
   const real = all.filter((s) => !s.simulated && inCat(s));
+  const commonNote = mostCommon(real.map((s) => s.terms_note));
 
   return (
     <div>
@@ -44,45 +49,55 @@ export default function WebsitesPage() {
       {openTask && <TaskPanel id={openTask} onClose={() => setParams({})} />}
 
       <InfoNote tone="lagoon" icon={<ShieldCheck className="h-4 w-4" />}>
-        <strong>How the agent behaves.</strong> On Tandem's simulated sites it completes the whole purchase after your approval (nothing real is charged).
-        Real airline, rail, bus and museum sites are <strong>link-only</strong> until their terms are reviewed for automated use; where an operator enables
-        assisted search, the agent searches and compares, then hands off before personal or payment details. It stops at CAPTCHAs and logins and never bypasses them.
-        {!workerAvailable && " Assisted search on real sites needs a browser worker, which isn't running on this deployment."}
+        <details className="group">
+          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <strong>How the agent behaves.</strong> It completes purchases only on Tandem's simulated sites, after your approval. <span className="font-medium underline decoration-lagoon-500/40 underline-offset-2 group-open:hidden">More</span>
+          </summary>
+          <p className="mt-1.5">Nothing real is charged on simulated sites. Real airline, rail, bus and museum sites are <strong>link-only</strong> until their terms are reviewed for automated use; where an operator enables
+          assisted search, the agent searches and compares, then hands off before personal or payment details. It stops at CAPTCHAs and logins and never bypasses them.
+          {!workerAvailable && " Assisted search on real sites needs a browser worker, which isn't running on this deployment."}</p>
+        </details>
       </InfoNote>
 
-      <div className="mt-6 flex gap-1.5 overflow-x-auto" role="tablist" aria-label="Website categories">
+      <div className="-mx-4 mt-6 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label="Website categories">
         {CATS.map((c) => (
           <button key={c.key} role="tab" aria-selected={cat === c.key} onClick={() => setCat(c.key)}
-            className={clsx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition",
-              cat === c.key ? "bg-ink-900 text-white" : "bg-white text-ink-600 ring-1 ring-sand-200 hover:text-ink-900")}>
-            <c.icon className="h-3.5 w-3.5" />{c.label}
+            className={clsx("relative inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-colors active:scale-95 pointer-coarse:h-10",
+              cat === c.key ? "text-white" : "bg-white text-ink-600 ring-1 ring-sand-200 hover:text-ink-900")}>
+            {cat === c.key && <motion.span layoutId="site-cat" transition={spring} className="absolute inset-0 rounded-full bg-ink-900" />}
+            <span className="relative z-10 inline-flex items-center gap-1.5"><c.icon className="h-4 w-4" />{c.label}</span>
           </button>
         ))}
       </div>
 
       {simulated.length > 0 && (
         <section className="mt-6">
-          <h2 className="eyebrow mb-3 flex items-center gap-1.5"><Bot className="h-3.5 w-3.5" /> The agent can complete a purchase (simulated sites)</h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {simulated.map((s) => <SiteCard key={s.key} s={s} onRun={() => setRunSite(s)} />)}
+          <h2 className="display mb-1 text-[21px]">The agent can do these end to end</h2>
+          <p className="mb-3 text-[13.5px] text-ink-500">Simulated booking sites — real flow, fake money.</p>
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4">
+            {simulated.map((s) => <div key={s.key} className="flex w-[80%] shrink-0 snap-start sm:w-auto"><SiteCard s={s} onRun={() => setRunSite(s)} featured /></div>)}
           </div>
         </section>
       )}
 
       <section className="mt-8">
-        <h2 className="eyebrow mb-3">Official websites ({real.length})</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <h2 className="display mb-1 text-[21px] sm:mb-3">Official websites <span className="text-ink-300">{real.length}</span></h2>
+        {commonNote && <p className="mb-3 text-[13px] text-ink-500 sm:hidden">These open the official site. {commonNote}</p>}
+        <ul className="card divide-y divide-sand-100 overflow-hidden rounded-[22px] sm:hidden">
+          {real.map((s) => <SiteRow key={s.key} s={s} note={s.terms_note !== commonNote ? s.terms_note : null} onRun={s.policy === "assisted" && workerAvailable ? () => setRunSite(s) : undefined} />)}
+        </ul>
+        <div className="hidden gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-3">
           {real.map((s) => <SiteCard key={s.key} s={s} onRun={s.policy === "assisted" && workerAvailable ? () => setRunSite(s) : undefined} />)}
         </div>
       </section>
 
       <section className="mt-10">
-        <h2 className="eyebrow mb-3">Recent agent runs</h2>
+        <h2 className="display mb-3 text-[21px]">Recent agent runs</h2>
         {(tasks.data?.length ?? 0) === 0 ? <EmptyState icon={<Bot className="h-7 w-7" />} title="No agent runs yet" body="Run the agent on a simulated site to watch it search, choose and prepare a purchase for your approval." /> : (
           <ul className="card divide-y divide-sand-100">
             {tasks.data!.map((t) => (
               <li key={t.id}>
-                <button onClick={() => setParams({ task: t.id })} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-sand-50/70">
+                <button onClick={() => setParams({ task: t.id })} className="flex min-h-[60px] w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-sand-50/70 active:bg-sand-50">
                   <span className="min-w-0">
                     <span className="block truncate text-[14px] font-medium">{t.site_name}</span>
                     <span className="block truncate text-[12.5px] text-ink-400">{describeParams(t.params)} · {relativeTime(t.created_at)}</span>
@@ -100,27 +115,36 @@ export default function WebsitesPage() {
   );
 }
 
+function mostCommon(xs: string[]) {
+  const counts = new Map<string, number>();
+  for (const x of xs) counts.set(x, (counts.get(x) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
 function describeParams(p: Record<string, any>) {
   const where = p.venue ? p.venue : p.origin ? `${p.origin} → ${p.destination}` : "";
   return [where, p.date ? fmtDate(p.date) : "", p.adults ? `${p.adults} ${p.adults === 1 ? "person" : "people"}` : ""].filter(Boolean).join(" · ");
 }
 
-function SiteCard({ s, onRun }: { s: BookingSite; onRun?: () => void }) {
-  const Icon = ICON[s.category] ?? Ticket;
-  const badge = s.simulated ? <Badge tone="violet">Full purchase · simulated</Badge>
+function siteBadge(s: BookingSite) {
+  return s.simulated ? <Badge tone="violet">Full purchase · simulated</Badge>
     : s.automation_forbidden ? <Badge tone="rose">Site forbids automation</Badge>
       : s.policy === "assisted" ? <Badge tone="lagoon">Assisted search</Badge> : <Badge tone="neutral">Link only</Badge>;
+}
+
+function SiteCard({ s, onRun, featured }: { s: BookingSite; onRun?: () => void; featured?: boolean }) {
+  const Icon = ICON[s.category] ?? Ticket;
   return (
-    <article className="card flex flex-col p-4">
+    <article className={clsx("card flex w-full flex-col rounded-[22px] p-4", featured && "bg-gradient-to-b from-white to-apricot-soft/50")}>
       <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sand-100 text-ink-600"><Icon className="h-[18px] w-[18px]" /></span>
+        <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", featured ? "rotate-[-6deg] bg-apricot-soft text-clay-600" : "bg-sand-100 text-ink-600")}><Icon className="h-[18px] w-[18px]" /></span>
         <div className="min-w-0">
-          <h3 className="text-[14.5px] font-semibold leading-snug">{s.name}</h3>
-          <p className="text-[12px] text-ink-400">{s.category}{s.country ? ` · ${s.country}` : ""}</p>
+          <h3 className="text-[15px] font-semibold leading-snug">{s.name}</h3>
+          <p className="text-[12.5px] capitalize text-ink-400">{s.category}{s.country ? ` · ${s.country}` : ""}</p>
         </div>
       </div>
-      <div className="mt-3">{badge}</div>
-      <p className="mt-2 text-[12.5px] text-ink-500">{s.terms_note}</p>
+      <div className="mt-3">{siteBadge(s)}</div>
+      <p className="mt-2 text-[13px] text-ink-500 sm:text-[12.5px]">{s.terms_note}</p>
       {s.notes.map((n) => <p key={n} className="mt-1 text-[12px] text-ink-400">{n}</p>)}
       <div className="mt-auto flex flex-wrap gap-2 pt-3">
         {onRun && <Button size="sm" onClick={onRun} icon={<Bot className="h-3.5 w-3.5" />}>Run agent</Button>}
@@ -129,9 +153,30 @@ function SiteCard({ s, onRun }: { s: BookingSite; onRun?: () => void }) {
             Open {s.name} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         )}
-        {s.simulated && <a href={s.homepage} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center gap-1 px-2 text-[12.5px] text-ink-500 hover:text-ink-800">View site <ExternalLink className="h-3 w-3" /></a>}
+        {s.simulated && <a href={s.homepage} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center gap-1 px-2 text-[13px] text-ink-500 hover:text-ink-800 pointer-coarse:h-10">View site <ExternalLink className="h-3.5 w-3.5" /></a>}
       </div>
     </article>
+  );
+}
+
+/** Phone layout for the long list of official sites: one grouped list instead of 40 near-identical cards. */
+function SiteRow({ s, note, onRun }: { s: BookingSite; note: string | null; onRun?: () => void }) {
+  const Icon = ICON[s.category] ?? Ticket;
+  return (
+    <li className="flex min-h-[64px] items-center gap-3 px-4 py-2.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-sand-100 text-ink-600"><Icon className="h-[17px] w-[17px]" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-medium">{s.name}</p>
+        <p className="truncate text-[12.5px] capitalize text-ink-400">{s.category}{s.country ? ` · ${s.country}` : ""}</p>
+        {(note || s.automation_forbidden || s.policy === "assisted") && <div className="mt-1">{siteBadge(s)}</div>}
+        {note && <p className="mt-1 text-[12.5px] text-ink-500">{note}</p>}
+      </div>
+      {onRun && <Button size="sm" onClick={onRun} icon={<Bot className="h-3.5 w-3.5" />}>Run</Button>}
+      <a href={s.homepage} target="_blank" rel="noopener noreferrer" aria-label={`Open ${s.name} in a new tab`}
+        className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-400 transition active:scale-90 active:bg-sand-100">
+        <ExternalLink className="h-[18px] w-[18px]" />
+      </a>
+    </li>
   );
 }
 
@@ -179,8 +224,8 @@ function RunDialog({ site, onClose, onStarted }: { site: BookingSite; onClose: (
             <div><label className="label" htmlFor="rd">To</label><input id="rd" required className="field" value={form.destination} onChange={set("destination")} placeholder="Florence" /></div>
           </div>
         )}
-        <div className="grid grid-cols-3 gap-3">
-          <div><label className="label" htmlFor="rdt">Date</label><input id="rdt" type="date" required className="field" value={form.date} onChange={set("date")} min={trip?.start_date ?? undefined} max={trip?.end_date ?? undefined} /></div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="col-span-2 sm:col-span-1"><label className="label" htmlFor="rdt">Date</label><input id="rdt" type="date" required className="field" value={form.date} onChange={set("date")} min={trip?.start_date ?? undefined} max={trip?.end_date ?? undefined} /></div>
           <div><label className="label" htmlFor="rt">{museum ? "Entry from" : "Leave after"}</label><input id="rt" type="time" className="field" value={form.time} onChange={set("time")} /></div>
           <div><label className="label" htmlFor="ra">People</label><input id="ra" type="number" min={1} max={9} className="field" value={form.adults} onChange={set("adults")} /></div>
         </div>
@@ -189,7 +234,7 @@ function RunDialog({ site, onClose, onStarted }: { site: BookingSite; onClose: (
             <option value="">No trip</option>{upcoming.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select></div>
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="flex justify-end gap-2 pt-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy} icon={<Bot className="h-4 w-4" />}>Start agent</Button></div>
+        <div className="flex justify-end gap-2 pb-2 pt-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" loading={busy} icon={<Bot className="h-4 w-4" />}>Start agent</Button></div>
       </form>
     </Dialog>
   );
@@ -215,7 +260,7 @@ function TaskPanel({ id, onClose }: { id: string; onClose: () => void }) {
   }
   return (
     <section className="card mb-6 overflow-hidden" aria-live="polite">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-sand-100 px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-sand-100 px-4 py-4 sm:px-5">
         <div className="min-w-0">
           <p className="eyebrow">Browser agent · {t.engine === "playwright" ? "headless Chromium" : t.engine === "http" ? "Tandem simulated site" : "hand-off"}</p>
           <h2 className="mt-0.5 text-[16px] font-semibold">{t.site_name}</h2>
@@ -227,10 +272,10 @@ function TaskPanel({ id, onClose }: { id: string; onClose: () => void }) {
           {!["completed", "cancelled", "requires_manual", "failed", "blocked"].includes(t.state) && (
             <Button size="sm" variant="ghost" onClick={async () => { await api.post(`/browser/tasks/${t.id}/cancel`); task.refetch(); }}>Cancel</Button>
           )}
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-400 hover:bg-sand-100" aria-label="Close task"><XCircle className="h-4 w-4" /></button>
+          <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-400 hover:bg-sand-100 active:scale-90 pointer-coarse:h-11 pointer-coarse:w-11" aria-label="Close task"><XCircle className="h-5 w-5" /></button>
         </div>
       </header>
-      <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <ol className="space-y-3" aria-label="Agent steps">
           {t.log.map((s) => (
             <li key={s.step} className="flex gap-3">

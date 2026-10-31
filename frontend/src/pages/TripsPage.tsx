@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { AlertTriangle, MapPin, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { EventIcon } from "@/components/trips/EventIcon";
 import { Button, EmptyState, ErrorNote, Field, PageHeader, PageLoader } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
@@ -35,8 +36,8 @@ export default function TripsPage() {
             if (!items.length) return null;
             return (
               <section key={g.key}>
-                <h2 className="eyebrow mb-3">{g.label}</h2>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map((t) => <TripCard key={t.id} trip={t} />)}</div>
+                <h2 className="display mb-3 text-[21px]">{g.label}</h2>
+                <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map((t) => <StaggerItem key={t.id}><TripCard trip={t} /></StaggerItem>)}</Stagger>
               </section>
             );
           })}
@@ -50,25 +51,30 @@ export default function TripsPage() {
 function TripCard({ trip }: { trip: Trip }) {
   const d = daysUntil(trip.start_date);
   const types = Object.keys(trip.stats.reservation_types ?? {});
+  const past = trip.stats.phase === "past";
+  const stub = trip.stats.phase === "current" ? { big: "Now", small: "travelling" }
+    : d !== null && d >= 0 ? { big: d === 0 ? "Today" : String(d), small: d === 0 ? "" : d === 1 ? "day to go" : "days to go" }
+      : { big: trip.start_date ? new Date(trip.start_date + "T00:00:00").toLocaleDateString("en-GB", { month: "short" }) : "—", small: trip.start_date?.slice(0, 4) ?? "" };
   return (
-    <Link to={`/trips/${trip.id}`} className={clsx("card group flex flex-col p-5 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]", trip.stats.phase === "past" && "opacity-80")}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="display text-[20px] leading-snug text-ink-900">{trip.name}</h3>
-          <p className="mt-1 text-[13.5px] text-ink-500">{fmtRange(trip.start_date, trip.end_date)}</p>
+    <Link to={`/trips/${trip.id}`} className={clsx("group flex overflow-hidden rounded-[22px] border border-sand-200/80 bg-white shadow-[var(--shadow-card)] transition active:scale-[0.985] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]", past && "opacity-75")}>
+      <div className="min-w-0 flex-1 p-5">
+        <h3 className="display text-[22px] leading-snug text-ink-900">{trip.name}</h3>
+        <p className="mt-1 text-[13.5px] text-ink-500">{fmtRange(trip.start_date, trip.end_date)}</p>
+        <p className="mt-3 flex items-center gap-1.5 text-[13.5px] text-ink-600"><MapPin className="h-3.5 w-3.5 shrink-0 text-clay-500" /><span className="truncate">{trip.destinations.map((x) => x.name).join(" → ") || trip.primary_destination || "Destination not set"}</span></p>
+        <div className="mt-5 flex items-center justify-between gap-2">
+          <div className="flex -space-x-1.5">{types.slice(0, 5).map((t) => <EventIcon key={t} type={t} size="sm" className="ring-2 ring-white" />)}</div>
+          <span className="text-[12.5px] text-ink-400">{trip.stats.reservations ?? 0} booking{trip.stats.reservations === 1 ? "" : "s"}</span>
         </div>
-        {trip.stats.phase === "upcoming" && d !== null && d >= 0 && (
-          <span className="rounded-full bg-clay-50 px-2.5 py-1 text-[12px] font-medium text-clay-600">{d === 0 ? "Today" : `${d}d`}</span>
+        {(trip.stats.conflict_count ?? 0) > 0 && (
+          <p className="mt-3 flex items-center gap-1.5 text-[12.5px] font-medium text-amber-ink"><AlertTriangle className="h-3.5 w-3.5" /> {trip.stats.conflict_count} thing{trip.stats.conflict_count === 1 ? "" : "s"} to check</p>
         )}
       </div>
-      <p className="mt-3 flex items-center gap-1.5 text-[13.5px] text-ink-600"><MapPin className="h-3.5 w-3.5 text-ink-400" />{trip.destinations.map((x) => x.name).join(" → ") || trip.primary_destination || "Destination not set"}</p>
-      <div className="mt-5 flex items-center justify-between">
-        <div className="flex -space-x-1.5">{types.slice(0, 5).map((t) => <EventIcon key={t} type={t} size="sm" className="ring-2 ring-white" />)}</div>
-        <span className="text-[12.5px] text-ink-400">{trip.stats.reservations ?? 0} booking{trip.stats.reservations === 1 ? "" : "s"}</span>
+      <div className="relative flex w-[92px] shrink-0 flex-col items-center justify-center border-l-2 border-dashed border-sand-200 bg-apricot-soft/60 px-2 text-center">
+        <span className="absolute -left-[11px] -top-[11px] h-5 w-5 rounded-full border border-sand-200 bg-paper" aria-hidden />
+        <span className="absolute -bottom-[11px] -left-[11px] h-5 w-5 rounded-full border border-sand-200 bg-paper" aria-hidden />
+        <span className="display text-[28px] leading-none text-clay-600">{stub.big}</span>
+        {stub.small && <span className="mt-1 text-[11px] font-medium text-ink-500">{stub.small}</span>}
       </div>
-      {(trip.stats.conflict_count ?? 0) > 0 && (
-        <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-amber-ink"><AlertTriangle className="h-3.5 w-3.5" /> {trip.stats.conflict_count} issue{trip.stats.conflict_count === 1 ? "" : "s"} to check</p>
-      )}
     </Link>
   );
 }

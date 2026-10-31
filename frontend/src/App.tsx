@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Page } from "./components/motion";
 import { AppShell } from "./components/layout/AppShell";
 import { PageLoader } from "./components/ui";
 import { useAuth } from "./lib/auth";
@@ -24,6 +25,7 @@ function Protected() {
   return (
     <AppShell>
       <Suspense fallback={<PageLoader />}>
+        <Page key={location.pathname}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
@@ -39,6 +41,7 @@ function Protected() {
           <Route path="/settings/:section" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Page>
       </Suspense>
     </AppShell>
   );

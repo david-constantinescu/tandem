@@ -1,10 +1,12 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { clsx } from "clsx";
 import { ChevronRight, Download, FileImage, FileText, Loader2, Mail, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import { motion } from "motion/react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { UploadZone } from "@/components/inbox/UploadZone";
+import { Stagger, StaggerItem, spring } from "@/components/motion";
 import { Badge, Button, EmptyState, InfoNote, PageHeader, PageLoader, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
@@ -31,14 +33,19 @@ export default function InboxPage() {
   const shown = items.filter(filters.find((f) => f.key === filter)!.match);
   const mode = ai.data?.settings.mode;
   const anyProvider = ai.data?.providers.some((p) => p.configured);
+  const tab = params.get("tab") ?? "documents";
 
   return (
     <div>
       <PageHeader title="Inbox" subtitle="Everything you send Tandem lands here first. Review what was found before it joins a trip." />
-      <Tabs.Root value={params.get("tab") ?? "documents"} onValueChange={(v) => setParams(v === "documents" ? {} : { tab: v })}>
-        <Tabs.List className="mb-6 inline-flex rounded-xl bg-sand-100 p-1" aria-label="Inbox sources">
-          <Tabs.Trigger value="documents" className="rounded-lg px-3.5 py-1.5 text-[13.5px] font-medium text-ink-500 data-[state=active]:bg-white data-[state=active]:text-ink-900 data-[state=active]:shadow-sm"><Upload className="mr-1.5 inline h-3.5 w-3.5" />Documents</Tabs.Trigger>
-          <Tabs.Trigger value="email" className="rounded-lg px-3.5 py-1.5 text-[13.5px] font-medium text-ink-500 data-[state=active]:bg-white data-[state=active]:text-ink-900 data-[state=active]:shadow-sm"><Mail className="mr-1.5 inline h-3.5 w-3.5" />Email</Tabs.Trigger>
+      <Tabs.Root value={tab} onValueChange={(v) => setParams(v === "documents" ? {} : { tab: v })}>
+        <Tabs.List className="mb-6 grid grid-cols-2 rounded-[14px] bg-sand-100 p-1 sm:inline-grid sm:w-auto" aria-label="Inbox sources">
+          {([["documents", "Documents", Upload], ["email", "Email", Mail]] as const).map(([v, label, Icon]) => (
+            <Tabs.Trigger key={v} value={v} className={clsx("relative flex h-9 items-center justify-center gap-1.5 rounded-[10px] px-4 text-[14px] font-medium transition-colors pointer-coarse:h-10", tab === v ? "text-ink-900" : "text-ink-500")}>
+              {tab === v && <motion.span layoutId="inbox-seg" transition={spring} className="absolute inset-0 rounded-[10px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]" />}
+              <span className="relative z-10 flex items-center gap-1.5"><Icon className="h-4 w-4" />{label}</span>
+            </Tabs.Trigger>
+          ))}
         </Tabs.List>
 
         <Tabs.Content value="documents">
@@ -46,13 +53,15 @@ export default function InboxPage() {
             <div className="space-y-6">
               <UploadZone />
               <div>
-                <div className="mb-3 flex gap-1.5 overflow-x-auto">
+                <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
                   {filters.map((f) => {
                     const n = items.filter(f.match).length;
+                    const on = filter === f.key;
                     return (
-                      <button key={f.key} onClick={() => setFilter(f.key)} className={clsx("whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium transition",
-                        filter === f.key ? "bg-ink-900 text-white" : "bg-white text-ink-500 ring-1 ring-sand-200 hover:text-ink-800")}>
-                        {f.label}{f.key !== "all" && n > 0 ? ` · ${n}` : ""}
+                      <button key={f.key} onClick={() => setFilter(f.key)} className={clsx("relative h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-colors active:scale-95 pointer-coarse:h-10",
+                        on ? "text-white" : "bg-white text-ink-500 ring-1 ring-sand-200 hover:text-ink-800")}>
+                        {on && <motion.span layoutId="inbox-filter" transition={spring} className="absolute inset-0 rounded-full bg-ink-900" />}
+                        <span className="relative z-10">{f.label}{f.key !== "all" && n > 0 ? ` · ${n}` : ""}</span>
                       </button>
                     );
                   })}
@@ -60,7 +69,7 @@ export default function InboxPage() {
                 {inbox.isLoading ? <PageLoader /> : shown.length === 0 ? (
                   <EmptyState title={items.length ? "Nothing in this view" : "Your inbox is empty"} body={items.length ? undefined : "Upload a confirmation above to get started."} />
                 ) : (
-                  <ul className="card divide-y divide-sand-100">{shown.map((d) => <InboxRow key={d.id} d={d} />)}</ul>
+                  <Stagger key={filter} as="ul" className="card divide-y divide-sand-100 overflow-hidden">{shown.map((d) => <InboxRow key={d.id} d={d} />)}</Stagger>
                 )}
               </div>
             </div>
@@ -92,21 +101,24 @@ function InboxRow({ d }: { d: DocumentItem }) {
   const Icon = d.mime_type.startsWith("image/") ? FileImage : d.mime_type === "message/rfc822" ? Mail : FileText;
   const via = d.extraction_method?.provider;
   return (
-    <li>
-      <Link to={`/inbox/${d.id}`} className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-sand-50/70">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sand-100 text-ink-500">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-[18px] w-[18px]" />}</span>
+    <StaggerItem as="li">
+      <Link to={`/inbox/${d.id}`} className="flex min-h-[64px] items-center gap-3 px-4 py-3 transition hover:bg-sand-50/70 active:bg-sand-50">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-apricot-soft text-clay-600">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-[18px] w-[18px]" />}</span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14.5px] font-medium text-ink-900">{d.filename}</p>
-          <p className="mt-0.5 truncate text-[12.5px] text-ink-400">
-            {d.status_detail || d.source} · {bytes(d.size_bytes)} · {relativeTime(d.created_at)}
-            {via && !busy ? ` · read by ${via === "local" ? "local parser" : via}` : ""}
-            {d.attachments?.length ? ` · ${d.attachments.length} attachment${d.attachments.length > 1 ? "s" : ""}` : ""}
-          </p>
+          <p className="truncate text-[15px] font-medium text-ink-900">{d.filename}</p>
+          <div className="mt-1 flex min-w-0 items-center gap-2 text-[12.5px] text-ink-400">
+            <span className="shrink-0 sm:hidden"><StatusPill status={d.status} /></span>
+            <span className="truncate">
+              <span className="hidden sm:inline">{d.status_detail || d.source} · {bytes(d.size_bytes)} · </span>{relativeTime(d.created_at)}
+              {via && !busy ? <span className="hidden sm:inline"> · read by {via === "local" ? "local parser" : via}</span> : null}
+              {d.attachments?.length ? ` · ${d.attachments.length} attachment${d.attachments.length > 1 ? "s" : ""}` : ""}
+            </span>
+          </div>
         </div>
-        <StatusPill status={d.status} />
+        <span className="hidden sm:block"><StatusPill status={d.status} /></span>
         <ChevronRight className="h-4 w-4 shrink-0 text-ink-300" />
       </Link>
-    </li>
+    </StaggerItem>
   );
 }
 
@@ -138,7 +150,7 @@ function DemoSamples() {
             <p className="mt-0.5 text-[12.5px] text-ink-500">{s.description}</p>
             <div className="mt-2 flex gap-2">
               <Button size="sm" onClick={() => send(s.key)} loading={busy === s.key}>Upload</Button>
-              <a href={`/api/v1/demo/samples/${s.key}`} className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-[12.5px] text-ink-600 hover:bg-white"><Download className="h-3.5 w-3.5" /> Download</a>
+              <a href={`/api/v1/demo/samples/${s.key}`} className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-[12.5px] text-ink-600 hover:bg-white pointer-coarse:h-10 pointer-coarse:text-[13.5px]"><Download className="h-3.5 w-3.5" /> Download</a>
             </div>
           </li>
         ))}
@@ -191,14 +203,16 @@ function EmailCandidates() {
       {(cands.data?.length ?? 0) === 0 ? <EmptyState title="No travel emails found yet" /> : (
         <ul className="card divide-y divide-sand-100">
           {cands.data!.map((c) => (
-            <li key={c.id} className="flex items-start gap-3 px-4 py-3">
-              <input type="checkbox" className="mt-1 h-4 w-4 accent-lagoon-600" disabled={c.status !== "candidate"} checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${c.subject}`} />
+            <li key={c.id}>
+              <label className="flex cursor-pointer items-start gap-3 px-4 py-3 active:bg-sand-50">
+              <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-lagoon-600" disabled={c.status !== "candidate"} checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${c.subject}`} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[14px] font-medium">{c.subject || "(no subject)"}</p>
                 <p className="truncate text-[12.5px] text-ink-400">{c.sender} · {c.received_at ? new Date(c.received_at).toLocaleDateString() : ""}</p>
                 <p className="mt-1 line-clamp-1 text-[13px] text-ink-500">{c.snippet}</p>
               </div>
               {c.status === "imported" ? (c.document_id ? <Link to={`/inbox/${c.document_id}`}><Badge tone="lagoon">Imported</Badge></Link> : <Badge tone="lagoon">Imported</Badge>) : c.has_attachments ? <Badge>Attachment</Badge> : null}
+              </label>
             </li>
           ))}
         </ul>

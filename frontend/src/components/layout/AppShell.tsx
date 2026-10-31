@@ -3,9 +3,11 @@ import { clsx } from "clsx";
 import {
   Bell, CheckCheck, Compass, Globe, Home, Inbox, LogOut, Map, MessageCircle, Settings, ShieldCheck, Sparkles,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion } from "motion/react";
+import { spring } from "@/components/motion";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -27,18 +29,25 @@ export function Logo({ className }: { className?: string }) {
 
 function NavItem({ to, icon, label, count, end }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean }) {
   return (
-    <NavLink
-      to={to}
-      end={end}
-      className={({ isActive }) => clsx(
-        "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
-        isActive ? "bg-white text-ink-900 shadow-[var(--shadow-card)]" : "text-ink-500 hover:bg-white/60 hover:text-ink-800",
+    <NavLink to={to} end={end} className="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium">
+      {({ isActive }) => (
+        <>
+          {isActive && <motion.span layoutId="side-pill" transition={spring} className="absolute inset-0 rounded-xl bg-white shadow-[var(--shadow-card)]" />}
+          <span className={clsx("relative z-10 [&>svg]:h-[18px] [&>svg]:w-[18px] transition-colors", isActive ? "text-clay-600" : "text-ink-400 group-hover:text-ink-700")}>{icon}</span>
+          <span className={clsx("relative z-10 flex-1 transition-colors", isActive ? "text-ink-900" : "text-ink-500 group-hover:text-ink-800")}>{label}</span>
+          {!!count && <span className="relative z-10 rounded-full bg-clay-500 px-1.5 text-[11px] font-semibold leading-5 text-white">{count}</span>}
+        </>
       )}
-    >
-      <span className="text-current [&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
-      <span className="flex-1">{label}</span>
-      {!!count && <span className="rounded-full bg-clay-500 px-1.5 text-[11px] font-semibold leading-5 text-white">{count}</span>}
     </NavLink>
+  );
+}
+
+function IconLink({ to, label, children, badge }: { to: string; label: string; children: ReactNode; badge?: boolean }) {
+  return (
+    <Link to={to} aria-label={label} className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-600 transition active:scale-90 active:bg-sand-100 lg:hidden [&>svg]:h-[21px] [&>svg]:w-[21px]">
+      {children}
+      {badge && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-paper" />}
+    </Link>
   );
 }
 
@@ -54,12 +63,12 @@ function Notifications() {
   };
   return (
     <Popover.Root>
-      <Popover.Trigger className="relative rounded-xl p-2 text-ink-500 hover:bg-sand-100 hover:text-ink-800" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}>
+      <Popover.Trigger className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-600 transition hover:bg-sand-100 hover:text-ink-800 active:scale-90" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}>
         <Bell className="h-5 w-5" />
-        {unread > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-paper" />}
+        {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-paper" />}
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" sideOffset={8} className="z-50 w-[min(92vw,380px)] rounded-2xl border border-sand-200 bg-white p-2 shadow-[var(--shadow-lift)]">
+        <Popover.Content align="end" sideOffset={8} collisionPadding={12} className="z-50 w-[min(94vw,380px)] rounded-[22px] border border-sand-200 bg-white p-2 shadow-[var(--shadow-float)] data-[state=open]:animate-[fade-in_.18s_ease-out]">
           <div className="flex items-center justify-between px-2 py-1.5">
             <p className="text-[13px] font-semibold">Notifications</p>
             {unread > 0 && (
@@ -105,10 +114,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   const approvals = useApprovals("awaiting_approval");
   const reviewCount = (inbox.data?.data ?? []).filter((d) => d.status === "awaiting_review").length;
   const approvalCount = approvals.data?.length ?? 0;
+  const headerRef = useRef<HTMLElement>(null);
+  // Expose the header height so sticky section headers can sit right below it.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty("--hdr", `${el.offsetHeight}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const tabs = [
+    { to: "/", icon: <Home />, label: t("nav.home"), end: true },
+    { to: "/trips", icon: <Map />, label: t("nav.trips") },
+    { to: "/inbox", icon: <Inbox />, label: t("nav.inbox"), count: reviewCount },
+    { to: "/discover", icon: <Compass />, label: t("nav.discover") },
+    { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant") },
+  ];
 
   return (
-    <div className="min-h-screen lg:flex">
-      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sand-200/70 bg-sand-50 px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
+    <div className="min-h-dvh lg:flex">
+      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sand-200/70 bg-sand-50/80 px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
         <Logo className="px-2" />
         <nav className="mt-8 flex flex-col gap-1" aria-label="Main">
           <NavItem to="/" end icon={<Home />} label={t("nav.home")} />
@@ -137,37 +162,44 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {user?.is_demo && (
-          <div className="flex items-center justify-center gap-2 bg-lagoon-900 px-4 py-2 text-center text-[12.5px] text-lagoon-50">
-            <Sparkles className="h-3.5 w-3.5 shrink-0 text-clay-100" /> {t("demo.banner")}
-          </div>
-        )}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sand-200/60 bg-paper/85 px-4 py-2.5 backdrop-blur lg:justify-end lg:border-none lg:bg-transparent lg:px-8 lg:pt-5 lg:backdrop-blur-none">
-          <Logo className="lg:hidden" />
-          <div className="flex items-center gap-1">
-            <Notifications />
-            <Link to="/websites" className="rounded-xl p-2 text-ink-500 hover:bg-sand-100 lg:hidden" aria-label="Book on websites"><Globe className="h-5 w-5" /></Link>
-            <Link to="/approvals" className="rounded-xl p-2 text-ink-500 hover:bg-sand-100 lg:hidden" aria-label="Approvals"><ShieldCheck className="h-5 w-5" /></Link>
-            <Link to="/settings" className="rounded-xl p-2 text-ink-500 hover:bg-sand-100 lg:hidden" aria-label="Settings"><Settings className="h-5 w-5" /></Link>
+        <header ref={headerRef} className="glass safe-top sticky top-0 z-30 border-x-0 border-t-0 border-b-sand-200/50 lg:border-none lg:bg-transparent lg:backdrop-blur-none">
+          {user?.is_demo && (
+            <div className="flex items-center justify-center gap-2 bg-lagoon-900 px-4 py-1.5 text-center text-[12px] text-lagoon-50">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-apricot" />
+              <span className="sm:hidden">Demo · fictional trips, simulated bookings</span>
+              <span className="hidden sm:inline">{t("demo.banner")}</span>
+            </div>
+          )}
+          <div className="flex h-[52px] items-center justify-between px-3 lg:h-auto lg:justify-end lg:px-8 lg:pt-5">
+            <Logo className="pl-1 lg:hidden" />
+            <div className="flex items-center">
+              <IconLink to="/websites" label="Book on websites"><Globe /></IconLink>
+              <IconLink to="/approvals" label={`Approvals${approvalCount ? `, ${approvalCount} waiting` : ""}`} badge={approvalCount > 0}><ShieldCheck /></IconLink>
+              <Notifications />
+              <IconLink to="/settings" label="Settings"><Settings /></IconLink>
+            </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-28 pt-4 sm:px-6 lg:px-10 lg:pb-14 lg:pt-2">{children}</main>
+        <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-36 pt-5 sm:px-6 lg:px-10 lg:pb-14 lg:pt-2">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-sand-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Main mobile">
-        {[
-          { to: "/", icon: <Home />, label: t("nav.home"), end: true },
-          { to: "/trips", icon: <Map />, label: t("nav.trips") },
-          { to: "/inbox", icon: <Inbox />, label: t("nav.inbox"), count: reviewCount },
-          { to: "/discover", icon: <Compass />, label: t("nav.discover") },
-          { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant") },
-        ].map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => clsx("relative flex flex-col items-center gap-0.5 py-2 text-[10.5px] font-medium", isActive ? "text-lagoon-700" : "text-ink-400")}>
-            <span className="[&>svg]:h-5 [&>svg]:w-5">{item.icon}</span>
-            {item.label}
-            {!!item.count && <span className="absolute right-[22%] top-1 h-2 w-2 rounded-full bg-clay-500" />}
-          </NavLink>
-        ))}
+      <nav aria-label="Main mobile" className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden">
+        <div className="glass mx-auto grid max-w-md grid-cols-5 rounded-[28px] p-1.5 shadow-[var(--shadow-float)]">
+          {tabs.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-[54px] flex-col items-center justify-center gap-0.5 rounded-[22px] text-[10.5px] font-semibold">
+              {({ isActive }) => (
+                <>
+                  {isActive && <motion.span layoutId="tab-pill" transition={spring} className="absolute inset-0 rounded-[22px] bg-ink-900" />}
+                  <motion.span whileTap={{ scale: 0.86 }} className={clsx("relative z-10 flex flex-col items-center gap-0.5", isActive ? "text-white" : "text-ink-500")}>
+                    <span className="[&>svg]:h-[21px] [&>svg]:w-[21px]">{item.icon}</span>
+                    {item.label}
+                  </motion.span>
+                  {!!item.count && <span className="absolute right-[18%] top-1.5 z-10 h-2 w-2 rounded-full bg-clay-500 ring-2 ring-white" />}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </nav>
     </div>
   );

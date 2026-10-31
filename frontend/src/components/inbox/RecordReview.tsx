@@ -134,7 +134,7 @@ export function RecordReview({ record, documentId }: { record: ExtractedRecord; 
               {record.uncertainty_notes.map((n) => <p key={n} className="flex gap-2 text-[13px] text-amber-ink"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{n}</p>)}
             </div>
           )}
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
             {relevant.map((f) => {
               const fld = fieldsByName[f.key];
               return (
@@ -181,8 +181,8 @@ export function RecordReview({ record, documentId }: { record: ExtractedRecord; 
           )}
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           {pending ? (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button onClick={() => decide("accept")} loading={busy === "accept"} icon={<Check className="h-4 w-4" />}>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+              <Button onClick={() => decide("accept")} loading={busy === "accept"} className="col-span-2" icon={<Check className="h-4 w-4" />}>
                 {Object.keys(changed).length ? "Save corrections & add" : "Looks right — add"}
               </Button>
               <Button variant="secondary" onClick={() => setEditing(!editing)}>{editing ? "Done editing" : "Correct details"}</Button>

@@ -4,6 +4,7 @@ import * as Menu from "@radix-ui/react-dropdown-menu";
 import { Badge, StatusPill } from "@/components/ui";
 import { dayKey, fmtDayHeading, fmtTime, offsetLabel, tzCity } from "@/lib/format";
 import type { Conflict, ItineraryEvent } from "@/lib/types";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { EventIcon } from "./EventIcon";
 
 type Props = {
@@ -30,14 +31,14 @@ export function Timeline({ events, conflicts, tripTz, onEdit, onDelete, onStatus
         const h = fmtDayHeading(day);
         return (
           <li key={day}>
-            <div className="mb-3 flex items-baseline gap-2.5">
-              <h3 className="display text-[19px] text-ink-900">{h.weekday}</h3>
+            <div className="sticky top-[var(--hdr,52px)] z-10 -mx-4 mb-3 flex items-baseline gap-2.5 bg-paper/85 px-4 py-2 backdrop-blur-md sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none lg:top-0">
+              <h3 className="display text-[21px] text-ink-900">{h.weekday}</h3>
               <span className="text-[14px] text-ink-400">{h.date}</span>
             </div>
-            <ol className="relative space-y-2.5 border-l border-sand-200 pl-5 sm:pl-6">
+            <Stagger as="ol" className="relative space-y-2.5 border-l border-dashed border-sand-300 pl-5 sm:pl-6">
               {list.map((e) => <EventRow key={e.id} e={e} flags={flagged.get(e.id) ?? []} tripTz={tripTz}
                 onEdit={onEdit} onDelete={onDelete} onStatus={onStatus} />)}
-            </ol>
+            </Stagger>
           </li>
         );
       })}
@@ -55,20 +56,20 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
   const editable = !e.reservation_id;
 
   return (
-    <li className="relative">
+    <StaggerItem as="li" className="relative">
       <span className={clsx("absolute -left-[27px] top-5 h-2.5 w-2.5 rounded-full ring-4 ring-paper sm:-left-[31px]",
         worst === "critical" ? "bg-rose-ink" : worst ? "bg-amber-ink" : e.status === "confirmed" ? "bg-lagoon-500" : suggested ? "bg-violet-ink/60" : "bg-ink-300")} />
       <div className={clsx("group flex gap-3 rounded-2xl border p-3.5 transition sm:gap-4 sm:p-4",
         suggested ? "border-dashed border-violet-ink/35 bg-violet-soft/40" :
           free ? "border-dashed border-lagoon-500/30 bg-lagoon-50/40" : "border-sand-200/80 bg-white shadow-[var(--shadow-card)]",
         cancelled && "opacity-60", worst === "critical" && "ring-1 ring-rose-ink/25")}>
-        <div className="w-[52px] shrink-0 pt-0.5 text-right">
+        <div className="w-[44px] shrink-0 pt-0.5 text-right sm:w-[52px]">
           <div className="text-[15px] font-semibold tabular-nums text-ink-900">{fmtTime(e.start_local)}</div>
           {e.end_local && !["hotel_checkin", "hotel_checkout"].includes(e.type) && (
             <div className="text-[12.5px] tabular-nums text-ink-400">{fmtTime(e.end_local)}</div>
           )}
         </div>
-        <EventIcon type={e.type} />
+        <span className="hidden sm:block"><EventIcon type={e.type} /></span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className={clsx("text-[15px] font-medium text-ink-900", cancelled && "line-through")}>{e.title}</p>
@@ -97,7 +98,7 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
         </div>
         {(onEdit || onDelete || onStatus) && (
           <Menu.Root>
-            <Menu.Trigger className="h-8 w-8 shrink-0 rounded-lg text-ink-300 opacity-70 hover:bg-sand-100 hover:text-ink-700 group-hover:opacity-100" aria-label={`Actions for ${e.title}`}>
+            <Menu.Trigger className="-mr-1.5 -mt-1.5 h-10 w-10 shrink-0 rounded-full text-ink-400 hover:bg-sand-100 hover:text-ink-700 active:scale-90 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={`Actions for ${e.title}`}>
               <MoreHorizontal className="mx-auto h-4 w-4" />
             </Menu.Trigger>
             <Menu.Portal>
@@ -127,7 +128,7 @@ function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: Itinera
           </Menu.Root>
         )}
       </div>
-    </li>
+    </StaggerItem>
   );
 }
 

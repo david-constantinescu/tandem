@@ -14,8 +14,8 @@ const variants: Record<Variant, string> = {
   danger: "bg-white text-rose-ink border border-rose-soft hover:bg-rose-soft",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-[13px] gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-[14px] gap-2 rounded-xl",
+  sm: "h-8 px-3 text-[13px] gap-1.5 rounded-lg pointer-coarse:h-10 pointer-coarse:px-3.5",
+  md: "h-10 px-4 text-[14px] gap-2 rounded-xl pointer-coarse:h-11",
   lg: "h-12 px-5 text-[15px] gap-2 rounded-xl",
 };
 
@@ -32,7 +32,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       ref={ref}
-      className={clsx("inline-flex items-center justify-center font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap", variants[variant], sizes[size], className)}
+      className={clsx("inline-flex select-none items-center justify-center font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 whitespace-nowrap", variants[variant], sizes[size], className)}
       disabled={disabled || loading}
       {...rest}
     >
@@ -44,7 +44,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
 export function LinkButton({ to, variant = "secondary", size = "md", icon, children, className }: { to: string; variant?: Variant; size?: Size; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <Link to={to} className={clsx("inline-flex items-center justify-center font-medium transition-colors whitespace-nowrap", variants[variant], sizes[size], className)}>
+    <Link to={to} className={clsx("inline-flex select-none items-center justify-center font-medium transition-[background-color,transform] duration-150 active:scale-[0.97] whitespace-nowrap", variants[variant], sizes[size], className)}>
       {icon}
       {children}
     </Link>
@@ -108,16 +108,20 @@ const statusText: Record<string, string> = {
 };
 
 export function StatusPill({ status, className }: { status: string; className?: string }) {
+  // Pills read like little stamps: tight, confident, never shouting.
   return <Badge tone={statusTone[status] ?? "neutral"} className={className}>{statusText[status] ?? status.replace(/_/g, " ")}</Badge>;
 }
 
 export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; title: string; body?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-sand-300 bg-sand-50/50 px-6 py-12 text-center">
-      {icon && <div className="mb-3 text-ink-300">{icon}</div>}
-      <p className="display text-lg text-ink-800">{title}</p>
-      {body && <div className="mt-1.5 max-w-md text-[14px] text-ink-500">{body}</div>}
-      {action && <div className="mt-5">{action}</div>}
+    <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[24px] border border-dashed border-sand-300 bg-white/50 px-6 py-12 text-center">
+      <svg viewBox="0 0 220 60" className="absolute inset-x-0 top-4 mx-auto h-12 w-56 opacity-60" aria-hidden>
+        <path d="M6 44 C 50 8, 90 12, 118 30 S 180 52, 214 14" fill="none" stroke="var(--color-sand-300)" strokeWidth="2" strokeDasharray="4 7" strokeLinecap="round" />
+      </svg>
+      {icon && <div className="relative mb-3 mt-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-apricot-soft text-clay-600 [&>svg]:h-6 [&>svg]:w-6">{icon}</div>}
+      <p className="display relative text-xl text-ink-800">{title}</p>
+      {body && <div className="relative mt-1.5 max-w-md text-[14.5px] text-ink-500">{body}</div>}
+      {action && <div className="relative mt-5">{action}</div>}
     </div>
   );
 }
@@ -139,7 +143,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
     <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && <div className="eyebrow mb-2">{eyebrow}</div>}
-        <h1 className="display text-[28px] leading-tight sm:text-[34px]">{title}</h1>
+        <h1 className="display text-[34px] leading-[1.08] tracking-[-0.02em] sm:text-[40px]">{title}</h1>
         {subtitle && <div className="mt-1.5 text-[15px] text-ink-500">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -1,22 +1,32 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { clsx } from "clsx";
-import { Compass, FileText, MessageCircle, MoreHorizontal, Plus, Trash2, Users } from "lucide-react";
+import { ChevronLeft, Compass, FileText, MessageCircle, MoreHorizontal, Plus, Trash2, Users } from "lucide-react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { spring } from "@/components/motion";
 import { ConflictList } from "@/components/trips/ConflictList";
 import { EventDialog, ReservationDialog } from "@/components/trips/EditDialogs";
 import { ReservationCard } from "@/components/trips/ReservationCard";
 import { Timeline, TimelineLegend } from "@/components/trips/Timeline";
 import { TripMap } from "@/components/trips/TripMap";
-import { Badge, Button, EmptyState, PageLoader, StatusPill } from "@/components/ui";
+import { Badge, Button, EmptyState, LinkButton, PageLoader, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { fmtRange, relativeTime } from "@/lib/format";
 import { useConflicts, useInvalidateTripData, useItinerary, useReservations, useTrip, useTripDocuments } from "@/lib/queries";
 import type { Conversation, ItineraryEvent, Reservation } from "@/lib/types";
 
-const tabClass = "relative whitespace-nowrap px-1 pb-3 text-[14px] font-medium text-ink-400 transition hover:text-ink-700 data-[state=active]:text-ink-900 data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-lagoon-600";
+function Tab({ value, current, children }: { value: string; current: string; children: ReactNode }) {
+  const active = value === current;
+  return (
+    <Tabs.Trigger value={value} className={clsx("relative flex h-10 shrink-0 snap-start items-center gap-1.5 rounded-full px-4 text-[14px] font-medium transition-colors pointer-coarse:h-11", active ? "text-white" : "text-ink-500 hover:text-ink-800")}>
+      {active && <motion.span layoutId="trip-tab" transition={spring} className="absolute inset-0 rounded-full bg-ink-900" />}
+      <span className="relative z-10 flex items-center gap-1.5">{children}</span>
+    </Tabs.Trigger>
+  );
+}
 
 export default function TripDetailPage() {
   const { id = "" } = useParams();
@@ -31,6 +41,7 @@ export default function TripDetailPage() {
   const [editing, setEditing] = useState<ItineraryEvent | null | "new">(null);
   const [editingRes, setEditingRes] = useState<Reservation | null | "new">(null);
   const [notes, setNotes] = useState<string | null>(null);
+  const [tab, setTab] = useState("itinerary");
 
   useEffect(() => { if (trip.data && notes === null) setNotes(trip.data.notes); }, [trip.data, notes]);
 
@@ -67,10 +78,10 @@ export default function TripDetailPage() {
   return (
     <div>
       <header className="mb-6">
-        <Link to="/trips" className="text-[13px] text-ink-400 hover:text-ink-700">← Trips</Link>
-        <div className="mt-2 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <Link to="/trips" className="-ml-1 inline-flex min-h-11 items-center gap-1 pr-3 text-[15px] text-lagoon-600 hover:text-lagoon-700"><ChevronLeft className="h-5 w-5" />Trips</Link>
+        <div className="mt-1 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h1 className="display text-[30px] leading-tight sm:text-[36px]">{t.name}</h1>
+            <h1 className="display text-[34px] leading-[1.06] tracking-[-0.02em] sm:text-[40px]">{t.name}</h1>
             <p className="mt-1.5 text-[15px] text-ink-500">{fmtRange(t.start_date, t.end_date)} · {t.destinations.map((d) => d.name).join(" → ") || t.primary_destination || "No destination yet"}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-400">
               {t.travellers.length > 0 && <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{t.travellers.map((x) => x.full_name).join(", ")}</span>}
@@ -78,11 +89,11 @@ export default function TripDetailPage() {
               {t.created_via === "demo" && <Badge tone="violet">Demo trip</Badge>}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={askAssistant} icon={<MessageCircle className="h-4 w-4" />}>Ask about this trip</Button>
-            <Link to={`/discover?trip=${t.id}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-sand-200 bg-white px-4 text-[14px] font-medium text-ink-800 hover:bg-sand-50"><Compass className="h-4 w-4" /> Find activities</Link>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+            <Button variant="secondary" onClick={askAssistant} className="shrink-0" icon={<MessageCircle className="h-4 w-4" />}>Ask about this trip</Button>
+            <LinkButton to={`/discover?trip=${t.id}`} className="shrink-0" icon={<Compass className="h-4 w-4" />}>Find activities</LinkButton>
             <Menu.Root>
-              <Menu.Trigger className="flex h-10 w-10 items-center justify-center rounded-xl border border-sand-200 bg-white text-ink-500 hover:bg-sand-50" aria-label="More trip actions"><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
+              <Menu.Trigger className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 hover:bg-sand-50 active:scale-90 pointer-coarse:h-11 pointer-coarse:w-11" aria-label="More trip actions"><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
               <Menu.Portal>
                 <Menu.Content align="end" className="z-50 min-w-[180px] rounded-xl border border-sand-200 bg-white p-1 text-[13.5px] shadow-[var(--shadow-lift)]">
                   <Menu.Item onSelect={deleteTrip} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-rose-ink outline-none data-[highlighted]:bg-rose-soft"><Trash2 className="h-4 w-4" /> Delete trip</Menu.Item>
@@ -93,14 +104,14 @@ export default function TripDetailPage() {
         </div>
       </header>
 
-      <Tabs.Root defaultValue="itinerary">
-        <Tabs.List className="mb-6 flex gap-6 overflow-x-auto border-b border-sand-200" aria-label="Trip sections">
-          <Tabs.Trigger value="itinerary" className={tabClass}>Itinerary</Tabs.Trigger>
-          <Tabs.Trigger value="reservations" className={tabClass}>Reservations <span className="text-ink-300">{reservations.data?.length ?? ""}</span></Tabs.Trigger>
-          <Tabs.Trigger value="alerts" className={tabClass}>Alerts {serious.length > 0 && <span className="ml-1 rounded-full bg-clay-500 px-1.5 text-[11px] text-white">{serious.length}</span>}</Tabs.Trigger>
-          <Tabs.Trigger value="map" className={tabClass}>Map</Tabs.Trigger>
-          <Tabs.Trigger value="documents" className={tabClass}>Documents</Tabs.Trigger>
-          <Tabs.Trigger value="notes" className={tabClass}>Notes</Tabs.Trigger>
+      <Tabs.Root value={tab} onValueChange={setTab}>
+        <Tabs.List className="-mx-4 mb-6 flex snap-x gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" aria-label="Trip sections">
+          <Tab value="itinerary" current={tab}>Itinerary</Tab>
+          <Tab value="reservations" current={tab}>Bookings <span className="opacity-50">{reservations.data?.length ?? ""}</span></Tab>
+          <Tab value="alerts" current={tab}>Alerts {serious.length > 0 && <span className="rounded-full bg-clay-500 px-1.5 text-[11px] leading-[18px] text-white">{serious.length}</span>}</Tab>
+          <Tab value="map" current={tab}>Map</Tab>
+          <Tab value="documents" current={tab}>Documents</Tab>
+          <Tab value="notes" current={tab}>Notes</Tab>
         </Tabs.List>
 
         <Tabs.Content value="itinerary">

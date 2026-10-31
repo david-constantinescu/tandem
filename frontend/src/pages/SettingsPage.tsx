@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { AlertTriangle, Check, ExternalLink, Mail, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Bell, Check, ChevronLeft, ChevronRight, Database, ExternalLink, Gauge, HardDrive, Link2, Lock, LogOut, Mail, ShieldAlert, Sparkles, UserRound } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,8 +11,9 @@ import { relativeTime } from "@/lib/format";
 import type { ProviderCaps, User } from "@/lib/types";
 
 const SECTIONS = [
-  ["profile", "Profile"], ["ai", "AI & privacy"], ["usage", "API usage"], ["connections", "Connected accounts"],
-  ["notifications", "Notifications"], ["storage", "File storage"], ["security", "Account security"], ["data", "Your data"],
+  ["profile", "Profile", UserRound, "bg-lagoon-600"], ["ai", "AI & privacy", Sparkles, "bg-violet-ink"], ["usage", "API usage", Gauge, "bg-clay-500"],
+  ["connections", "Connected accounts", Link2, "bg-lagoon-500"], ["notifications", "Notifications", Bell, "bg-rose-ink"],
+  ["storage", "File storage", HardDrive, "bg-ink-500"], ["security", "Account security", Lock, "bg-ink-800"], ["data", "Your data", Database, "bg-amber-ink"],
 ] as const;
 
 type Settings = {
@@ -23,18 +24,51 @@ type Settings = {
 };
 
 export default function SettingsPage() {
-  const { section = "profile" } = useParams();
+  const { section: picked } = useParams();
+  const section = picked ?? "profile";
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const settings = useQuery({ queryKey: ["settings"], queryFn: () => api.get<Settings>("/settings") });
   if (settings.isLoading || !settings.data) return <PageLoader />;
   const s = settings.data;
+  const label = SECTIONS.find(([k]) => k === section)?.[1] ?? "Settings";
   return (
     <div>
-      <PageHeader title="Settings" />
+      {/* Phones get an iOS-style grouped list first; a section opens as its own screen. */}
+      <div className={clsx("lg:hidden", picked && "hidden")}>
+        <PageHeader title="Settings" />
+        <div className="card mb-5 flex items-center gap-3 rounded-[22px] p-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-lagoon-900 text-[18px] font-semibold text-white">{(user?.display_name || user?.email || "?").slice(0, 1).toUpperCase()}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-[16px] font-semibold">{user?.display_name || "Traveller"}</span>
+            <span className="block truncate text-[13px] text-ink-400">{user?.is_demo ? "Demo workspace" : user?.email}</span>
+          </span>
+        </div>
+        <ul className="card divide-y divide-sand-100 overflow-hidden rounded-[22px]">
+          {SECTIONS.map(([key, name, Icon, tint]) => (
+            <li key={key}>
+              <Link to={`/settings/${key}`} className="flex min-h-[52px] items-center gap-3 px-4 active:bg-sand-50">
+                <span className={clsx("flex h-8 w-8 items-center justify-center rounded-[9px] text-white", tint)}><Icon className="h-[17px] w-[17px]" /></span>
+                <span className="flex-1 text-[16px] text-ink-900">{name}</span>
+                <ChevronRight className="h-4 w-4 text-ink-300" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <button onClick={async () => { await logout(); navigate("/login"); }} className="card mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[22px] text-[16px] font-medium text-rose-ink active:bg-sand-50">
+          <LogOut className="h-[18px] w-[18px]" /> Sign out
+        </button>
+      </div>
+
+      <div className={clsx(!picked && "hidden lg:block")}>
+        <Link to="/settings" className="-ml-1 inline-flex min-h-11 items-center gap-1 pr-3 text-[15px] text-lagoon-600 lg:hidden"><ChevronLeft className="h-5 w-5" />Settings</Link>
+        <h1 className="display mb-5 text-[30px] leading-tight lg:hidden">{label}</h1>
+        <div className="hidden lg:block"><PageHeader title="Settings" /></div>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav className="-mx-1 flex gap-1 overflow-x-auto lg:flex-col" aria-label="Settings sections">
-          {SECTIONS.map(([key, label]) => (
+        <nav className="hidden flex-col gap-1 lg:flex" aria-label="Settings sections">
+          {SECTIONS.map(([key, name]) => (
             <NavLink key={key} to={`/settings/${key}`} className={({ isActive }) => clsx("whitespace-nowrap rounded-xl px-3 py-2 text-[13.5px] font-medium",
-              isActive || (key === "profile" && section === "profile") ? "bg-white text-ink-900 shadow-[var(--shadow-card)]" : "text-ink-500 hover:text-ink-800")}>{label}</NavLink>
+              isActive || (key === "profile" && !picked) ? "bg-white text-ink-900 shadow-[var(--shadow-card)]" : "text-ink-500 hover:text-ink-800")}>{name}</NavLink>
           ))}
         </nav>
         <div className="max-w-2xl">
@@ -48,14 +82,15 @@ export default function SettingsPage() {
           {section === "data" && <DataSection />}
         </div>
       </div>
+      </div>
     </div>
   );
 }
 
 function Panel({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return (
-    <section className="card p-5 sm:p-6">
-      <h2 className="text-[16px] font-semibold">{title}</h2>
+    <section className="card rounded-[22px] p-4 sm:p-6">
+      <h2 className="text-[17px] font-semibold">{title}</h2>
       {description && <p className="mt-1 text-[13.5px] text-ink-500">{description}</p>}
       <div className="mt-5">{children}</div>
     </section>
@@ -93,7 +128,7 @@ function Profile({ s }: { s: Settings }) {
   return (
     <form onSubmit={submit} className="space-y-6">
       <Panel title="Profile" description="Your home city helps Tandem tell outbound from return journeys.">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Name" htmlFor="pn"><input id="pn" className="field" value={p.display_name} onChange={(e) => setP({ ...p, display_name: e.target.value })} /></Field>
           <Field label="Email"><input className="field" value={s.profile.email} disabled /></Field>
           <Field label="Home city" htmlFor="ph"><input id="ph" className="field" value={p.home_city} onChange={(e) => setP({ ...p, home_city: e.target.value })} /></Field>
@@ -107,7 +142,7 @@ function Profile({ s }: { s: Settings }) {
         </div>
       </Panel>
       <Panel title="Travel preferences" description="Used by the assistant when suggesting activities.">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><Field label="Interests" htmlFor="pi" hint="Comma separated"><input id="pi" className="field" value={prefs.interests} onChange={(e) => setPrefs({ ...prefs, interests: e.target.value })} /></Field></div>
           <Field label="Pace" htmlFor="pp"><select id="pp" className="field" value={prefs.pace} onChange={(e) => setPrefs({ ...prefs, pace: e.target.value })}><option value="relaxed">Relaxed</option><option value="balanced">Balanced</option><option value="packed">Packed</option></select></Field>
           <Field label="Budget" htmlFor="pb"><select id="pb" className="field" value={prefs.budget} onChange={(e) => setPrefs({ ...prefs, budget: e.target.value })}><option value="budget">Budget</option><option value="moderate">Moderate</option><option value="premium">Premium</option></select></Field>
@@ -363,7 +398,7 @@ function Security() {
   return (
     <div className="space-y-6">
       <Panel title="Change password" description="You'll be signed out everywhere.">
-        <form onSubmit={change} className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={change} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Current password" htmlFor="cp"><input id="cp" type="password" required className="field" value={cur} onChange={(e) => setCur(e.target.value)} autoComplete="current-password" /></Field>
           <Field label="New password" htmlFor="np" hint="At least 10 characters"><input id="np" type="password" required minLength={10} className="field" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" /></Field>
           {err && <div className="sm:col-span-2"><ErrorNote>{err}</ErrorNote></div>}
@@ -400,7 +435,7 @@ function DataSection() {
         <a href="/api/v1/settings/export" className="inline-flex h-10 items-center rounded-xl bg-lagoon-900 px-4 text-[14px] font-medium text-white hover:bg-ink-800">Download export (.zip)</a>
       </Panel>
       <Panel title="Delete account" description="Permanently deletes your account, documents, trips and history, and revokes connected accounts. This can't be undone.">
-        <form onSubmit={del} className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={del} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Password" htmlFor="dp"><input id="dp" type="password" required className="field" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
           <Field label="Type DELETE to confirm" htmlFor="dc"><input id="dc" className="field" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} /></Field>
           {err && <div className="sm:col-span-2"><ErrorNote>{err}</ErrorNote></div>}

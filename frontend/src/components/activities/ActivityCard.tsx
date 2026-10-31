@@ -24,16 +24,16 @@ export function ActivityCard({ a, tripId, date }: { a: ActivityResult; tripId?: 
     }
   };
   return (
-    <article className="card flex flex-col p-4">
+    <article className="card flex w-full flex-col rounded-[22px] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="eyebrow">{a.categories?.[0] ?? "Activity"}</p>
-          <h3 className="mt-1 text-[15.5px] font-semibold leading-snug text-ink-900">{a.title}</h3>
+          <h3 className="display mt-1 text-[19px] leading-snug text-ink-900">{a.title}</h3>
         </div>
         {a.price !== null ? (
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <p className="text-[16px] font-semibold text-ink-900">{a.price === 0 ? "Free" : money(a.price, a.currency)}</p>
-            {a.price_basis && a.price !== 0 && <p className="text-[11.5px] text-ink-400">{a.price_basis.replace("_", " ")}</p>}
+            {a.price_basis && a.price !== 0 && <p className="whitespace-nowrap text-[11.5px] text-ink-400">{a.price_basis.replace("_", " ")}</p>}
           </div>
         ) : <p className="text-[12px] text-ink-400">Price unknown</p>}
       </div>
@@ -57,7 +57,7 @@ export function ActivityCard({ a, tripId, date }: { a: ActivityResult; tripId?: 
           <Button size="sm" onClick={() => setOpen(true)} icon={<CalendarCheck className="h-3.5 w-3.5" />}>Prepare booking</Button>
         ) : a.booking_url ? (
           <a href={a.booking_url} target="_blank" rel="noopener noreferrer nofollow"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-sand-200 bg-white px-3 text-[13px] font-medium text-ink-800 hover:bg-sand-50">
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-sand-200 bg-white px-3 text-[13px] font-medium text-ink-800 transition active:scale-[0.97] hover:bg-sand-50 pointer-coarse:h-10 pointer-coarse:px-3.5 pointer-coarse:text-[14px]">
             {a.provider === "osm" ? "Official website" : "View on provider"} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         ) : null}
@@ -106,7 +106,7 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
                   const v = `${s.date}|${s.time}`;
                   return (
                     <button key={v} type="button" onClick={() => setSlot(v)}
-                      className={clsx("rounded-xl border px-3 py-2 text-left text-[13px] transition", slot === v ? "border-lagoon-500 bg-lagoon-50 text-lagoon-700" : "border-sand-200 hover:border-sand-300")}>
+                      className={clsx("min-h-11 rounded-xl border px-3 py-2 text-left text-[13px] transition active:scale-95", slot === v ? "border-lagoon-500 bg-lagoon-50 text-lagoon-700" : "border-sand-200 hover:border-sand-300")}>
                       <span className="block font-medium">{s.time}</span>
                       <span className="block text-[11.5px] text-ink-400">{fmtDate(s.date)} · {s.remaining} left</span>
                     </button>
@@ -125,7 +125,7 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
             <input id="ppl" type="number" min={1} max={20} className="field" value={participants} onChange={(e) => setParticipants(Math.max(1, +e.target.value))} />
           </div>
           {error && <ErrorNote>{error}</ErrorNote>}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pb-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button onClick={prepare} loading={busy} disabled={!slot && !manualDate}>Get live quote</Button>
           </div>
