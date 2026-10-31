@@ -31,6 +31,10 @@ SITE_FOR = {"train": "demo_rail", "tren": "demo_rail", "rail": "demo_rail", "bus
             "coach": "demo_coach", "autocar": "demo_coach", "flight": "demo_air", "plane": "demo_air", "zbor": "demo_air",
             "avion": "demo_air", "museum": "demo_museum", "muzeu": "demo_museum", "gallery": "demo_museum",
             "galerie": "demo_museum"}
+# "from Rome to Florence on Sunday" / "de la Roma la Florenta cu trenul pe 14 noiembrie"
+ROUTE = (r"(?:from|de la|din) ([a-z .'-]+?) (?:to|la|spre|catre|pana la|in) ([a-z .'-]+?)"
+         r"(?: on| for| at| by| with| this| next| pe| pentru| in| cu| duminica| luni| marti| miercuri| joi| vineri| sambata"
+         r"|,|\.|\?|$)")
 CATEGORY_FOR = {"demo_rail": "train", "demo_coach": "bus", "demo_air": "flight", "demo_museum": "museum"}
 STATUS = {"confirmed": "confirmed", "pending": "pending", "unknown": "unconfirmed", "suggested": "suggestion",
           "unbooked": "not booked", "cancelled": "cancelled", "completed": "completed"}
@@ -121,16 +125,18 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
         lines = [f"- **{c['title']}** ({tr(SEVERITY.get(c['severity'], c['severity']), loc)}): {c['detail']}" for c in items[:8]]
         return header + tr("I found {n} things to look at:", loc, n=len(items)) + "\n" + "\n".join(lines)
 
-    booking = re.search(r"\b(book|buy|get|rezerva|cumpara|ia-mi|ia)\b.*\b(train|tren|rail|bus|autobuz|coach|autocar|flight|zbor"
-                        r"|plane|avion|museum|muzeu|gallery|galerie)\b", lower)
+    booking = re.search(r"\b(book|buy|get|rezerva|cumpara|ia-mi|ia|ajung\w*|merg\w*|go|travel|calatoresc)\b.*"
+                        r"\b(train|tren|rail|bus|autobuz|coach|autocar|flight|zbor|plane|avion|museum|muzeu|gallery"
+                        r"|galerie)\w*", lower)
     practice = re.search(r"practice|simulat|exersa|test", lower)
-    if booking and SITE_FOR[booking.group(2)] != "demo_museum" and not practice:
-        route = re.search(r"(?:from|de la) ([a-z .'-]+?) (?:to|la|spre|catre) ([a-z .'-]+?)"
-                          r"(?: on| for| at| this| next| pe| pentru| in| duminica| luni| marti| miercuri| joi| vineri| sambata|,|\.|$)", lower)
+    route = re.search(ROUTE, lower)
+    asks_way = route and re.search(r"how (do|can|should|would) (i|we)|get (to|from|there)|cum (ajung|ajungem|merg|mergem)"
+                                   r"|\bdrum|calatori", lower)
+    if ((booking and SITE_FOR[booking.group(2)] != "demo_museum") or asks_way) and not practice:
         if not route:
             return header + tr("Tell me where from and to, e.g. *book a train from Rome to Florence on Sunday*.", loc)
         day = _resolve_day(text, user, t_start, t_end)
-        mode = {"demo_rail": "train", "demo_coach": "bus", "demo_air": "flight"}[SITE_FOR[booking.group(2)]]
+        mode = {"demo_rail": "train", "demo_coach": "bus", "demo_air": "flight"}.get(SITE_FOR[booking.group(2)]) if booking else None
         origin, destination = route.group(1).strip().title(), route.group(2).strip().title()
         result = call("plan_journey", origin=origin, destination=destination, mode=mode,
                       date=day.isoformat() if day else None) or {"links": []}
@@ -143,7 +149,7 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
                 f"- [{i['title']}]({i['url']}) · {i['source']}" for i in strikes)
         when = " " + tr("on {day}", loc, day=long_date(day, loc)) if day else ""
         return header + tr("Here's where to book {mode} {origin} → {destination}{when} on the real websites, with the route "
-                           "filled in where the site allows it:", loc, mode=tr(mode, loc), origin=origin,
+                           "filled in where the site allows it:", loc, mode=tr(mode or "tickets", loc), origin=origin,
                            destination=destination, when=when) + "\n" + "\n".join(lines) + warn + "\n\n" + \
             tr("Book there, then forward the confirmation to Tandem and I'll add it to your trip.", loc)
 
@@ -187,8 +193,11 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
                                place=news.get("place") or "")
         lines = [f"- **{tr(NEWS_KINDS.get(i['kind'], 'News'), loc)}**: [{i['title']}]({i['url']}) · {i['source']}"
                  + (" — " + tr("mentions your trip dates", loc) if i["mentions_dates"] else "") for i in items[:6]]
+        on_dates = [i for i in items if i["mentions_dates"]]
+        verdict = tr("{n} of these mention your trip dates — plan around them.", loc, n=len(on_dates)) if on_dates else \
+            tr("None of these mention your trip dates, so they look like they're about other days.", loc)
         return header + tr("Recent local news for {place} ({source}):", loc, place=news.get("place") or "",
-                           source=news.get("source") or "") + "\n" + "\n".join(lines) + "\n\n" + \
+                           source=news.get("source") or "") + "\n" + "\n".join(lines) + "\n\n" + verdict + " " + \
             tr("These are news reports, not confirmed timetables: check the operator's site on the day.", loc)
 
     if booking:
@@ -199,8 +208,7 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
             return header + tr("Real booking sites are link-only for now ({names}). Open one from **Explore → Tickets**, "
                                "book there, then forward the confirmation to Tandem and I'll add it to your trip.", loc, names=names)
         day = _resolve_day(text, user, t_start, t_end)
-        route = re.search(r"(?:from|de la) ([a-z .'-]+?) (?:to|la|spre|catre) ([a-z .'-]+?)"
-                          r"(?: on| for| at| this| next| pe| pentru| in| duminica| luni| marti| miercuri| joi| vineri| sambata|,|\.|$)", lower)
+        route = re.search(ROUTE, lower)
         party = re.search(r"\b(\d) (?:people|persons|adults|tickets|of us|persoane|oameni|adulti|bilete)\b", lower)
         args = {"site": site, "date": day.isoformat() if day else None, "trip_id": tid,
                 "adults": int(party.group(1)) if party else max(1, len(trip_info.get("travellers") or []) or 1)}

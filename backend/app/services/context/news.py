@@ -40,9 +40,10 @@ COUNTRY_NAMES = {"italy": "IT", "italia": "IT", "france": "FR", "spain": "ES", "
                  "netherlands": "NL", "greece": "GR", "united kingdom": "GB", "uk": "GB", "ireland": "IE",
                  "united states": "US", "usa": "US"}
 CITY_COUNTRY = {"rome": "IT", "roma": "IT", "milan": "IT", "florence": "IT", "venice": "IT", "naples": "IT",
-                "paris": "FR", "lyon": "FR", "madrid": "ES", "barcelona": "ES", "seville": "ES", "berlin": "DE",
+                "firenze": "IT", "florenta": "IT", "milano": "IT", "venezia": "IT", "napoli": "IT", "veneția": "IT",
+                "florența": "IT", "paris": "FR", "parigi": "FR", "lyon": "FR", "madrid": "ES", "barcelona": "ES", "seville": "ES", "berlin": "DE",
                 "munich": "DE", "vienna": "AT", "lisbon": "PT", "porto": "PT", "bucharest": "RO", "bucurești": "RO",
-                "cluj-napoca": "RO", "amsterdam": "NL", "athens": "GR", "london": "GB", "dublin": "IE"}
+                "cluj-napoca": "RO", "amsterdam": "NL", "athens": "GR", "london": "GB", "londra": "GB", "dublin": "IE", "bucuresti": "RO", "lisabona": "PT", "viena": "AT"}
 # Local spellings, so local outlets are found ("Roma", not "Rome").
 LOCAL_NAMES = {"rome": "Roma", "florence": "Firenze", "milan": "Milano", "venice": "Venezia", "naples": "Napoli",
                "turin": "Torino", "munich": "München", "cologne": "Köln", "vienna": "Wien", "lisbon": "Lisboa",

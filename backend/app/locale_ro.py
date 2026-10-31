@@ -370,6 +370,11 @@ RO: dict[str, str] = {
     "Recent local news for {place} ({source}):": "Știri locale recente pentru {place} ({source}):",
     "The forecast only reaches 16 days ahead. Ask me again from {day}.":
         "Prognoza acoperă doar 16 zile înainte. Întreabă-mă din nou de {day}.",
+    "{n} of these mention your trip dates — plan around them.":
+        "{n} dintre ele menționează datele călătoriei — planifică în jurul lor.",
+    "None of these mention your trip dates, so they look like they're about other days.":
+        "Niciuna nu menționează datele călătoriei, deci par să fie despre alte zile.",
+    "tickets": "bilete",
     "These are news reports, not confirmed timetables: check the operator's site on the day.":
         "Sunt știri, nu orare confirmate: verifică site-ul operatorului în ziua respectivă.",
     "Weather in {place} (Open-Meteo):": "Vremea în {place} (Open-Meteo):",

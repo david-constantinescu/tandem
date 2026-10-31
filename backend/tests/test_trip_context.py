@@ -137,3 +137,25 @@ def test_journeys_abroad_skip_domestic_buses(api):
     names = [link["name"] for link in r["links"]]
     assert "Google Flights" in names and "ITA Airways" in names and "British Airways" in names
     assert "National Express" not in names and "Trenitalia" not in names
+
+
+@pytest.mark.parametrize("question, locale, expect", [
+    ("How do I get from Rome to Florence on Sunday?", "en", "Trenitalia"),
+    ("Cum ajung de la Roma la Florența cu trenul pe 14 noiembrie?", "ro", "Trenitalia"),
+])
+def test_offline_assistant_answers_route_questions(api, live, question, locale, expect):
+    api.demo()
+    t = _trip(api)
+    conv = api.post("/api/v1/assistant/conversations", json={"trip_id": t["id"]}).get_json()["data"]
+    reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages", json={"content": question},
+                     headers={"X-Tandem-Locale": locale}).get_json()["data"]["reply"]["content"]
+    assert expect in reply and "Florenta Cu" not in reply
+
+
+def test_offline_news_answer_says_whether_trip_dates_are_hit(api, live):
+    api.demo()
+    t = _trip(api)
+    conv = api.post("/api/v1/assistant/conversations", json={"trip_id": t["id"]}).get_json()["data"]
+    reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages",
+                     json={"content": "Is there a strike?"}).get_json()["data"]["reply"]["content"]
+    assert "mention your trip dates" in reply
