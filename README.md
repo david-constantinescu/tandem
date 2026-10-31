@@ -3,7 +3,7 @@
 **Your travel, in tandem.** Drop in every confirmation, ticket and screenshot. Tandem reads them, builds one calm
 itinerary, tells you what clashes, and only books things when you say yes.
 
-**Try it:** https://tandem-travel-roan.vercel.app → *Explore the demo* (works best on a phone).
+**Try it:** https://tandem.softhoarders.me → *Explore the demo* (works best on a phone).
 
 ---
 
