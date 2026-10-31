@@ -955,4 +955,5 @@ export const ro: Record<Key, string> = {
   "trip.emptyDay": "Nimic planificat în această zi.",
   "common.back": "Înapoi",
   "common.next": "Înainte",
+  "tool.ask_user": "A pus o întrebare",
 };

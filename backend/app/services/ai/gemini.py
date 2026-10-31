@@ -113,11 +113,11 @@ class GeminiProvider(AIProvider):
                 req = replace(request, messages=flatten_tool_turns(request.messages))
             try:
                 return self._generate_one(req, name)
-            except (QuotaExceeded, ProviderUnavailable, ProviderTimeout) as exc:
+            except (QuotaExceeded, ProviderUnavailable, ProviderTimeout, ProviderError) as exc:
                 last = exc
                 if isinstance(exc, QuotaExceeded):
                     self._rest(name)
-                log.info("gemini %s unavailable (%s)%s", name, exc.code, "; trying the next model" if i + 1 < len(chain) else "")
+                log.info("gemini %s unavailable (%s: %s)%s", name, exc.code, str(exc)[:140], "; trying the next model" if i + 1 < len(chain) else "")
         assert last is not None
         raise last
 

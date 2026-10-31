@@ -264,3 +264,18 @@ def test_every_ai_request_in_a_web_request_gets_a_deadline(app, monkeypatch):
     finally:
         app.config["AI_TURN_SECONDS"] = 0
         app.config["DEMO_ALLOW_EXTERNAL_AI"] = False
+
+
+def test_gemini_moves_to_the_next_model_when_one_answers_with_an_error(app, monkeypatch):
+    from app.services.ai.base import AIResponse, ProviderError
+    from app.services.ai.gemini import GeminiProvider
+
+    def fake(self, request, model):
+        if model == "main":
+            raise ProviderError("Gemini returned no content", provider="gemini")
+        return AIResponse(provider="gemini", model=model, text="ok")
+
+    monkeypatch.setattr(GeminiProvider, "_generate_one", fake)
+    provider = GeminiProvider({"GEMINI_API_KEY": "x", "AI_REQUEST_TIMEOUT": 20, "GEMINI_FALLBACK_MODELS": "backup"})
+    req = AIRequest(task="agent", system="", messages=[ChatMessage(role="user", parts=[TextPart("hi")])])
+    assert provider.generate(req, "main").model == "backup"

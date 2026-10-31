@@ -970,6 +970,7 @@ export const en = {
   "trip.emptyDay": "Nothing planned this day.",
   "common.back": "Back",
   "common.next": "Next",
+  "tool.ask_user": "Asked a question",
 };
 
 export type Key = keyof typeof en;
