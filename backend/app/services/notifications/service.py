@@ -11,9 +11,7 @@ from app.models import Notification, UserPreference
 
 def notify(user_id: uuid.UUID, type_: str, title: T | str, body: T | str | None = "", *, link: str | None = None,
            severity: str = "info", dedupe_key: str | None = None) -> Notification | None:
-    """Create an in-app notification, honouring preferences and de-duplicating by key.
-
-    Notifications are stored text, so translatable parts are rendered now, in the recipient's language."""
+    """create an in-app notification, honouring preferences and de-duplicating by key"""
     prefs = db.session.get(UserPreference, user_id)
     if prefs and prefs.notification_prefs.get(type_) is False:
         return None

@@ -76,7 +76,7 @@ class ProcessingJob(UUIDPk, db.Model):
 
 
 class ExtractedRecord(UUIDPk, db.Model):
-    """A candidate travel record found in a document, awaiting user review."""
+    """a candidate travel record found in a document, awaiting user review"""
 
     __tablename__ = "extracted_records"
     document_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("documents.id", ondelete="CASCADE"), index=True)
@@ -124,7 +124,7 @@ class ExtractedField(UUIDPk, db.Model):
 
 
 class ProviderFile(UUIDPk, db.Model):
-    """Temporary copy of a document held by an AI provider (e.g. Gemini Files API)."""
+    """temporary copy of a document held by an AI provider"""
 
     __tablename__ = "provider_files"
     document_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("documents.id", ondelete="CASCADE"), index=True)

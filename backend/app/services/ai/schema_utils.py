@@ -1,4 +1,4 @@
-"""JSON-schema helpers for provider structured-output modes and robust JSON parsing."""
+"""helperi pt json schema si pt parsat json din raspunsuri mai murdare"""
 from __future__ import annotations
 
 import copy
@@ -13,12 +13,12 @@ _DROP_KEYS = {"title", "default", "examples"}
 
 
 def inline_schema(model: type[BaseModel] | dict) -> dict:
-    """Return a JSON schema with $refs inlined and cosmetic keys removed."""
+    """return a JSON schema with $refs inlined and cosmetic keys removed"""
     schema = model.model_json_schema() if not isinstance(model, dict) else copy.deepcopy(model)
     defs = schema.pop("$defs", {})
 
     def resolve(node, names: bool = False):
-        # In a "properties" map the keys are field names: a field called "title" must survive.
+        # in a "properties" map the keys are field names: a field called "title" must survive
         if isinstance(node, dict):
             if "$ref" in node and not names:
                 name = node["$ref"].split("/")[-1]
@@ -34,7 +34,7 @@ def inline_schema(model: type[BaseModel] | dict) -> dict:
 
 
 def strict_schema(model: type[BaseModel] | dict) -> dict:
-    """Schema for strict json_schema modes: every property required, no additional properties."""
+    """schema for strict json_schema modes: every property required, no additional properties"""
     schema = inline_schema(model)
 
     def walk(node):
@@ -57,7 +57,7 @@ _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
 
 
 def parse_json_text(text: str) -> dict:
-    """Parse a JSON object from model text, tolerating code fences and leading prose."""
+    """parse a JSON object from model text, tolerating code fences and leading prose"""
     if not text or not text.strip():
         raise InvalidOutput("Model returned an empty response")
     cleaned = _FENCE.sub("", text.strip())

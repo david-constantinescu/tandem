@@ -1,9 +1,4 @@
-"""Provider registry with demo isolation.
-
-Demo workspaces get real, read-only places from OpenStreetMap plus the simulator (the only provider they can
-"book" with, and nothing real is charged). Real accounts can never reach the simulator. This is enforced here,
-the single place adapters are created for a user.
-"""
+"""registrul de provideri. conturile demo vad si simulatorul, cele reale niciodata"""
 from __future__ import annotations
 
 from flask import current_app

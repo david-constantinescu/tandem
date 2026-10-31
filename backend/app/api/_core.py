@@ -1,7 +1,8 @@
-"""Shared API plumbing: response envelope, authentication, CSRF, request validation, OpenAPI metadata."""
+"""chestii comune pt api: raspunsurile, login, csrf, validarea requesturilor si metadatele pt openapi"""
 from __future__ import annotations
 
 import functools
+import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, TypeVar
@@ -31,7 +32,7 @@ def ok(data: Any = None, status: int = 200, meta: dict | None = None) -> tuple[R
 
 
 def error_response(err: APIError) -> tuple[Response, int]:
-    # Messages are written in English; the client's language is applied here when a translation exists.
+    # messages are written in English; the client's language is applied here when a translation exists
     body: dict[str, Any] = {"error": {"code": err.code, "message": tr(str(err.message))}}
     if err.details is not None:
         body["error"]["details"] = err.details
@@ -40,7 +41,7 @@ def error_response(err: APIError) -> tuple[Response, int]:
 
 def doc(summary: str, *, body: type[BaseModel] | None = None, query: type[BaseModel] | None = None,
         tag: str | None = None, auth: bool = True):
-    """Attach OpenAPI metadata to a view function."""
+    """attach OpenAPI metadata to a view function"""
 
     def decorator(fn: Callable) -> Callable:
         OPENAPI_REGISTRY[f"{fn.__module__}.{fn.__name__}"] = {
@@ -85,7 +86,7 @@ def parse_uuid(value: str, label: str = "resource") -> uuid.UUID:
 
 
 def load_session() -> None:
-    """Resolve the session cookie into g.user / g.session (called before every request)."""
+    """resolve the session cookie into g.user / g.session (called before every request)"""
     g.user = None
     g.session = None
     token = request.cookies.get(current_app.config["SESSION_COOKIE_NAME"])
@@ -114,7 +115,7 @@ def login_required(fn: Callable) -> Callable:
             raise Unauthorized("Sign in to continue")
         if request.method not in SAFE_METHODS:
             sent = request.headers.get("X-CSRF-Token", "")
-            if not sent or sent != g.session.csrf_token:
+            if not sent or not hmac.compare_digest(sent, g.session.csrf_token or ""):
                 raise Forbidden("Missing or invalid CSRF token", code="csrf_failed")
         return fn(*args, **kwargs)
 
@@ -129,7 +130,7 @@ def current_user() -> User:
 
 
 def get_owned(model, obj_id, label: str | None = None):
-    """Fetch a row by id that belongs to the current user, or 404 (never 403, to avoid leaking existence)."""
+    """fetch a row by id that belongs to the current user, or 404 (never 403, to avoid leaking existence)"""
     label = label or model.__name__.lower()
     oid = parse_uuid(obj_id, label)
     obj = db.session.get(model, oid)
@@ -140,5 +141,5 @@ def get_owned(model, obj_id, label: str | None = None):
 
 def client_ip() -> str:
     # remote_addr already reflects trusted X-Forwarded-For hops when TRUSTED_PROXIES is set (ProxyFix);
-    # the raw header is never trusted directly because clients can forge it.
+    # the raw header is never trusted directly because clients can forge it
     return request.remote_addr or ""

@@ -1,11 +1,4 @@
-"""Partner activity providers: Booking.com Demand API (Attractions), Expedia Rapid Activities,
-Viator Partner API, GetYourGuide Partner API.
-
-Each requires partner credentials Tandem does not have by default. Without them the adapter reports
-`awaiting_partner_approval` and performs no calls. With credentials, only the operations that the
-provider documents for that access level are enabled; booking stays redirect-only unless an
-authorised booking flow is documented and implemented. See docs/PROVIDER_INTEGRATIONS.md.
-"""
+"""providerii parteneri (booking.com, expedia, viator, getyourguide). merg doar cu chei de partener"""
 from __future__ import annotations
 
 import hashlib
@@ -44,12 +37,7 @@ def _http(method: str, url: str, provider: str, **kwargs) -> dict:
 
 
 class BookingComAdapter(TravelProviderAdapter):
-    """Booking.com Demand API — Attractions (early-access pilot).
-
-    Documented flow (3.2 Beta / 3.3): POST /attractions/search (price + free-cancellation in results),
-    POST /attractions/details (static content), POST /attractions/points-of-interest. Booking is a
-    redirect to the Booking.com attraction URL with the affiliate id; there is no booking endpoint.
-    """
+    """Booking.com Demand API — Attractions (early-access pilot)"""
 
     key = "booking_com"
     name = "Booking.com Attractions"
@@ -142,12 +130,10 @@ class BookingComAdapter(TravelProviderAdapter):
 
 
 class ExpediaAdapter(TravelProviderAdapter):
-    """Expedia Rapid. Activities is an early-access beta (OAuth 2.0; booking requires the Payments API).
-
-    The lodging/common Rapid APIs use the documented EAN APIKey signature, implemented in `signature()`.
-    Activities endpoints are not yet in the public API Explorer, so search is not enabled until beta
-    access and endpoint documentation are available.
-    """
+    """Expedia Rapid. Activities is an early-access beta (OAuth 2.0; booking requires the Payments API). The
+    lodging/common Rapid APIs use the documented EAN APIKey signature, implemented in `signature()`. Activities
+    endpoints are not yet in the public API Explorer, so search is not enabled until beta access and endpoint
+    documentation are available."""
 
     key = "expedia"
     name = "Expedia Rapid Activities"
@@ -184,11 +170,7 @@ class ExpediaAdapter(TravelProviderAdapter):
 
 
 class ViatorAdapter(TravelProviderAdapter):
-    """Viator Partner API v2 (affiliate). Confirmed: `exp-api-key` header, `Accept: application/json;version=2.0`,
-    sandbox host api.sandbox.viator.com/partner. Endpoint paths follow the Partner API v2 reference and must be
-    confirmed with a sandbox key (see docs/PROVIDER_INTEGRATIONS.md). Booking is redirect-only: API booking
-    requires a full-access merchant partnership.
-    """
+    """Viator Partner API v2 (affiliate)"""
 
     key = "viator"
     name = "Viator"
@@ -282,8 +264,7 @@ class GetYourGuideAdapter(TravelProviderAdapter):
 
 
 class _PartnerStub(TravelProviderAdapter):
-    """Activity marketplaces with partner-only APIs. Registered so their status is visible; no calls are made
-    until a partnership grants credentials and the adapter is implemented against their documentation."""
+    """activity marketplaces with partner-only APIs"""
 
     env_key = ""
     access_note = ""

@@ -1,4 +1,4 @@
-"""Itinerary event editing with timezone-aware times."""
+"""editarea evenimentelor din itinerariu, cu ore pe fusul local"""
 from __future__ import annotations
 
 from datetime import datetime

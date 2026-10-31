@@ -1,9 +1,10 @@
 import { clsx } from "clsx";
-import { AlertTriangle, Bell, CalendarDays, Check, Copy, ChevronLeft, ChevronRight, Database, ExternalLink, Gauge, HardDrive, Languages, Link2, Lock, LogOut, Mail, ShieldAlert, Sparkles, UserRound } from "lucide-react";
+import { AlertTriangle, Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Database, ExternalLink, Gauge, HardDrive, Languages, Link2, Lock, LogOut, Mail, Moon, ShieldAlert, Sparkles, UserRound } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Badge, Button, ErrorNote, Field, InfoNote, PageHeader, PageLoader, Toggle, useStatusLabel } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
@@ -53,6 +54,11 @@ export default function SettingsPage() {
           <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-lagoon-900 text-white"><Languages className="h-[17px] w-[17px]" /></span>
           <span className="flex-1 text-[16px] text-ink-900">{t("lang.label")}</span>
           <LanguageSwitch />
+        </div>
+        <div className="card mb-5 -mt-3 flex min-h-[56px] items-center gap-3 rounded-[22px] px-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink-700 text-white"><Moon className="h-[17px] w-[17px]" /></span>
+          <span className="flex-1 text-[16px] text-ink-900">{t("theme.label")}</span>
+          <ThemeSwitch />
         </div>
         <ul className="card divide-y divide-sand-100 overflow-hidden rounded-[22px]">
           {SECTIONS.map(([key, name, Icon, tint]) => (
@@ -149,9 +155,9 @@ function Profile({ s }: { s: Settings }) {
           <Field label={t("event.timezone")} htmlFor="ptz">
             <select id="ptz" className="field" value={p.timezone} onChange={(e) => setP({ ...p, timezone: e.target.value })}>{["UTC", ...zones].map((z) => <option key={z} value={z}>{z}</option>)}</select>
           </Field>
-          <div>
-            <p className="label">{t("lang.label")}</p>
-            <LanguageSwitch />
+          <div className="flex flex-wrap gap-6">
+            <div><p className="label">{t("lang.label")}</p><LanguageSwitch /></div>
+            <div><p className="label">{t("theme.label")}</p><ThemeSwitch /></div>
           </div>
         </div>
       </Panel>

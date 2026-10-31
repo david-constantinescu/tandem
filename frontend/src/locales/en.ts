@@ -979,6 +979,11 @@ export const en = {
   "chat.attach": "Add a file, photo, email or link",
   "nav.trip": "Trip",
   "home.openChat": "Open chat",
+  "theme.toLight": "Switch to light mode",
+  "theme.toDark": "Switch to dark mode",
+  "theme.label": "Appearance",
+  "theme.dark": "Dark",
+  "theme.light": "Light",
 };
 
 export type Key = keyof typeof en;

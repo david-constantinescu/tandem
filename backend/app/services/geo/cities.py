@@ -1,8 +1,4 @@
-"""Curated major destinations (name → coordinates, IANA zone, ISO country) and country names.
-
-Airport data alone is ambiguous for city names (Rome, Italy vs Rome, Georgia), so these well-known
-destinations are resolved first; other names fall back to airport data only when unambiguous.
-"""
+"""orasele mai importante cu coordonate, fus orar si tara"""
 from __future__ import annotations
 
 MAJOR_CITIES: dict[str, tuple[float, float, str, str]] = {

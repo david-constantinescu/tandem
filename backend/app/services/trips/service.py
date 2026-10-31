@@ -1,4 +1,4 @@
-"""Trips and reservations: turning reviewed records into reservations, itinerary sync, change handling."""
+"""calatorii si rezervari: din inregistrari verificate fac rezervari, sincronizez itinerariul, schimbari"""
 from __future__ import annotations
 
 import re
@@ -44,7 +44,7 @@ def _decimal(v) -> Decimal | None:
 
 
 # ---------------------------------------------------------------------------------------
-# Trips
+# trips
 def create_trip(user: User, name: str, *, start_date: date | None = None, end_date: date | None = None,
                 destination: str | None = None, created_via: str = "user", grouping_info: dict | None = None,
                 lat: float | None = None, lon: float | None = None) -> Trip:
@@ -78,7 +78,7 @@ def add_destination(trip: Trip, name: str, *, lat=None, lon=None, arrive=None, d
 
 
 def refresh_trip(trip: Trip, user: User) -> None:
-    """Recompute trip date bounds and destinations from its reservations and events."""
+    """recompute trip date bounds and destinations from its reservations and events"""
     events = db.session.execute(db.select(ItineraryEvent).where(
         ItineraryEvent.trip_id == trip.id, ItineraryEvent.status != "cancelled")).scalars().all()
     dates = []
@@ -92,7 +92,7 @@ def refresh_trip(trip: Trip, user: User) -> None:
     home = _squash(user.home_city)
     reservations = db.session.execute(db.select(Reservation).where(
         Reservation.trip_id == trip.id, Reservation.status != "cancelled").order_by(Reservation.start_at)).scalars().all()
-    # Where the trip starts from (the first journey's departure city) is home, not a destination.
+    # where the trip starts from (the first journey's departure city) is home, not a destination
     first_transport = next((r for r in reservations if r.type in TRANSPORT and r.city), None)
     origin = _squash(first_transport.city) if first_transport else ""
     for r in reservations:
@@ -110,7 +110,7 @@ def refresh_trip(trip: Trip, user: User) -> None:
 
 
 # ---------------------------------------------------------------------------------------
-# Reservations
+# reservations
 def reservation_from_data(user: User, data: dict, *, trip: Trip | None, source_document_id=None,
                           confidence: float | None = None, verification: str = "user_confirmed",
                           created_via: str = "extraction") -> Reservation:
@@ -150,7 +150,7 @@ def _tz(name: str | None, user: User) -> str:
 
 
 def sync_events(res: Reservation) -> list[ItineraryEvent]:
-    """Create or update the itinerary events that represent a reservation."""
+    """create or update the itinerary events that represent a reservation"""
     if res.trip_id is None:
         for e in db.session.execute(db.select(ItineraryEvent).where(ItineraryEvent.reservation_id == res.id)).scalars():
             db.session.delete(e)
@@ -171,7 +171,7 @@ def sync_events(res: Reservation) -> list[ItineraryEvent]:
     elif res.type in ("hotel", "car_rental"):
         first, last = ("hotel_checkin", "hotel_checkout") if res.type == "hotel" else ("car_rental", "car_rental")
         name = res.provider_name or res.title
-        # Generated titles are stored, so they're written in the owner's language.
+        # generated titles are stored, so they're written in the owner's language
         loc = locale_of(res.user_id)
         labels = (tr("Check in", loc), tr("Check out", loc)) if res.type == "hotel" else (tr("Pick up", loc), tr("Drop off", loc))
         common = {"location_name": res.location_name or name, "city": res.city, "lat": res.lat, "lon": res.lon}
@@ -196,7 +196,7 @@ def sync_events(res: Reservation) -> list[ItineraryEvent]:
             setattr(event, key, value)
         event.trip_id = res.trip_id
         event.address = res.address
-        # Preserve user-marked completion but follow reservation status otherwise.
+        # preserve user-marked completion but follow reservation status otherwise
         if not (event.status == "completed" and status == "confirmed"):
             event.status = status
         event.details = {**(event.details or {}), "role": role, "reservation_type": res.type,
@@ -209,7 +209,7 @@ def sync_events(res: Reservation) -> list[ItineraryEvent]:
 
 
 def assign_trip_for_data(user: User, data: dict, choice: dict | None) -> tuple[Trip | None, dict]:
-    """Resolve the trip a record goes into: explicit choice, else a fresh grouping proposal."""
+    """resolve the trip a record goes into: explicit choice, else a fresh grouping proposal"""
     choice = choice or {}
     if choice.get("trip_id"):
         trip = db.session.get(Trip, choice["trip_id"])
@@ -253,7 +253,7 @@ def accept_record(user: User, record: ExtractedRecord, *, corrections: dict | No
     if actor != "user" and unverified:
         raise Conflict("Records with unverified fields need a manual review", code="needs_review")
     if actor == "user":
-        # The user reviewed the record (including any highlighted warnings) and accepted it.
+        # the user reviewed the record (including any highlighted warnings) and accepted it
         for f in record.fields:
             if f.field_name not in corrections:
                 f.verification = "user_confirmed"
@@ -285,8 +285,7 @@ def accept_record(user: User, record: ExtractedRecord, *, corrections: dict | No
 
 
 def refresh_pending_proposals(user: User, exclude_id=None, limit: int = 50) -> None:
-    """Re-run grouping for records still awaiting review, so proposals reflect trips created since analysis
-    (e.g. the hotel uploaded together with the flight now proposes joining the flight's new trip)."""
+    """re-run grouping for records still awaiting review, so proposals reflect trips created since analysis"""
     import uuid as _uuid
 
     pending = db.session.execute(db.select(ExtractedRecord).where(
@@ -313,7 +312,7 @@ def _finish_document_if_reviewed(doc: Document | None) -> None:
 
 
 def apply_corrections(user: User, data: dict, corrections: dict) -> dict:
-    """Merge user corrections into normalised data, recomputing UTC instants when local times change."""
+    """merge user corrections into normalised data, recomputing UTC instants when local times change"""
     from app.utils.timeutil import iso, localize
     from datetime import datetime
 
@@ -347,7 +346,7 @@ def apply_corrections(user: User, data: dict, corrections: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------------------
-# Change detection
+# change detection
 def find_matching_reservation(user: User, data: dict) -> Reservation | None:
     ref = _squash(data.get("booking_reference"))
     if not ref:
@@ -362,7 +361,7 @@ def find_matching_reservation(user: User, data: dict) -> Reservation | None:
 
 
 def relocalize(data: dict, start_tz: str | None, end_tz: str | None) -> dict:
-    """Re-read local wall-clock times in the given zones (used when a document's zone was only assumed)."""
+    """re-read local wall-clock times in the given zones (used when a document's zone was only assumed)"""
     from datetime import datetime
 
     from app.utils.timeutil import iso, localize

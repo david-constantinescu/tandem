@@ -1,10 +1,4 @@
-"""Deterministic itinerary conflict detection.
-
-All rules here are plain code over stored data. AI may later *explain* a conflict, but never decides
-whether one exists. Travel-time checks use a physical lower bound (straight-line distance at a
-generous maximum speed) to flag impossible sequences; routed durations are used only when a routing
-provider is configured, and otherwise the result says travel time is unknown.
-"""
+"""detectarea suprapunerilor si a problemelor din itinerariu, fara ai"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -234,7 +228,7 @@ def detect(trip: Trip, *, now: datetime | None = None) -> list[ConflictItem]:
 
 
 def as_dicts(items: list[ConflictItem], locale: str | None = None) -> list[dict]:
-    """Plain dicts with title and detail rendered in the reader's language."""
+    """plain dicts with title and detail rendered in the reader's language"""
     out = []
     for c in items:
         d = asdict(c)

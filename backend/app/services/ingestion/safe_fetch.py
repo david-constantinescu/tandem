@@ -1,9 +1,4 @@
-"""SSRF-hardened URL fetching for user-submitted links.
-
-Only http(s) on standard ports; every hop (including redirects) must resolve exclusively to public
-addresses; size and time are capped. Links found *inside* documents are never fetched automatically.
-Residual risk (DNS rebinding between check and connect) is documented in docs/SECURITY.md.
-"""
+"""descarcare de linkuri protejata impotriva ssrf (doar adrese publice, si la redirecturi)"""
 from __future__ import annotations
 
 import ipaddress
@@ -42,7 +37,7 @@ def _check_host(url: str) -> None:
 
 
 def fetch(url: str, *, user_agent: str) -> tuple[bytes, str, str]:
-    """Return (content, content_type, final_url)."""
+    """return (content, content_type, final_url)"""
     current = url.strip()
     with httpx.Client(follow_redirects=False, timeout=httpx.Timeout(10.0, connect=5.0),
                       headers={"User-Agent": user_agent, "Accept": ",".join(ALLOWED_TYPES)}) as client:

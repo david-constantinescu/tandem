@@ -1,13 +1,4 @@
-"""Tandem speaking first: checks a user's coming trips and writes to them when something needs a decision.
-
-- Rain on the day of something outdoors ("you planned the walking tour on Saturday, but it's going to rain…").
-- A strike or protest in the news that names one of the trip's days.
-- A clash in the plan.
-
-Each message comes with tappable answers and lands in the user's "updates" conversation, where the assistant (with
-the whole trip in its brief) takes it from there. Runs from the daily cron, when the app is opened (at most every
-few hours), and right after a demo workspace is created.
-"""
+"""tandem scrie primul: se uita la calatoriile urmatoare si zice cand ceva cere o decizie (ploaie, greva, suprapunere)"""
 from __future__ import annotations
 
 import logging
@@ -22,7 +13,7 @@ from app.utils.timeutil import iso_local, local_date
 
 log = logging.getLogger("tandem.proactive")
 
-LOOKAHEAD_DAYS = 16  # how far the forecast reaches
+LOOKAHEAD_DAYS = 16  # cat de departe ajunge prognoza
 MAX_PER_RUN = 3
 OUTDOOR = ("outdoor", "park", "garden", "walk", "tour", "day trip", "viewpoint", "beach", "hike", "bike", "boat",
            "picnic", "sunset", "plimbare", "parc", "grădin", "gradin", "aer liber", "pe jos", "apus", "tur ")
@@ -110,7 +101,7 @@ def _clashes(user: User, trip: Trip, loc: str) -> list[tuple[str, str, list[str]
 
 
 def check_user(user: User, *, force: bool = False) -> int:
-    """Post what's new for this user. Returns how many messages were posted."""
+    """post what's new for this user"""
     throttle = {"u": str(user.id)}
     if not force and cache_get("proactive_run", throttle):
         return 0
@@ -129,7 +120,7 @@ def check_user(user: User, *, force: bool = False) -> int:
 
 
 def run_all(limit: int = 200) -> int:
-    """Daily: everyone with a trip coming up soon."""
+    """daily: everyone with a trip coming up soon"""
     users = db.session.execute(db.select(User).join(Trip, Trip.user_id == User.id).distinct().limit(limit)).scalars().all()
     total = 0
     for u in users:

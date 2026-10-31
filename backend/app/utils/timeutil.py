@@ -1,4 +1,4 @@
-"""Timezone-aware datetime helpers. Storage is UTC; every event keeps its own IANA zone."""
+"""helperi pt timp. in baza totul e utc, fiecare eveniment isi tine fusul orar"""
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
@@ -29,18 +29,13 @@ def is_valid_tz(tz_name: str | None) -> bool:
 
 
 def localize(naive: datetime, tz_name: str) -> tuple[datetime, list[str]]:
-    """Attach a zone to a naive local wall-clock time, flagging DST gaps and folds.
-
-    Returns (aware datetime in UTC, notes). For an ambiguous time (fall-back fold) the first
-    occurrence is used and a note is returned; for a non-existent time (spring-forward gap)
-    the time is shifted forward and a note is returned.
-    """
+    """attach a zone to a naive local wall-clock time, flagging DST gaps and folds"""
     notes: list[str] = []
     tz = zone(tz_name)
     first = naive.replace(tzinfo=tz, fold=0)
     second = naive.replace(tzinfo=tz, fold=1)
     if first.utcoffset() != second.utcoffset():
-        # Either a fold (ambiguous) or a gap (non-existent). Round-trip tells which.
+        # either a fold (ambiguous) or a gap (non-existent). Round-trip tells which.
         roundtrip = first.astimezone(UTC).astimezone(tz).replace(tzinfo=None)
         if roundtrip != naive:
             notes.append(f"{naive:%Y-%m-%d %H:%M} does not exist in {tz_name} (DST change); shifted forward")

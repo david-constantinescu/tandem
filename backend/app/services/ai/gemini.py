@@ -1,4 +1,4 @@
-"""Gemini provider (official google-genai SDK). Primary provider for documents and images."""
+"""providerul gemini (sdk-ul oficial google-genai). principalul, si pt documente si poze"""
 from __future__ import annotations
 
 import io
@@ -15,16 +15,12 @@ from app.services.ai.schema_utils import inline_schema
 
 log = logging.getLogger("tandem.ai.gemini")
 
-# PDFs above this size go through the Files API instead of inline bytes.
+# pdf-urile mai mari de atat merg prin files api, nu inline
 INLINE_PDF_LIMIT = 15 * 1024 * 1024
 
 
 def flatten_tool_turns(messages: list[ChatMessage]) -> list[ChatMessage]:
-    """Rewrite earlier tool calls and their results as plain text on the last user message.
-
-    Gemini 3.x refuses a replayed function call that lacks the thought signature of the model that made it, so when
-    a different model takes over mid-conversation it is given what the tools returned as text instead.
-    """
+    """rewrite earlier tool calls and their results as plain text on the last user message"""
     from dataclasses import replace
 
     if not any(m.tool_calls or m.role == "tool" for m in messages):
@@ -74,13 +70,18 @@ class GeminiProvider(AIProvider):
         return self._client
 
     def model_for(self, role):
-        return {
+        chosen = {
             "extraction": self.cfg.get("GEMINI_EXTRACTION_MODEL"),
             "document": self.cfg.get("GEMINI_EXTRACTION_MODEL"),
             "vision": self.cfg.get("GEMINI_VISION_MODEL"),
             "reasoning": self.cfg.get("GEMINI_REASONING_MODEL"),
             "fast": self.cfg.get("GEMINI_FAST_MODEL"),
         }.get(role)
+        if chosen in (None, "", "auto") and role in ("extraction", "document", "vision", "reasoning", "fast"):
+            from app.services.ai.gemini_models import chain
+
+            return chain(self.cfg, "fast" if role == "fast" else "reasoning")[0]
+        return chosen
 
     def capabilities(self) -> dict:
         return {
@@ -90,40 +91,47 @@ class GeminiProvider(AIProvider):
 
     # ------------------------------------------------------------------------------------
     def generate(self, request: AIRequest, model: str) -> AIResponse:
-        """Try `model`, then the cheaper fallbacks when it is out of quota, at capacity or too slow.
-
-        Free-tier limits are per model, and the 3.x previews are often at capacity (HTTP 503), so a chain of
-        models keeps the assistant answering. Only text requests fall back: files stay on the requested model.
-        """
+        """try `model`, then the cheaper fallbacks when it is out of quota, at capacity or too slow"""
         chain = [model]
-        # Every Gemini model reads text, images and PDFs, so they can all stand in for each other.
-        chain += [m for m in str(self.cfg.get("GEMINI_FALLBACK_MODELS") or "").split(",") if m.strip() and m.strip() != model]
+        # toate modelele gemini citesc text, poze si pdf, deci se pot inlocui intre ele
+        fallbacks = str(self.cfg.get("GEMINI_FALLBACK_MODELS") or "")
+        if fallbacks.strip() == "auto":
+            from app.services.ai.gemini_models import chain as best
+
+            names = best(self.cfg, "fast" if request.role == "fast" else "reasoning")
+        else:
+            names = fallbacks.split(",")
+        chain += [m.strip() for m in names if m.strip() and m.strip() != model]
         last: Exception | None = None
         resting = self._resting(chain)
         for i, name in enumerate(chain):
             name = name.strip()
             if i and (request.remaining is not None and request.remaining < 6):
                 break
-            if name in resting and i + 1 < len(chain):  # out of quota a moment ago: don't spend a request finding out again
+            if name in resting and i + 1 < len(chain):  # a ramas fara cota acum putin, nu mai incercam degeaba
                 continue
-            req = request
-            if i:  # reasoning state (thought signatures) from another model can't be replayed to this one
-                from dataclasses import replace
+            from dataclasses import replace
 
+            req = request
+            if i:  # starea de gandire de la alt model nu merge trimisa la asta
                 req = replace(request, messages=flatten_tool_turns(request.messages))
+            if request.task == "agent" and request.deadline is not None and i + 1 < len(chain):
+                # in chat, un model lent azi nu trebuie sa manance tot timpul: 15s si trecem la urmatorul
+                req = replace(req, deadline=min(request.deadline, time.monotonic() + 15))
             try:
                 return self._generate_one(req, name)
             except (QuotaExceeded, ProviderUnavailable, ProviderTimeout, ProviderError) as exc:
                 last = exc
-                if isinstance(exc, QuotaExceeded):
-                    self._rest(name)
+                # fara cota: mai incercam peste un minut. ocupat sau prea lent (503/504): il lasam 10 minute,
+                # ca sa nu ne coste 15s la fiecare mesaj cel mai nou model care e mereu aglomerat
+                self._rest(name, minutes=1 if isinstance(exc, QuotaExceeded) else 10)
                 log.info("gemini %s unavailable (%s: %s)%s", name, exc.code, str(exc)[:140], "; trying the next model" if i + 1 < len(chain) else "")
         assert last is not None
         raise last
 
     @staticmethod
     def _resting(chain: list[str]) -> set[str]:
-        """Models that reported their quota used up in the last minute (shared by every instance through the cache)."""
+        """models that reported their quota used up in the last minute (shared by every instance through the cache)"""
         from app.services.cache import cache_get
 
         try:
@@ -132,11 +140,11 @@ class GeminiProvider(AIProvider):
             return set()
 
     @staticmethod
-    def _rest(model: str) -> None:
+    def _rest(model: str, minutes: float = 1) -> None:
         from app.services.cache import cache_set
 
         try:
-            cache_set("gemini_rest", model, True, ttl_hours=1 / 60)
+            cache_set("gemini_rest", model, True, ttl_hours=minutes / 60)
         except Exception:  # noqa: BLE001
             log.debug("could not record the model's rest", exc_info=True)
 
@@ -152,14 +160,14 @@ class GeminiProvider(AIProvider):
                 "max_output_tokens": request.max_output_tokens,
                 "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
             }
-            if request.remaining is not None:  # never wait past the turn's deadline
+            if request.remaining is not None:  # nu asteptam peste limita turului
                 config_kwargs["http_options"] = types.HttpOptions(
                     timeout=int(max(3.0, min(float(self.cfg["AI_REQUEST_TIMEOUT"]), request.remaining)) * 1000))
             if model.startswith("gemini-2.5-flash") and not model.endswith("lite"):
-                # 2.5 Flash thinks for a long time by default; a short budget keeps chat answers quick and cheap.
+                # 2.5 flash gandeste mult din default, cu buget mic raspunde repede si ieftin
                 config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=512)
             if model.startswith("gemini-3"):
-                # Gemini 3.x: 'minimal' thinking is rejected by 3.8-flash, so use 'low' for latency.
+                # gemini 3.x: 3.8-flash nu accepta 'minimal', punem 'low'
                 config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="low")
             if request.schema is not None and not request.tools:
                 config_kwargs["response_mime_type"] = "application/json"
@@ -209,12 +217,12 @@ class GeminiProvider(AIProvider):
             output_tokens=int((getattr(usage, "candidates_token_count", 0) or 0)
                               + (getattr(usage, "thoughts_token_count", 0) or 0)),
             finish_reason=str(candidate.finish_reason) if candidate.finish_reason else None,
-            provider_state=candidate.content,  # echoed back verbatim to preserve thought signatures
+            provider_state=candidate.content,  # il trimitem inapoi exact asa, altfel se pierd semnaturile
         )
 
     def _contents(self, messages: list[ChatMessage], uploaded: list[str]) -> list:
-        """Build Gemini contents. All function responses answering one model turn go in a single user
-        Content, each carrying the call id it answers."""
+        """build Gemini contents. All function responses answering one model turn go in a single user Content, each
+        carrying the call id it answers."""
         from google.genai import types
 
         out: list = []
@@ -273,7 +281,7 @@ class GeminiProvider(AIProvider):
             return ProviderError(f"Gemini model not found: {message}", provider=self.name)
         return ProviderError(f"Gemini request rejected ({code}): {message}", provider=self.name)
 
-    # Files API ----------------------------------------------------------------------------
+    # files API ----------------------------------------------------------------------------
     def upload_temporary_file(self, part: FilePart) -> dict:
         from google.genai import types
 

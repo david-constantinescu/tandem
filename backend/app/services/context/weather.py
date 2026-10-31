@@ -1,8 +1,4 @@
-"""Weather for a trip's days from Open-Meteo (free, no key; https://open-meteo.com).
-
-Forecasts reach 16 days ahead; days further out are reported as not yet forecast rather than guessed.
-Each day says whether it's a good day to be outdoors, so suggestions can favour museums when it rains.
-"""
+"""vremea pe zilele calatoriei, de la open-meteo (gratis, fara cheie)"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -19,7 +15,7 @@ WET_PROBABILITY = 50  # % chance of rain from which a day (or hour) counts as we
 
 
 def condition(code: int | None) -> str:
-    """WMO weather code → clear | cloudy | fog | drizzle | rain | snow | storm."""
+    """WMO weather code → clear | cloudy | fog | drizzle | rain | snow | storm"""
     if code is None:
         return "unknown"
     if code == 0:
@@ -76,7 +72,7 @@ def _fetch(lat: float, lon: float, tz: str, start: date, end: date) -> dict | No
 
 
 def forecast(lat: float | None, lon: float | None, tz: str | None, start: date, end: date) -> dict:
-    """Daily weather between two dates (inclusive), clipped to what's forecast today."""
+    """daily weather between two dates (inclusive), clipped to what's forecast today"""
     if not current_app.config.get("WEATHER_ENABLED"):
         return {"available": False, "reason": "disabled", "days": []}
     if lat is None or lon is None:
@@ -109,7 +105,7 @@ def forecast(lat: float | None, lon: float | None, tz: str | None, start: date, 
 
 
 def trip_point(trip) -> tuple[float | None, float | None, str | None, str | None]:
-    """Where to read the weather for a trip: its first located destination."""
+    """where to read the weather for a trip: its first located destination"""
     for d in trip.destinations or []:
         if d.lat is not None and d.lon is not None:
             return d.lat, d.lon, d.timezone, d.name

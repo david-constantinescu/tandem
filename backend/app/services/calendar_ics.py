@@ -1,10 +1,4 @@
-"""iCalendar (RFC 5545) export of itinerary events, for "Add to Calendar" and the private subscription feed.
-
-Times are written in UTC (``…Z``), so no VTIMEZONE blocks are needed and calendar apps show them in the
-viewer's own time zone; the description repeats the local time at the destination. Calendar feeds are fetched
-by third-party servers (iCloud, Google), so events carry only what, when, where and a link back to Tandem:
-no booking references, traveller names, prices or notes.
-"""
+"""export icalendar (rfc 5545) pt 'adauga in calendar' si pt feed"""
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -26,13 +20,13 @@ TYPE_LABELS = {
 
 
 def escape(text: str) -> str:
-    """Escape a TEXT value: backslash, semicolon, comma and line breaks."""
+    """escape a TEXT value: backslash, semicolon, comma and line breaks"""
     return (text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
             .replace("\r\n", "\\n").replace("\n", "\\n").replace("\r", "\\n"))
 
 
 def fold(line: str) -> str:
-    """Fold a content line at 75 octets without splitting a UTF-8 character."""
+    """fold a content line at 75 octets without splitting a UTF-8 character"""
     if len(line.encode()) <= 75:
         return line
     parts: list[str] = []

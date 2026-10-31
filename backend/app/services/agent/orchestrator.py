@@ -1,10 +1,4 @@
-"""Assistant orchestration: a bounded tool-calling loop over Tandem's typed tools.
-
-The model receives trusted instructions in the system prompt and the user's data only through tool
-results. Tool permissions, ownership and approval rules are enforced in code (tools.py, approvals.py),
-so model output can never override them. When no AI provider is permitted or available, a limited
-offline assistant answers common questions from the same tools and says that it is offline.
-"""
+"""bucla asistentului: modelul cheama tooluri, noi le rulam cu verificari. limita de timp si de apeluri"""
 from __future__ import annotations
 
 import json
@@ -40,7 +34,7 @@ from app.utils.timeutil import utcnow
 log = logging.getLogger("tandem.agent")
 
 MAX_TOOL_CALLS = 8
-MAX_SECONDS = 40  # the whole turn: Vercel stops a function at 60 s
+MAX_SECONDS = 40  # tot turul, vercel taie functia la 60s
 HISTORY = 12
 PROMPT_VERSION = "agent-v1"
 
@@ -186,14 +180,14 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
         provider, model = resp.provider, resp.model
         if not resp.tool_calls:
             if not resp.text.strip() and calls and not nudged:
-                # Smaller models sometimes stop after the tools without writing the answer: ask once for it.
+                # modelele mai mici uneori se opresc dupa tooluri si nu mai scriu raspunsul, le mai cerem o data
                 nudged = True
                 messages.append(ChatMessage(role="user", parts=[TextPart(
                     "Now answer my last message in my language, using the tool results above. Don't call more tools.")]))
                 continue
             text = resp.text.strip()
             if text.endswith("?") and not ask_nudged and not any(r.get("type") == "choices" for r in ctx.references):
-                # A question written as prose has no buttons: have the model ask it through the tool, once.
+                # daca a pus intrebarea ca text nu avem butoane, il punem s-o puna prin tool (o singura data)
                 ask_nudged = True
                 messages.append(ChatMessage(role="assistant", parts=[TextPart(text)]))
                 messages.append(ChatMessage(role="user", parts=[TextPart(

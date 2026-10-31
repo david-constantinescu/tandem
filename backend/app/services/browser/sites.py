@@ -1,17 +1,4 @@
-"""Registry of booking websites the browser agent knows about.
-
-Policy (enforced in code, see policy.py):
-  * Every real site defaults to **link_only**: Tandem opens the official site (or a verified deep link) for
-    you and does not automate it. Terms of service have not been reviewed for automated access, and some
-    sites (e.g. Ryanair) prohibit it outright.
-  * An operator can enable **assisted** search for specific real sites with BROWSER_ASSIST_SITES after
-    reviewing their terms. Assisted runs still obey robots.txt, a domain allow-list, CAPTCHA/MFA stops,
-    and stop before personal-data and payment pages (hand-off to the user).
-  * **Simulated** sites are Tandem's own demo websites (served at /demo-sites/...). They demonstrate a full
-    agentic purchase with nothing real booked or charged.
-
-Deep-link templates are only listed where they were opened and checked; others link to the homepage.
-"""
+"""lista de site-uri de rezervari pe care le stie agentul si ce are voie sa faca pe fiecare"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -55,7 +42,7 @@ def _real(key, name, category, homepage, domains, country="", **kw) -> Site:
 
 
 REAL_SITES: tuple[Site, ...] = (
-    # Trains
+    # trains
     _real("trenitalia", "Trenitalia", "train", "https://www.trenitalia.com/en.html", ["trenitalia.com", "lefrecce.it"], "IT"),
     _real("italo", "Italo", "train", "https://www.italotreno.com/en", ["italotreno.com", "italotreno.it"], "IT"),
     _real("sncf", "SNCF Connect", "train", "https://www.sncf-connect.com/en-en/", ["sncf-connect.com"], "FR"),
@@ -68,14 +55,14 @@ REAL_SITES: tuple[Site, ...] = (
     _real("trainline", "Trainline", "train", "https://www.thetrainline.com/", ["thetrainline.com"], "EU"),
     _real("omio", "Omio", "train", "https://www.omio.com/", ["omio.com"], "EU",
           notes=("Also sells buses and flights.",)),
-    # Buses
+    # buses
     _real("flixbus", "FlixBus", "bus", "https://global.flixbus.com/", ["flixbus.com"], "EU"),
     _real("blablacar", "BlaBlaCar Bus", "bus", "https://www.blablacar.com/bus", ["blablacar.com"], "EU"),
     _real("nationalexpress", "National Express", "bus", "https://www.nationalexpress.com/", ["nationalexpress.com"], "GB"),
     _real("megabus", "Megabus", "bus", "https://uk.megabus.com/", ["megabus.com", "megabus.co.uk"], "GB"),
     _real("alsa", "ALSA", "bus", "https://www.alsa.com/en/", ["alsa.com"], "ES"),
     _real("regiojet", "RegioJet", "bus", "https://regiojet.com/", ["regiojet.com"], "CZ", notes=("Also runs trains.",)),
-    # Flights
+    # flights
     _real("ryanair", "Ryanair", "flight", "https://www.ryanair.com/", ["ryanair.com"], "IE", automation_forbidden=True,
           terms_note="Ryanair's website terms prohibit automated access and screen scraping; link only."),
     _real("wizzair", "Wizz Air", "flight", "https://wizzair.com/", ["wizzair.com"], "HU",
@@ -92,7 +79,7 @@ REAL_SITES: tuple[Site, ...] = (
           notes=("Redirects to your country's site (e.g. klm.ro).",)),
     _real("ita", "ITA Airways", "flight", "https://www.ita-airways.com/", ["ita-airways.com"], "IT"),
     _real("aa", "American Airlines", "flight", "https://www.aa.com/", ["aa.com"], "US"),
-    # Museums and galleries
+    # museums and galleries
     _real("vatican", "Vatican Museums", "museum", "https://tickets.museivaticani.va/home", ["museivaticani.va"], "VA"),
     _real("colosseum", "Colosseum (Parco archeologico)", "attraction", "https://ticketing.colosseo.it/en/",
           ["colosseo.it"], "IT"),
@@ -158,7 +145,7 @@ def agent_capabilities(site: Site) -> dict:
 
 
 def get_site(key: str) -> Site | None:
-    """By key, or by the name people use ("Wizz Air", "wizzair.com", "AeroDemo")."""
+    """by key, or by the name people use ("Wizz Air", "wizzair.com", "AeroDemo")"""
     if not key:
         return None
     if key in ALL_SITES:
@@ -172,12 +159,12 @@ def get_site(key: str) -> Site | None:
 
 
 def sites_for(user_is_demo: bool) -> list[Site]:
-    """Demo workspaces see the simulated sites first; every account sees the real directory (link-outs)."""
+    """demo workspaces see the simulated sites first; every account sees the real directory (link-outs)"""
     return list(SIMULATED_SITES) + list(REAL_SITES)
 
 
-# The airport each city's flights use, for links that need IATA codes. Low-cost carriers often fly to a secondary
-# airport (Wizz Air: London Luton, Milan Bergamo, Paris Beauvais), so these are the airports those links expect.
+# the airport each city's flights use, for links that need IATA codes. Low-cost carriers often fly to a secondary
+# airport (Wizz Air: London Luton, Milan Bergamo, Paris Beauvais), so these are the airports those links expect
 AIRPORTS = {
     "craiova": "CRA", "bucharest": "OTP", "bucuresti": "OTP", "bucurești": "OTP", "cluj-napoca": "CLJ", "cluj": "CLJ",
     "timisoara": "TSR", "timișoara": "TSR", "iasi": "IAS", "iași": "IAS", "sibiu": "SBZ", "suceava": "SCV",
@@ -199,7 +186,7 @@ def airport_code(place: str | None) -> str | None:
 
 
 def handoff_url(site: Site, params: dict) -> str:
-    """Verified deep link when available, otherwise the official homepage."""
+    """verified deep link when available, otherwise the official homepage"""
     params = {**params, "adults": params.get("adults") or 1,
               "origin_code": airport_code(params.get("origin")), "destination_code": airport_code(params.get("destination"))}
     if site.deep_link and site.deep_link_checked and all(params.get(p) for p in site.deep_link_params):

@@ -1,10 +1,4 @@
-"""A compact brief of everything Tandem knows about the user and the focused trip.
-
-It goes into the assistant's system prompt on every turn. That is what makes it one assistant that knows the
-whole trip: the model doesn't need a round of tool calls to find out who is travelling, what is booked, what
-clashes, what the weather will be or what is waiting for approval. (Free-tier AI quotas are per request, so
-fewer tool rounds also means the demo keeps working.)
-"""
+"""un rezumat scurt cu tot ce stim despre om si calatorie, merge in promptul asistentului la fiecare mesaj"""
 from __future__ import annotations
 
 import logging
@@ -43,7 +37,7 @@ def _weather_lines(trip: Trip) -> list[str]:
 
 
 def trip_brief(user: User, trip: Trip | None) -> str:
-    """Plain text, newest facts first, capped so it never crowds out the conversation."""
+    """plain text, newest facts first, capped so it never crowds out the conversation"""
     if trip is None:
         return "No trip is focused. Use list_trips to see the user's trips."
     out = [f"Trip: {trip.name} ({trip.start_date} to {trip.end_date}), destination {trip.primary_destination}.",

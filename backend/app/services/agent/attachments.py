@@ -1,5 +1,4 @@
-"""Uploads in the chat: whatever the user adds (a file, a photo, a pasted email, a link) shows up in the conversation,
-and Tandem answers with what it read from it, without waiting for an AI round trip."""
+"""fisierele puse in chat: apar in conversatie si tandem zice ce a citit din ele"""
 from __future__ import annotations
 
 from datetime import timedelta
@@ -54,7 +53,7 @@ def describe(user: User, conv: Conversation, docs: list[Document]) -> Message:
     db.session.add(Message(conversation_id=conv.id, role="user", content=f"📎 {names}", created_at=now,
                            references=[{"type": "document", "id": str(d.id), "label": d.filename[:60]} for d in docs]))
     for d in docs:
-        if d.status in READING:  # answer again in this chat when the reading is done
+        if d.status in READING:  # raspundem iar aici cand termina de citit
             cache_set("doc_chat", str(d.id), str(conv.id), ttl_hours=24)
     lines, refs = [], []
     for d in docs:
@@ -76,7 +75,7 @@ def describe(user: User, conv: Conversation, docs: list[Document]) -> Message:
 
 
 def follow_up(user: User, doc: Document) -> None:
-    """Called when a document finishes reading: if it was added in a chat while still being read, answer there."""
+    """called when a document finishes reading: if it was added in a chat while still being read, answer there"""
     conv_id = cache_get("doc_chat", str(doc.id))
     if not conv_id:
         return

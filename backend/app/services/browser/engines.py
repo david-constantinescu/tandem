@@ -1,13 +1,4 @@
-"""Browser engines with one constrained interface: goto, snapshot, fill, select, click, close.
-
-The model never supplies JavaScript, selectors or URLs. It refers to elements by the ids in a snapshot,
-and values come from task parameters. Every navigation is checked against the site policy.
-
-* HttpEngine  — for Tandem's own simulated sites (plain HTML forms). Runs in-process through the Flask
-  app (WSGI transport), so it works on serverless hosts and in tests.
-* PlaywrightEngine — headless Chromium for real sites. Runs only in a browser worker (not on Vercel).
-  No stealth plugins and no user-agent spoofing: if a site challenges automation, the run stops.
-"""
+"""motoarele de browser, toate cu aceeasi interfata mica: goto, snapshot, fill, select, click, close"""
 from __future__ import annotations
 
 import logging
@@ -26,8 +17,7 @@ INTERNAL_BASE = "http://tandem.internal"
 
 
 def playwright_available() -> bool:
-    """Whether a browser worker (Playwright + Chromium) runs for this deployment. The web process only needs to
-    know that; Playwright itself is imported by the worker that executes the job."""
+    """whether a browser worker (Playwright + Chromium) runs for this deployment"""
     cfg = current_app.config
     return bool(cfg.get("BROWSER_WORKER_ENABLED")) and not cfg.get("ON_VERCEL")
 
@@ -56,7 +46,7 @@ class Snapshot:
         return None
 
     def for_model(self, limit: int = 120) -> str:
-        """Compact, untrusted description of the page for the navigator model."""
+        """compact, untrusted description of the page for the navigator model"""
         lines = [f"URL: {self.url}", f"Title: {self.title}", "Interactive elements:"]
         for e in self.elements[:limit]:
             bits = [e["id"], e["tag"]]
@@ -90,7 +80,7 @@ class Engine:
 
 
 class HttpEngine(Engine):
-    """Form-level browser for Tandem's simulated sites, executed in-process through the Flask app."""
+    """form-level browser for Tandem's simulated sites, executed in-process through the Flask app"""
 
     name = "http"
 

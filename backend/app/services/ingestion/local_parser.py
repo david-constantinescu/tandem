@@ -1,9 +1,4 @@
-"""Rules-based travel document parser that runs entirely on the server.
-
-Used when external AI is disabled, unavailable, or out of quota. It reads labelled fields and common
-confirmation layouts (flights, hotels, trains, restaurants, tickets, tours). Results carry lower
-confidence than AI extraction and every value keeps the line it was read from as evidence.
-"""
+"""parser cu reguli pt documente de calatorie, merge complet pe server (fara ai)"""
 from __future__ import annotations
 
 import re
@@ -112,12 +107,12 @@ def classify(doc: ParsedDoc) -> tuple[str | None, dict[str, int]]:
     best = max(scores, key=scores.get)
     if scores[best] < 2:
         return None, scores
-    # Museums/tours both mention tickets; prefer the more specific signal.
+    # museums/tours both mention tickets; prefer the more specific signal
     return best, scores
 
 
 def parse_text(text: str) -> ExtractionResult:
-    # Email send timestamps are not booking dates.
+    # email send timestamps are not booking dates
     text = "\n".join(line for line in text.split("\n") if not line.startswith("Sent: "))
     doc = ParsedDoc(text)
     record_type, _ = classify(doc)
@@ -263,7 +258,7 @@ def _fmt(dt: datetime | None) -> str | None:
 
 
 def _segment_times(doc: ParsedDoc, start: int, end: int) -> tuple[datetime | None, datetime | None, list[str], list[Line]]:
-    """Departure and arrival datetimes inside a block, using labels when present."""
+    """departure and arrival datetimes inside a block, using labels when present"""
     notes: list[str] = []
     lines: list[Line] = []
     dep = arr = None
@@ -369,7 +364,7 @@ def _flights(doc: ParsedDoc, common: dict) -> list[ExtractedTravelRecord]:
         if not rec.get("start_local"):
             rec["uncertainty_notes"].append("Departure date/time not found")
         if len(unique) > 1 and i > 0:
-            # Price on a multi-segment confirmation usually covers the whole itinerary.
+            # price on a multi-segment confirmation usually covers the whole itinerary
             rec["price"] = None
         rec["confidence"] = _confidence(rec)
         records.append(ExtractedTravelRecord(**{**rec, "details": RecordDetails(**details)}))

@@ -169,3 +169,37 @@ def test_openapi_document(api):
     assert spec["openapi"].startswith("3.1")
     assert "/api/v1/approvals/{action_id}/approve" in spec["paths"]
     assert "requestBody" in spec["paths"]["/api/v1/inbox/paste"]["post"]
+
+
+def test_login_locks_an_address_after_repeated_failures_across_instances(app, api, monkeypatch):
+    from app.extensions import limiter
+
+    monkeypatch.setitem(app.config, "THROTTLE_ENABLED", True)
+    api.post("/api/v1/auth/register", json={"email": "lock@example.com", "password": "correct-horse-battery", "display_name": "L"})
+    api.post("/api/v1/auth/logout")
+    statuses = [api.post("/api/v1/auth/login", json={"email": "lock@example.com", "password": f"wrong-{i}"}).status_code for i in range(9)]
+    assert statuses[:8] == [401] * 8 and statuses[8] == 429
+    # Even the right password waits now (the lock is per address, stored in the database, not in one process).
+    assert api.post("/api/v1/auth/login", json={"email": "LOCK@example.com", "password": "correct-horse-battery"}).status_code == 429
+    assert limiter.enabled is False  # the in-memory limiter is off in tests: this was the shared throttle
+
+
+def test_a_successful_login_clears_the_failures(app, api, monkeypatch):
+    monkeypatch.setitem(app.config, "THROTTLE_ENABLED", True)
+    api.post("/api/v1/auth/register", json={"email": "ok@example.com", "password": "correct-horse-battery", "display_name": "O"})
+    api.post("/api/v1/auth/logout")
+    for i in range(5):
+        api.post("/api/v1/auth/login", json={"email": "ok@example.com", "password": f"nope-{i}"})
+    assert api.post("/api/v1/auth/login", json={"email": "ok@example.com", "password": "correct-horse-battery"}).status_code == 200
+    api.post("/api/v1/auth/logout")
+    for i in range(7):
+        api.post("/api/v1/auth/login", json={"email": "ok@example.com", "password": f"nope-again-{i}"})
+    assert api.post("/api/v1/auth/login", json={"email": "ok@example.com", "password": "correct-horse-battery"}).status_code == 200
+
+
+def test_csrf_token_is_required_for_changes(app, api):
+    api.demo()
+    token, api.csrf = api.csrf, "wrong-token"
+    assert api.post("/api/v1/assistant/conversations", json={}).status_code == 403
+    api.csrf = token
+    assert api.post("/api/v1/assistant/conversations", json={}).status_code == 201

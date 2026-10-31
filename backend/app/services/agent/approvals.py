@@ -1,14 +1,4 @@
-"""Action proposals, approvals and verified execution.
-
-Rules enforced here (never by prompts):
-  * consequential actions start as `awaiting_approval` and run only after the user approves the exact
-    payload (the approval is bound to the payload hash);
-  * external bookings are re-quoted at execution time; any change in price, time or availability sends
-    the action back for a fresh approval;
-  * a booking is `completed` only after the provider's own record is read back and matches;
-  * an uncertain outcome (e.g. timeout after submission) becomes `requires_manual`, never `completed`;
-  * the AI model can create proposals and read their status, but cannot approve or execute them.
-"""
+"""propuneri, aprobari si executia lor. nimic nu se face fara ok-ul omului, legat de hash-ul exact"""
 from __future__ import annotations
 
 import hashlib
@@ -51,7 +41,7 @@ def _new_action(user: User, **kwargs) -> AgentAction:
 
 
 # ---------------------------------------------------------------------------------------
-# Proposals
+# proposals
 def propose_booking(user: User, *, provider: str, item_id: str, day: str, time: str | None, participants: int,
                     trip: Trip | None, conversation_id=None, created_by: str = "user",
                     replaces_event_id: str | None = None) -> AgentAction:
@@ -136,7 +126,7 @@ def _event_snapshot(e: ItineraryEvent) -> dict:
 
 
 # ---------------------------------------------------------------------------------------
-# Decisions
+# decisions
 def approve(user: User, action: AgentAction, presented_hash: str) -> AgentAction:
     if action.status != "awaiting_approval":
         raise Conflict(f"This action is {action.status.replace('_', ' ')}, not awaiting approval", code="not_awaiting")
@@ -172,7 +162,7 @@ def reject(user: User, action: AgentAction, note: str = "") -> AgentAction:
 
 
 # ---------------------------------------------------------------------------------------
-# Execution
+# execution
 def execute_action(action_id: str) -> None:
     action = db.session.get(AgentAction, uuid.UUID(str(action_id)))
     if action is None or action.status != "in_progress":

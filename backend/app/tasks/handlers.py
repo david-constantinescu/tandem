@@ -1,4 +1,4 @@
-"""Job handler registrations (imported by the app factory so workers know every job kind)."""
+"""inregistrarea joburilor, ca workerul sa le stie pe toate"""
 from __future__ import annotations
 
 from app.models import ProcessingJob

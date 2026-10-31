@@ -1,9 +1,4 @@
-"""Local news that can affect a trip: transport strikes, protests and marches, closures, weather alerts.
-
-Sources need no key: Google News RSS (searched in the destination's own language, where local outlets and the city
-council publish strike notices first) and the GDELT 2.0 DOC API as a fallback. Results are headlines with links;
-the assistant reads them and says what they mean for the plans, and the app never treats them as verified fact.
-"""
+"""stiri locale care pot strica planul: greve, proteste, inchideri, alerte meteo. din google news, fara cheie"""
 from __future__ import annotations
 
 import re
@@ -22,7 +17,7 @@ GOOGLE_NEWS = "https://news.google.com/rss/search"
 GDELT = "https://api.gdeltproject.org/api/v2/doc/doc"
 UA = "Mozilla/5.0 (compatible; Tandem travel assistant)"
 
-# Destination country → (news language, words that signal a disruption in that language).
+# destination country → (news language, words that signal a disruption in that language))).
 LANGUAGES: dict[str, tuple[str, list[str]]] = {
     "IT": ("it", ["sciopero", "manifestazione", "corteo", "chiusura", "chiuso", "allerta meteo", "disagi"]),
     "FR": ("fr", ["grève", "manifestation", "fermeture", "perturbations", "vigilance"]),
@@ -44,7 +39,7 @@ CITY_COUNTRY = {"rome": "IT", "roma": "IT", "milan": "IT", "florence": "IT", "ve
                 "florența": "IT", "paris": "FR", "parigi": "FR", "lyon": "FR", "madrid": "ES", "barcelona": "ES", "seville": "ES", "berlin": "DE",
                 "munich": "DE", "vienna": "AT", "lisbon": "PT", "porto": "PT", "bucharest": "RO", "bucurești": "RO",
                 "cluj-napoca": "RO", "craiova": "RO", "brasov": "RO", "brașov": "RO", "sibiu": "RO", "timisoara": "RO", "timișoara": "RO", "iasi": "RO", "iași": "RO", "constanta": "RO", "constanța": "RO", "amsterdam": "NL", "athens": "GR", "london": "GB", "londra": "GB", "dublin": "IE", "bucuresti": "RO", "lisabona": "PT", "viena": "AT"}
-# Local spellings, so local outlets are found ("Roma", not "Rome").
+# local spellings, so local outlets are found ("Roma", not "Rome")
 LOCAL_NAMES = {"rome": "Roma", "florence": "Firenze", "milan": "Milano", "venice": "Venezia", "naples": "Napoli",
                "turin": "Torino", "munich": "München", "cologne": "Köln", "vienna": "Wien", "lisbon": "Lisboa",
                "seville": "Sevilla", "bucharest": "București", "athens": "Αθήνα", "prague": "Praha", "the hague": "Den Haag"}
@@ -117,7 +112,7 @@ def _dates_in(title: str, days: list[date], lang: str) -> list[str]:
 
 
 def _named_dates(title: str, lang: str, published: str | None) -> list[date]:
-    """Every "30 ottobre" / "October 30" in a headline, placed in the year around when it was published."""
+    """every "30 ottobre" / "October 30" in a headline, placed in the year around when it was published"""
     t = _plain(title)
     ref = datetime.fromisoformat(published).date() if published else date.today()
     out = []
@@ -174,8 +169,8 @@ def _gdelt(query: str) -> list[dict]:
 
 def disruptions(city: str | None, *, country: str | None = None, days: list[date] | None = None,
                 topic: str | None = None, max_items: int = 10) -> dict:
-    """Recent headlines about strikes, protests, closures and alerts in a city, newest first; those naming one of
-    `days` come first."""
+    """recent headlines about strikes, protests, closures and alerts in a city, newest first; those naming one of
+    `days` come first"""
     if not current_app.config.get("NEWS_ENABLED"):
         return {"available": False, "reason": "disabled", "items": []}
     if not city:

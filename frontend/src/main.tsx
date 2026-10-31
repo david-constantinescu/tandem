@@ -11,6 +11,9 @@ import { ToastProvider } from "./components/ui/Toast";
 import { ApiError } from "./lib/api";
 import { AuthProvider } from "./lib/auth";
 import { I18nProvider } from "./lib/i18n";
+import { applyTheme } from "./lib/theme";
+
+applyTheme(); // before the first paint, so a light-mode choice doesn't flash dark
 
 const queryClient = new QueryClient({
   defaultOptions: {

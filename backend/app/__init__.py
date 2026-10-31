@@ -1,4 +1,4 @@
-"""Tandem backend application factory."""
+"""aici se construieste aplicatia flask (create_app), cu tot ce trebuie legat de ea"""
 from __future__ import annotations
 
 import logging
@@ -34,7 +34,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     if overrides:
         app.config.update(overrides)
     if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
-        # Keep database sessions in UTC regardless of the server's local timezone.
+        # keep database sessions in UTC regardless of the server's local timezone
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {**app.config["SQLALCHEMY_ENGINE_OPTIONS"],
                                                    "connect_args": {"options": "-c timezone=UTC"}}
     app.config["MAX_CONTENT_LENGTH"] = (
@@ -81,7 +81,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 def _configure_logging(app: Flask) -> None:
     level = logging.DEBUG if app.config["APP_ENV"] == "development" and os.environ.get("TANDEM_DEBUG") else logging.INFO
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    # Never log request bodies: they can contain travel documents and personal data.
+    # never log request bodies: they can contain travel documents and personal data
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("google_genai").setLevel(logging.WARNING)
 
@@ -115,7 +115,9 @@ def _register_security_headers(app: Flask) -> None:
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+        resp.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        resp.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
         if request.path.startswith("/api/"):
             resp.headers.setdefault("Cache-Control", "no-store")
             resp.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
@@ -124,7 +126,7 @@ def _register_security_headers(app: Flask) -> None:
                 "Content-Security-Policy",
                 "default-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; "
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
-                "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+                "connect-src 'self'; worker-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
             )
         if app.config["SESSION_COOKIE_SECURE"]:
             resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -132,7 +134,7 @@ def _register_security_headers(app: Flask) -> None:
 
 
 def _register_frontend(app: Flask) -> None:
-    """Serve the built SPA when present (single-origin deployments)."""
+    """serve the built SPA when present (single-origin deployments)"""
     dist = Path(app.config["FRONTEND_DIST"])
 
     @app.get("/", defaults={"path": ""})

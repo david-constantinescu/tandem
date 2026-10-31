@@ -1,9 +1,4 @@
-"""Real ways to get from A to B: prefilled journey planners plus the official operators for the country.
-
-Tandem doesn't buy tickets on real websites (their terms rarely allow automated purchases and they sit behind
-logins and CAPTCHAs). Instead it opens the right real page with the route filled in, where that page supports it,
-and the user books there; the confirmation then comes back into Tandem.
-"""
+"""cum ajungi din a in b: planificatoare cu ruta completata + operatorii oficiali din tara"""
 from __future__ import annotations
 
 from urllib.parse import quote, urlencode
@@ -19,7 +14,7 @@ EUROPE = {"IT", "FR", "ES", "DE", "AT", "PT", "RO", "NL", "GR", "GB", "IE", "BE"
 
 def options(origin: str, destination: str, *, day: str | None = None, mode: str | None = None,
             country: str | None = None) -> dict:
-    """Links for a journey. `mode` narrows the operators; planners cover every mode."""
+    """links for a journey. `mode` narrows the operators; planners cover every mode."""
     links = [{
         "kind": "planner", "name": "Google Maps",
         "url": "https://www.google.com/maps/dir/?" + urlencode({"api": 1, "origin": origin, "destination": destination,
@@ -32,8 +27,8 @@ def options(origin: str, destination: str, *, day: str | None = None, mode: str 
                       "url": f"https://www.google.com/travel/flights?q={quote(q)}", "covers": "flights, all airlines"})
     oc, dc = country_for(origin), country_for(destination)
     code = oc or dc or (country or "").upper() or None
-    # Abroad, a country's own buses and trains rarely help: its airlines, both ends' airlines, and the
-    # Europe-wide sellers do.
+    # abroad, a country's own buses and trains rarely help: its airlines, both ends' airlines, and the
+    # europe-wide sellers do
     abroad = {oc, dc} if oc and dc and oc != dc else None
     params = {"origin": origin, "destination": destination, "date": day or ""}
     for site in REAL_SITES:
@@ -50,7 +45,7 @@ def options(origin: str, destination: str, *, day: str | None = None, mode: str 
             links.append({"kind": "operator", "name": site.name, "url": handoff_url(site, params), "covers": site.category,
                           "official": site.country != "EU", "automation_forbidden": site.automation_forbidden,
                           "local": site.country in (oc, dc, code) or site.key == "eurostar"})
-    # Planners, then the operators of the places themselves, then everyone else.
+    # planners, then the operators of the places themselves, then everyone else
     links.sort(key=lambda link: (link["kind"] != "planner", not link.get("local", True), not link.get("official", True)))
     return {"origin": origin, "destination": destination, "date": day, "country": code, "links": links[:9],
             "note": "Real websites: you book there; forward the confirmation to Tandem and it joins your trip."}

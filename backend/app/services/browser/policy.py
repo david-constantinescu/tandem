@@ -1,12 +1,4 @@
-"""Code-level guards for the browser agent. None of these can be overridden by the model.
-
-* Navigation is limited to the site's own domains (checked before every request and after redirects).
-* robots.txt is honoured for real sites (user agent "TandemBrowserAgent").
-* Password, card, CVV, IBAN, passport and one-time-code fields are never filled by the agent.
-* CAPTCHA and bot-challenge pages (reCAPTCHA, hCaptcha, Cloudflare Turnstile, DataDome, PerimeterX,
-  Akamai) stop the run; Tandem never tries to solve or bypass them.
-* Login walls stop the run; Tandem does not sign in to third-party accounts.
-"""
+"""regulile de siguranta ale agentului de browser, in cod. modelul nu le poate ocoli"""
 from __future__ import annotations
 
 import re
@@ -37,7 +29,7 @@ def host_allowed(site: Site, url: str) -> bool:
     if parsed.scheme != "https":
         from flask import current_app
 
-        # Plain HTTP only for local fixture sites in the test suite.
+        # plain HTTP only for local fixture sites in the test suite
         if not (current_app.config.get("TESTING") and host in ("127.0.0.1", "localhost") and parsed.scheme == "http"):
             return False
     return any(_brand_match(host, d[:-1]) if d.endswith(".") else (host == d or host.endswith("." + d))
@@ -45,7 +37,7 @@ def host_allowed(site: Site, url: str) -> bool:
 
 
 def _brand_match(host: str, brand: str) -> bool:
-    """brand.<country suffix> such as klm.ro or airfrance.co.uk; never brand.attacker.com."""
+    """brand.<country suffix> such as klm.ro or airfrance.co.uk; never brand.attacker.com"""
     labels = host.split(".")
     if brand not in labels:
         return False

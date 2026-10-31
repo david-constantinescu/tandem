@@ -10,7 +10,7 @@ from app.extensions import db
 from app.models.base import JSONType, Timestamps, UUIDPk, tz_dt, utcnow
 from app.security.encryption import EncryptedText
 
-# Modes for external AI processing, enforced by the AI router.
+# modes for external AI processing, enforced by the AI router
 AI_MODE_OFF = "off"  # local parsing only; nothing leaves Tandem
 AI_MODE_TEXT = "text_only"  # locally extracted text may be sent; original files never leave Tandem
 AI_MODE_FULL = "full"  # original files may be sent to providers that officially support them
@@ -83,10 +83,10 @@ class UserPreference(db.Model):
     default_currency: Mapped[str] = mapped_column(String(3), default="EUR")
     notification_prefs: Mapped[dict] = mapped_column(JSONType, default=lambda: dict(DEFAULT_NOTIFICATION_PREFS))
     retain_original_documents: Mapped[bool] = mapped_column(Boolean, default=True)
-    # When on, high-confidence records whose key fields were verified against the source are
-    # added to the matching trip without a manual review step.
+    # when on, high-confidence records whose key fields were verified against the source are
+    # added to the matching trip without a manual review step
     auto_organize: Mapped[bool] = mapped_column(Boolean, default=False)
-    # Private calendar subscription link. The token is kept encrypted so Settings can show the link again,
+    # private calendar subscription link. The token is kept encrypted so Settings can show the link again,
     # and looked up by its keyed hash. Regenerating replaces both, which revokes the old link.
     calendar_token: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     calendar_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)

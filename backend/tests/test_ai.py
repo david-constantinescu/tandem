@@ -337,3 +337,40 @@ def test_gemini_groups_parallel_tool_results_with_ids(app):
     assert [c.role for c in contents] == ["user", "model", "user"]
     responses = [part.function_response for part in contents[2].parts]
     assert [(r.id, r.name) for r in responses] == [("c1", "get_trip"), ("c2", "detect_conflicts")]
+
+
+def test_gemini_models_are_picked_from_googles_list_newest_flash_first(app, monkeypatch):
+    import httpx
+
+    from app.services.ai import gemini_models, registry
+
+    listing = {"models": [{"name": f"models/{n}", "supportedGenerationMethods": ["generateContent"]} for n in (
+        "gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.8-flash-tts", "gemini-3-flash-preview", "gemini-3.5-flash-lite",
+        "gemini-3.1-pro-preview", "gemini-flash-latest", "gemini-3.6-flash", "gemini-2.5-flash-lite")]}
+
+    class R:
+        def raise_for_status(self): pass
+        def json(self): return listing
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: R())
+    cfg = {"GEMINI_API_KEY": "k"}
+    assert gemini_models.available(cfg)[:3] == ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
+    assert gemini_models.chain(cfg, "reasoning")[:3] == ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-2.5-flash"]
+    assert gemini_models.chain(cfg, "fast")[0] == "gemini-3.5-flash-lite"
+    assert all("tts" not in m and "preview" not in m and "pro" not in m for m in gemini_models.available(cfg))
+    info = registry.lookup("gemini", "gemini-3.7-flash")
+    assert info and info.free_tier and info.tools
+    assert registry.lookup("gemini", "gemini-3.1-pro-preview").free_tier is False  # Pro stays blocked
+
+
+def test_gemini_models_fall_back_when_google_cannot_be_asked(app, monkeypatch):
+    import httpx
+
+    from app.services.ai import gemini_models
+
+    def down(*a, **k):
+        raise httpx.ConnectError("offline")
+
+    monkeypatch.setattr(httpx, "get", down)
+    assert gemini_models.available({"GEMINI_API_KEY": "k"}) == ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    assert gemini_models.available({}) == ["gemini-2.5-flash", "gemini-2.5-flash-lite"]

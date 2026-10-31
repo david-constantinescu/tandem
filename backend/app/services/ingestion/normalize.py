@@ -1,10 +1,4 @@
-"""Normalise extracted records: resolve places and timezones, convert to UTC, verify evidence.
-
-Verification is the concrete guard against hallucination: booking references, flight numbers, dates,
-times and prices claimed by any extractor must appear in the text Tandem itself extracted from the
-document (embedded PDF text or local OCR). Values that cannot be found are marked unverified,
-lower the record's confidence, and are highlighted for review.
-"""
+"""curata ce s-a extras: locuri, fusuri orare, conversie in utc, verifica dovezile"""
 from __future__ import annotations
 
 import re
@@ -35,7 +29,7 @@ def _resolve(text: str | None, code: str | None, allow_network: bool) -> geo.Pla
 
 def normalise_record(rec: ExtractedTravelRecord, *, source_text: str | None, fallback_tz: str,
                      allow_network: bool = True) -> tuple[dict, list[dict], list[str], float]:
-    """Return (data, field_rows, notes, confidence)."""
+    """return (data, field_rows, notes, confidence)"""
     notes = list(rec.uncertainty_notes)
     if rec.date_ambiguity:
         notes.append(rec.date_ambiguity)
@@ -138,7 +132,7 @@ _DURATION = re.compile(r"(\d+(?:[.,]\d+)?)\s*(hours?|hrs?|h|minutes?|mins?)\b", 
 
 
 def _end_matches_stated_duration(rec: ExtractedTravelRecord, source_text: str | None) -> bool:
-    """True when the end time equals start + a duration printed in the document (a derived, not invented, value)."""
+    """true when the end time equals start + a duration printed in the document (a derived, not invented, value)"""
     if not (source_text and rec.start_local and rec.end_local):
         return False
     try:

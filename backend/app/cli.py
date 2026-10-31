@@ -1,4 +1,4 @@
-"""Flask CLI commands: worker, jobs, demo seeding, provider health checks."""
+"""comenzi flask: worker, joburi, seed pt demo, verificari la provideri"""
 from __future__ import annotations
 
 import json
@@ -13,7 +13,7 @@ def register_cli(app: Flask) -> None:
     @click.option("--only", default="", help="Comma-separated job kinds to process (e.g. browser_task)")
     @click.option("--skip", default="", help="Comma-separated job kinds to leave for another worker")
     def worker(once: bool, only: str, skip: str):
-        """Run the background job worker (PostgreSQL-backed queue)."""
+        """run the background job worker (PostgreSQL-backed queue)"""
         from app.tasks.queue import worker_loop
 
         split = lambda v: {x.strip() for x in v.split(",") if x.strip()} or None  # noqa: E731
@@ -21,14 +21,14 @@ def register_cli(app: Flask) -> None:
 
     @app.cli.command("run-jobs")
     def run_jobs():
-        """Process all due jobs once, then exit."""
+        """process all due jobs once, then exit"""
         from app.tasks.queue import run_pending
 
         click.echo(f"processed {run_pending()} job(s)")
 
     @app.cli.command("periodic")
     def periodic():
-        """Run periodic checks once (upcoming events, deadlines, Gmail sync scheduling, demo cleanup)."""
+        """run periodic checks once (upcoming events, deadlines, Gmail sync scheduling, demo cleanup)"""
         from app.tasks.periodic import run_periodic
 
         run_periodic()
@@ -37,7 +37,7 @@ def register_cli(app: Flask) -> None:
     @app.cli.command("seed-demo")
     @click.option("--password", default=None, help="Password for demo@tandem.travel (default: env or generated)")
     def seed_demo(password: str | None):
-        """Create or reset the shared demo account with the Rome trip."""
+        """create or reset the shared demo account with the Rome trip"""
         from app.services.demo.seed import seed_demo_account
 
         user, generated = seed_demo_account(password)
@@ -47,7 +47,7 @@ def register_cli(app: Flask) -> None:
 
     @app.cli.command("check-providers")
     def check_providers():
-        """Run live health checks against configured AI providers (makes small API calls)."""
+        """run live health checks against configured AI providers (makes small API calls)"""
         from app.extensions import db
         from app.models import ProviderStatus
         from app.services.ai.router import build_providers
@@ -67,7 +67,7 @@ def register_cli(app: Flask) -> None:
 
     @app.cli.command("smoke-ai")
     def smoke_ai():
-        """Live end-to-end check of configured AI providers using fictional demo documents (real API calls)."""
+        """live end-to-end check of configured AI providers using fictional demo documents (real API calls)"""
         from app.extensions import db
         from app.models import DemoTenant, Trip, User
         from app.services.agent.orchestrator import respond
@@ -154,7 +154,7 @@ def register_cli(app: Flask) -> None:
     @app.cli.command("openapi")
     @click.argument("path", default="-")
     def openapi(path: str):
-        """Write the OpenAPI document to PATH (or stdout)."""
+        """write the OpenAPI document to PATH (or stdout)"""
         from app.api.openapi import build_spec
 
         text = json.dumps(build_spec(), indent=2)
@@ -167,7 +167,7 @@ def register_cli(app: Flask) -> None:
 
     @app.cli.command("env-status")
     def env_status():
-        """Show which features this environment unlocks (never prints secret values)."""
+        """show which features this environment unlocks (never prints secret values)"""
         cfg = app.config
         has = lambda *keys: all(cfg.get(k) for k in keys)  # noqa: E731
         rows = [

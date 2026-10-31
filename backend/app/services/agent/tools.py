@@ -1,13 +1,4 @@
-"""Typed, permission-checked tools exposed to the assistant.
-
-Every tool validates its arguments with Pydantic, scopes all queries to the calling user, and declares
-a permission level:
-  read      — no side effects;
-  internal  — may add items or edit plans in Tandem only (when the user asked for it, changes apply directly;
-              the assistant's own ideas are added as visible suggestions);
-  proposal  — creates an approval request; nothing happens until the user approves in the UI.
-There is deliberately no tool that approves or executes an action, runs SQL, or reads credentials.
-"""
+"""toolurile pe care le poate folosi asistentul. fiecare verifica userul si are un nivel de permisiune"""
 from __future__ import annotations
 
 import json
@@ -56,7 +47,7 @@ class Tool:
     args: type[BaseModel]
     permission: Literal["read", "internal", "proposal"]
     fn: Callable[[ToolContext, Any], Any]
-    # Tools that commit (e.g. run a browser task inline) can't run inside the per-call savepoint.
+    # toolurile care fac commit (ex. browser task) nu pot rula in savepoint
     transactional: bool = True
 
     def spec(self) -> ToolSpec:
@@ -233,7 +224,7 @@ def search_activities(ctx: ToolContext, args: SearchArgs):
     req = ActivitySearchRequest(location=args.location, date_from=day, date_to=day, categories=args.categories,
                                 query=args.query, max_price=args.max_price, group_size=args.group_size,
                                 start_after=args.start_after, end_before=args.end_before, limit=8)
-    out = activity_service.search(ctx.user, req, trip=t)  # results carry weather notes for the day
+    out = activity_service.search(ctx.user, req, trip=t)  # rezultatele vin cu nota de vreme pe ziua aia
     forecast = out.get("weather")
     for r in out["results"][:6]:
         ctx.references.append({"type": "activity", "id": f"{r['provider']}:{r['provider_item_id']}", "label": r["title"],
@@ -284,7 +275,7 @@ def create_itinerary_event(ctx: ToolContext, args: CreateEventArgs):
     status = "unbooked" if args.requested_by_user or args.type in ("free_time", "reminder") else "suggested"
     data = args.model_dump(exclude={"trip_id", "requested_by_user"})
     if not data.get("end_local") and args.type != "reminder":
-        # Without an end there is nothing to clash with: assume a meal lasts 90 minutes, anything else an hour.
+        # fara ora de final nu se poate suprapune cu nimic, punem 90 min la masa si o ora la rest
         start = datetime.fromisoformat(args.start_local)
         data["end_local"] = (start + timedelta(minutes=90 if args.type == "restaurant" else 60)).strftime("%Y-%m-%dT%H:%M")
     e = create_event(ctx.user, t, {**data, "status": status}, source="assistant")
@@ -465,7 +456,7 @@ def start_website_task(ctx: ToolContext, args: WebsiteTaskArgs):
     job = getattr(task, "_job", None)
     db.session.commit()
     if job is not None:
-        run_inline_if_configured(job)  # in worker mode the task runs in the background; poll get_website_task
+        run_inline_if_configured(job)  # cu worker merge in fundal, se verifica cu get_website_task
         db.session.refresh(task)
     if task.action_id:
         ctx.action_ids.append(str(task.action_id))
@@ -629,7 +620,7 @@ def _event(ctx: ToolContext, event_id: str) -> ItineraryEvent:
 
 # ---------------------------------------------------------------------------------------
 def run_tool(ctx: ToolContext, name: str, raw_args: dict) -> tuple[str, Any]:
-    """Execute a tool. Returns (status, result) where status is ok | error."""
+    """execute a tool. Returns (status, result) where status is ok | error."""
     t = TOOLS.get(name)
     if t is None:
         return "error", {"error": f"Unknown tool {name}"}

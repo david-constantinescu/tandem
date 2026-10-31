@@ -1,4 +1,4 @@
-"""Local content extraction (no network): PDF text + OCR, images, DOCX, HTML, EML, plain text."""
+"""extrage textul local, fara retea: pdf + ocr, poze, docx, html, eml, text"""
 from __future__ import annotations
 
 import email
@@ -105,7 +105,7 @@ def extract_pdf(data: bytes) -> ExtractedContent:
 
 
 def normalise_image(data: bytes) -> tuple[bytes, str, object]:
-    """Fix EXIF orientation and bound size without destructive compression. Returns (bytes, mime, PIL image)."""
+    """fix EXIF orientation and bound size without destructive compression"""
     from PIL import Image, ImageOps
 
     img = Image.open(io.BytesIO(data))
@@ -158,7 +158,7 @@ def html_to_text(html: str) -> str:
 
 
 def sanitize_html(html: str) -> str:
-    """Sanitised HTML for previews: no scripts, styles, event handlers or remote resources."""
+    """sanitised HTML for previews: no scripts, styles, event handlers or remote resources"""
     import nh3
 
     return nh3.clean(html, tags={"p", "br", "b", "strong", "i", "em", "ul", "ol", "li", "table", "thead", "tbody",
@@ -192,7 +192,7 @@ def extract_eml(data: bytes) -> ExtractedContent:
         payload = part.get_payload(decode=True) or b""
         if payload:
             attachments.append(Attachment(filename=filename, mime_type=part.get_content_type(), data=payload))
-    # "Sent:" (not "Date:") so the email's send time is never mistaken for a booking date.
+    # "Sent:" (not "Date:") so the email's send time is never mistaken for a booking date
     header = f"Subject: {subject}\nFrom: {sender}\nSent: {date_raw or ''}\n\n"
     return ExtractedContent(text=header + body.strip(), attachments=attachments,
                             metadata={"subject": subject, "from": sender, "sent_at": sent},

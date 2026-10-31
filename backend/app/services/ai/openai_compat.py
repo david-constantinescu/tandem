@@ -1,4 +1,4 @@
-"""Shared helpers for OpenAI-compatible chat completion APIs (Z.ai, Groq)."""
+"""helperi comuni pt api-urile compatibile openai (z.ai, groq)"""
 from __future__ import annotations
 
 import base64
@@ -120,7 +120,7 @@ def parse_chat_response(provider: str, model: str, payload: dict) -> AIResponse:
             args = {"__invalid_json__": fn.get("arguments")}
         calls.append(ToolCall(id=tc.get("id") or f"call_{len(calls)}", name=fn.get("name", ""), arguments=args))
     usage = payload.get("usage") or {}
-    # reasoning_content (thinking traces) is deliberately discarded and never shown to users.
+    # reasoning_content (thinking traces) is deliberately discarded and never shown to users
     return AIResponse(
         provider=provider, model=model, text=message.get("content") or "", tool_calls=calls,
         input_tokens=int(usage.get("prompt_tokens") or 0), output_tokens=int(usage.get("completion_tokens") or 0),

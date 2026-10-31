@@ -964,4 +964,9 @@ export const ro: Record<Key, string> = {
   "chat.attach": "Adaugă un fișier, o poză, un email sau un link",
   "nav.trip": "Călătorie",
   "home.openChat": "Deschide chatul",
+  "theme.toLight": "Treci la modul luminos",
+  "theme.toDark": "Treci la modul întunecat",
+  "theme.label": "Aspect",
+  "theme.dark": "Întunecat",
+  "theme.light": "Luminos",
 };

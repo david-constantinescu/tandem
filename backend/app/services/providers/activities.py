@@ -1,4 +1,4 @@
-"""Activity discovery across providers, with itinerary-aware fit analysis."""
+"""cautarea de activitati la toti providerii, cu potrivire pe timpul liber si pe vreme"""
 from __future__ import annotations
 
 import logging
@@ -31,7 +31,7 @@ def trip_timezone(trip: Trip) -> str:
 
 
 def free_windows(trip: Trip, day: date, tz: str | None = None) -> list[dict]:
-    """Free intervals on a local day, between 08:30 and 22:00, around existing (non-cancelled) events."""
+    """free intervals on a local day, between 08:30 and 22:00, around existing (non-cancelled) events"""
     tz = tz or trip_timezone(trip)
     day_start, _ = localize(datetime.combine(day, DAY_START), tz)
     day_end, _ = localize(datetime.combine(day, DAY_END), tz)
@@ -45,7 +45,7 @@ def free_windows(trip: Trip, day: date, tz: str | None = None) -> list[dict]:
         if end < day_start or e.start_at > day_end:
             continue
         busy.append((e.start_at - BUFFER, end + BUFFER, e))
-    # Leaving the city ends the day; arriving starts it.
+    # leaving the city ends the day; arriving starts it
     busy.sort(key=lambda b: b[0])
     windows = []
     cursor = day_start
@@ -137,7 +137,7 @@ def search(user: User, req: ActivitySearchRequest, *, trip: Trip | None = None,
     if req.start_after or req.end_before:
         results = [r for r in results if _within_time(r, req)]
     rank = {"fits": 0, "availability_unknown": 1, "no_fitting_slot": 2}
-    # On a wet day outdoor options go last, and both the app and the assistant see why.
+    # on a wet day outdoor options go last, and both the app and the assistant see why
     forecast = _day_weather(trip, req.date_from) if trip and req.date_from else None
     notes = {id(r): weather_note(r.title, r.categories, forecast) for r in results}
     results.sort(key=lambda r: (notes[id(r)] == "outdoor_in_bad_weather", rank.get(r.fits.get("status"), 1),
@@ -157,7 +157,7 @@ def _day_weather(trip: Trip, day) -> dict | None:
 
 
 def weather_note(title: str, categories: list[str] | None, forecast: dict | None) -> str | None:
-    """"outdoor_in_bad_weather" or "indoor_good_for_rain" on a wet day; nothing otherwise."""
+    """"outdoor_in_bad_weather" or "indoor_good_for_rain" on a wet day; nothing otherwise"""
     if not forecast or forecast.get("outdoor_ok", True):
         return None
     text = " ".join([title or "", *(categories or [])]).lower()

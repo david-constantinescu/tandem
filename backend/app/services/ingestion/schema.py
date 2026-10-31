@@ -1,4 +1,4 @@
-"""Structured extraction schema shared by every extractor (AI providers and the local parser)."""
+"""schema comuna pt extragere, folosita si de ai si de parserul local"""
 from __future__ import annotations
 
 from typing import Literal

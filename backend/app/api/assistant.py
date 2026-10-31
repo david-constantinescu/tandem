@@ -8,6 +8,7 @@ from app.i18n import locale_of, tr
 from app.extensions import db, limiter
 from app.models import AgentAction, Conversation, Message, Trip
 from app.schemas.serializers import action_dict, conversation_dict, message_dict
+from app.security import throttle
 from app.services.agent.orchestrator import respond
 from app.utils.errors import NotFound
 
@@ -92,6 +93,8 @@ def list_messages(conv_id):
 @doc("Send a message; the assistant replies using Tandem's tools", body=MessageBody, tag="Assistant")
 def post_message(conv_id):
     c = get_owned(Conversation, conv_id, "conversation")
+    # every message can cost AI quota: a shared cap per account, whatever instance serves the request
+    throttle.guard("chat", str(current_user().id), limit=80, window_minutes=60)
     body = parse_body(MessageBody)
     reply = respond(current_user(), c, body.content)
     payload = _messages_payload(c)

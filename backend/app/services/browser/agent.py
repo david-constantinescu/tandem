@@ -1,16 +1,4 @@
-"""Browser agent: runs website tasks under the policy in policy.py and the approval system.
-
-Flow for Tandem's simulated sites (full purchase, nothing real):
-  search → pick an offer that fits → STOP for approval (exact offer, price, traveller names) →
-  enter names → simulated payment (only on simulated sites, covered by the approval) →
-  read the confirmation page back → verify it matches the approval → import a verified reservation.
-
-Flow for real sites:
-  link_only (default): hand off immediately with the official homepage or a checked deep link.
-  assisted (operator allow-listed, browser worker with Playwright, AI provider configured): the model
-  searches and compares within the site's domain, then the run hands off before any personal-data or
-  payment page. Tandem never types traveller or payment details into real sites and never solves CAPTCHAs.
-"""
+"""agentul de browser: ruleaza taskuri pe site-uri dupa regulile din policy.py si cu aprobari"""
 from __future__ import annotations
 
 import logging
@@ -43,7 +31,7 @@ RESERVATION_TYPE = {"rail": "train", "coach": "bus", "air": "flight", "museum": 
 
 
 # ---------------------------------------------------------------------------------------
-# Creation
+# creation
 def create_task(user: User, site_key: str, params: dict, *, trip: Trip | None = None, conversation_id=None,
                 goal: str = "book") -> BrowserTask:
     site = get_site(site_key)
@@ -110,7 +98,7 @@ def _handoff(task: BrowserTask, site: Site, reason: T | str, url: str | None = N
 
 def _log(task: BrowserTask, action: str, reason: T | str, *, url: str | None = None, title: str | None = None,
          snap: Snapshot | None = None, engine: Engine | None = None) -> None:
-    # The step log is stored and shown to the owner, so it's written in their language.
+    # the step log is stored and shown to the owner, so it's written in their language
     reason = render(reason, locale_of(task.user_id))
     entry = {"step": len(task.log or []) + 1, "action": action, "reason": reason[:400], "at": utcnow().isoformat(),
              "url": (engine.public_url(snap.url) if engine and snap else url), "title": snap.title if snap else title}
@@ -131,7 +119,7 @@ def _log(task: BrowserTask, action: str, reason: T | str, *, url: str | None = N
 
 
 # ---------------------------------------------------------------------------------------
-# Execution
+# execution
 def run_task(task_id: str) -> None:
     task = db.session.get(BrowserTask, uuid.UUID(str(task_id)))
     if task is None or task.state in ("completed", "cancelled", "requires_manual", "awaiting_approval"):
@@ -245,7 +233,7 @@ def _read_offers(engine: Engine) -> list[dict]:
 
 
 def _choose(offers: list[dict], params: dict, task: BrowserTask) -> tuple[dict, str]:
-    """Earliest option at/after the preferred time that doesn't clash with the itinerary; else cheapest."""
+    """earliest option at/after the preferred time that doesn't clash with the itinerary; else cheapest"""
     preferred = params.get("time")
     free = _free_windows(task)
     candidates = offers
@@ -321,7 +309,7 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
 
 
 def _fill_details(task: BrowserTask, engine: Engine, travellers: list[str], total: float) -> Snapshot:
-    """From the passenger page to the payment page: the approved names only, and the approved price."""
+    """from the passenger page to the payment page: the approved names only, and the approved price"""
     snap = engine.goto(task.state_url)
     summary_total = _total_on_page(engine)
     if summary_total is not None and abs(summary_total - float(total)) > 0.001:
@@ -344,7 +332,7 @@ def _fill_details(task: BrowserTask, engine: Engine, travellers: list[str], tota
 
 
 def complete_checkout(user: User, action: AgentAction) -> None:
-    """First approval: enter the travellers' names, then stop on the payment page and ask again before paying."""
+    """first approval: enter the travellers' names, then stop on the payment page and ask again before paying"""
     p = action.payload
     task = db.session.get(BrowserTask, uuid.UUID(p["task_id"]))
     site = get_site(p["site"])
@@ -396,7 +384,7 @@ def complete_checkout(user: User, action: AgentAction) -> None:
 
 
 def complete_payment(user: User, action: AgentAction) -> None:
-    """Second approval: press Pay for exactly the approved amount, read the confirmation back, add it to the trip."""
+    """second approval: press Pay for exactly the approved amount, read the confirmation back, add it to the trip"""
     p = action.payload
     task = db.session.get(BrowserTask, uuid.UUID(p["task_id"]))
     site = get_site(p["site"])

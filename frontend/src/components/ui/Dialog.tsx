@@ -12,7 +12,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
-        <RD.Overlay className="fixed inset-0 z-40 bg-ink-900/35 backdrop-blur-[3px] data-[state=closed]:animate-[fade-out_.2s_ease-in] data-[state=open]:animate-[fade-in_.25s_ease-out]" />
+        <RD.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[3px] data-[state=closed]:animate-[fade-out_.2s_ease-in] data-[state=open]:animate-[fade-in_.25s_ease-out]" />
         <RD.Content className={clsx(
           "safe-bottom fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-[28px] bg-white px-5 pt-2.5 shadow-[var(--shadow-float)]",
           "data-[state=open]:animate-[sheet-in_.42s_var(--ease-out-expo)] data-[state=closed]:animate-[sheet-out_.25s_ease-in]",

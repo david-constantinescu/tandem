@@ -1,10 +1,4 @@
-"""Server-side localisation of text users see: errors, itinerary checks, notifications, the offline assistant
-and the demo trip. Romanian is the default; English is the alternative.
-
-English templates are the keys (``T("Processed {name}", name=...)``) and ``locale_ro.RO`` maps them to Romanian.
-A ``T`` is lazy: an API response renders it in the request's language (the ``X-Tandem-Locale`` header the app
-sends, else the signed-in user's), and a stored notification renders it in the recipient's language.
-"""
+"""traduceri pe server pt textele pe care le vede omul (erori, notificari, asistentul offline). default e romana"""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -24,7 +18,7 @@ def normalise(locale: str | None) -> str | None:
 
 
 def request_locale() -> str:
-    """The language of the current request: the app's header, then the signed-in user's, then Romanian."""
+    """the language of the current request: the app's header, then the signed-in user's, then Romanian"""
     if has_request_context():
         header = normalise(request.headers.get("X-Tandem-Locale"))
         if header:
@@ -36,7 +30,7 @@ def request_locale() -> str:
 
 
 def locale_of(who: Any) -> str:
-    """Language for stored text addressed to someone: a User, a user id, or a locale string."""
+    """language for stored text addressed to someone: a User, a user id, or a locale string"""
     if isinstance(who, str) and normalise(who):
         return who
     locale = getattr(who, "locale", None)
@@ -52,7 +46,7 @@ def locale_of(who: Any) -> str:
 
 
 class T:
-    """A translatable template with its values, rendered when the language is known."""
+    """a translatable template with its values, rendered when the language is known"""
 
     __slots__ = ("text", "kw")
 
@@ -75,7 +69,7 @@ class T:
 
 
 class When:
-    """A local date-time shown as e.g. "Sat 14 Nov 17:30" / "sâm. 14 nov. 17:30"."""
+    """o data+ora locala, formatata in limba celui care citeste"""
 
     __slots__ = ("value", "with_time")
 
@@ -120,7 +114,7 @@ def month_year(d: date, locale: str | None = None) -> str:
 
 
 def render(value: Any, locale: str | None = None) -> Any:
-    """Render a T/When (or a list of them); anything else passes through."""
+    """render a T/When (or a list of them); anything else passes through"""
     if isinstance(value, (T, When)):
         return value.render(locale)
     if isinstance(value, list):

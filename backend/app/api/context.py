@@ -1,4 +1,4 @@
-"""Live context for trips: weather for each day, local disruptions in the news, and real journey options."""
+"""context live pt calatorie: vremea pe zile, stiri cu greve/proteste si variante reale de drum"""
 from __future__ import annotations
 
 from flask import Blueprint

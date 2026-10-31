@@ -1,10 +1,4 @@
-"""Gmail integration (read-only, official Google OAuth 2.0 + Gmail REST API).
-
-Scope: https://www.googleapis.com/auth/gmail.readonly only — no send, modify or delete permissions.
-Tandem searches for likely travel emails, shows them as candidates, and imports only the messages the
-user selects. Message bodies are never logged. Tokens are stored encrypted. gmail.readonly is a
-restricted scope: production use requires Google's OAuth app verification (see docs).
-"""
+"""gmail (doar citire, oauth oficial google). emailurile de calatorie se importa singure"""
 from __future__ import annotations
 
 import base64
@@ -177,8 +171,8 @@ def sync_candidates(user_id: uuid.UUID, *, full: bool = False) -> int:
     conn.last_sync_at = utcnow()
     db.session.commit()
     if added:
-        # No separate review step: travel emails go straight through the reading pipeline, and the assistant says
-        # what it found in the chat (anything uncertain still waits for the user's check there).
+        # no separate review step: travel emails go straight through the reading pipeline, and the assistant says
+        # what it found in the chat (anything uncertain still waits for the user's check there)
         pending = db.session.execute(db.select(EmailCandidate).where(
             EmailCandidate.user_id == user_id, EmailCandidate.status == "candidate")).scalars().all()
         imported = import_messages(user_id, [str(c.id) for c in pending])

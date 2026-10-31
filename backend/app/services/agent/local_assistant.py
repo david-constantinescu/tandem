@@ -1,9 +1,4 @@
-"""Offline assistant used when no AI provider may or can be used.
-
-It recognises a handful of common requests, in Romanian or English, and answers them from the same
-permission-checked tools the AI agent uses, so the answers come from real trip data. It answers in the
-user's language and says clearly that it is running in a limited offline mode.
-"""
+"""asistentul offline, cand nu avem ai (fara chei sau fara voie). raspunde la intrebarile uzuale din date"""
 from __future__ import annotations
 
 import re
@@ -14,7 +9,7 @@ from app.i18n import When, locale_of, long_date, tr
 from app.services.agent.tools import ToolContext, _next_trip, run_tool, today_for
 from app.services.ingestion.dates import find_dates
 
-# Weekday names, Monday first; Romanian ones are matched without diacritics.
+# weekday names, Monday first; Romanian ones are matched without diacritics
 WEEKDAYS = [("monday", "luni"), ("tuesday", "marti"), ("wednesday", "miercuri"), ("thursday", "joi"),
             ("friday", "vineri"), ("saturday", "sambata"), ("sunday", "duminica")]
 MONTHS = [("jan", "ian"), ("feb", "feb"), ("mar", "mar"), ("apr", "apr"), ("may", "mai"), ("jun", "iun"),
@@ -46,7 +41,7 @@ NEWS_KINDS = {"strike": "Strike", "protest": "Protest or march", "weather": "Wea
 
 
 def _plain(text: str) -> str:
-    """Lower case without diacritics, so "sâmbătă" and "sambata" match alike."""
+    """lower case without diacritics, so "sâmbătă" and "sambata" match alike"""
     return "".join(c for c in unicodedata.normalize("NFD", text.lower()) if unicodedata.category(c) != "Mn")
 
 
@@ -191,7 +186,7 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
                       date=day.isoformat() if day else None) or {"links": []}
         lines = [f"- [{link['name']}]({link['url']})" for link in result["links"][:6]]
         news = call("check_local_news", trip_id=tid, date=day.isoformat() if day else None) or {"items": []}
-        # Only strikes that name the travel day; older strike reports are about other days.
+        # only strikes that name the travel day; older strike reports are about other days
         strikes = [i for i in news.get("items", []) if i["kind"] == "strike" and (i["mentions_dates"] or not day)][:2]
         warn = ""
         if strikes:
@@ -203,7 +198,7 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
                            destination=destination, when=when) + "\n" + "\n".join(lines) + warn + "\n\n" + \
             tr("Book there, then forward the confirmation to Tandem and I'll add it to your trip.", loc)
 
-    # Word boundaries matter: "rain" is inside "train" and "hot" inside "hotel".
+    # word boundaries matter: "rain" is inside "train" and "hot" inside "hotel"
     if re.search(r"weather|\brain|forecast|umbrella|\bcold\b|\bhot\b|vreme|ploua|ploaie|prognoz|umbrel|\bfrig|\bcald|temperatur", lower):
         day = _resolve_day(text, user, t_start, t_end)
         w = call("get_weather", trip_id=tid, date=day.isoformat() if day else None) or {}

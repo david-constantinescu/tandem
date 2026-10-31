@@ -1,4 +1,4 @@
-"""Scheduled maintenance endpoint for hosts without a long-running worker (e.g. Vercel Cron)."""
+"""endpoint pt cron (vercel), ca nu avem worker care sa ruleze tot timpul"""
 from __future__ import annotations
 
 import hmac

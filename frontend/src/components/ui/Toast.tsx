@@ -21,7 +21,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <motion.div key={t.id} layout initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }} transition={{ type: "spring", stiffness: 500, damping: 34 }}
             className="pointer-events-auto flex max-w-md items-start gap-2.5 rounded-2xl bg-ink-900/95 px-4 py-3 text-[14px] text-white shadow-[var(--shadow-float)] backdrop-blur">
-            {t.tone === "success" ? <CheckCircle2 className="mt-0.5 h-4 w-4 text-lagoon-100" /> : t.tone === "error" ? <AlertTriangle className="mt-0.5 h-4 w-4 text-clay-100" /> : <Info className="mt-0.5 h-4 w-4 text-sand-200" />}
+            {t.tone === "success" ? <CheckCircle2 className="mt-0.5 h-4 w-4 text-white/80" /> : t.tone === "error" ? <AlertTriangle className="mt-0.5 h-4 w-4 text-clay-100" /> : <Info className="mt-0.5 h-4 w-4 text-sand-200" />}
             <span>{t.text}</span>
           </motion.div>
         ))}

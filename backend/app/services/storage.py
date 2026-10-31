@@ -1,5 +1,4 @@
-"""Private object storage. Files are never served from a public URL; downloads go through
-an authenticated endpoint. Local storage encrypts each object with the app's Fernet key."""
+"""stocare privata de fisiere. nimic nu e public, descarcarile trec prin api cu verificare"""
 from __future__ import annotations
 
 import os
@@ -49,8 +48,7 @@ class LocalStorage(StorageBackend):
 
 
 class S3Storage(StorageBackend):
-    """S3-compatible storage (AWS S3, MinIO, R2). Objects are written with server-side encryption
-    and additionally encrypted client-side with the app key."""
+    """s3-compatible storage (AWS S3, MinIO, R2)"""
 
     def __init__(self, cfg):
         import boto3
@@ -84,8 +82,7 @@ class S3Storage(StorageBackend):
 
 
 class DatabaseStorage(StorageBackend):
-    """Encrypted objects in the `stored_objects` table. Used on serverless hosts (Vercel), where the
-    filesystem is ephemeral; fine for documents up to the upload limit."""
+    """encrypted objects in the `stored_objects` table"""
 
     def put(self, key: str, data: bytes, content_type: str) -> None:
         from app.extensions import db

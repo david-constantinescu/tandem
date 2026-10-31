@@ -12,7 +12,7 @@ from app.security.encryption import generate_token, hash_token
 from app.utils.errors import Conflict, Unauthorized
 from app.utils.timeutil import utcnow
 
-# Used to equalise timing for unknown emails.
+# used to equalise timing for unknown emails
 _DUMMY_HASH = generate_password_hash("tandem-timing-equaliser")
 
 

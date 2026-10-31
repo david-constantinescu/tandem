@@ -1,4 +1,4 @@
-"""Upload validation: extension, declared MIME type, magic-byte signature and size."""
+"""validarea uploadurilor: extensie, tip, semnatura fisierului si marime"""
 from __future__ import annotations
 
 import re
@@ -27,7 +27,7 @@ BINARY_SIGNATURES = {
     "image/jpeg": {"image/jpeg"},
     "image/png": {"image/png"},
     "image/webp": {"image/webp"},
-    # DOCX is a ZIP container; filetype may report either.
+    # DOCX is a ZIP container; filetype may report either
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/zip"},
 }

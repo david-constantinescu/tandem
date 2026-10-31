@@ -1,9 +1,4 @@
-"""Demo workspaces: isolated, fictional, and wired to the simulated provider only.
-
-`create_demo_workspace` gives each visitor their own tenant (expires after DEMO_SESSION_HOURS) so
-visitors never see each other's actions. `seed_demo_account` maintains the shared demo@tandem.travel
-account for presentations. Both use the same seeding function and the real application code paths.
-"""
+"""spatiile demo: fiecare vizitator are copia lui, cu calatoria din craiova la roma"""
 from __future__ import annotations
 
 import secrets
@@ -30,7 +25,7 @@ HOME_TZ = "Europe/Bucharest"  # Craiova
 
 
 def demo_start_date(today: date | None = None) -> date:
-    """Next occurrence of 12 November that keeps the 12–16 Nov trip in the future (or ongoing)."""
+    """next occurrence of 12 November that keeps the 12–16 Nov trip in the future (or ongoing)"""
     today = today or utcnow().date()
     start = date(today.year, 11, 12)
     if today > start + timedelta(days=4):
@@ -74,7 +69,7 @@ def create_demo_workspace(locale: str = "ro") -> User:
 
 
 def seed_demo_account(password: str | None = None) -> tuple[User, str | None]:
-    """Create or reset the shared demo account. Returns (user, generated_password_or_None)."""
+    """create or reset the shared demo account"""
     cfg = current_app.config
     email = cfg["DEMO_ACCOUNT_EMAIL"]
     existing = db.session.execute(db.select(User).where(User.email == email)).scalar_one_or_none()
@@ -109,7 +104,7 @@ def _profile(user: User) -> None:
 
 
 def seed_rome_trip(user: User) -> None:
-    # The demo is seeded in the visitor's language; names of places and providers stay as they are.
+    # the demo is seeded in the visitor's language; names of places and providers stay as they are
     loc = locale_of(user)
     start = demo_start_date()
     end = start + timedelta(days=4)
@@ -192,7 +187,7 @@ def seed_rome_trip(user: User) -> None:
         reservations[data["booking_reference"] + data["title"][:10]] = res
         doc.trip_id = trip.id
 
-    # An updated reservation, already applied, with its change history preserved.
+    # an updated reservation, already applied, with its change history preserved
     hotel = next(r for r in reservations.values() if r.type == "hotel")
     from app.models import ExtractedRecord, ReservationChange
 
@@ -212,7 +207,7 @@ def seed_rome_trip(user: User) -> None:
     db.session.flush()
     trips.apply_change(user, change, actor="user")
 
-    # Free time and a pending suggestion.
+    # free time and a pending suggestion
     create_event(user, trip, {"title": tr("Free afternoon", loc), "type": "free_time", "status": "unbooked",
                               "start_local": f"{d3.isoformat()}T14:00", "end_local": f"{d3.isoformat()}T18:00",
                               "start_tz": ROME_TZ}, source="manual")
@@ -228,7 +223,7 @@ def seed_rome_trip(user: User) -> None:
     db.session.flush()
     check_and_notify(trip, user)
 
-    # A realistic conversation produced by the offline assistant over the real seeded data.
+    # a realistic conversation produced by the offline assistant over the real seeded data
     from app.services.agent import local_assistant
     from app.services.agent.tools import ToolContext
     from app.models import Message

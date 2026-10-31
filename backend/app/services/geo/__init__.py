@@ -1,11 +1,4 @@
-"""Location services: airport lookup, city timezones, geocoding and distances.
-
-Offline data (airportsdata + timezonefinder) resolves airports and many cities without network
-access. Free-form addresses use Nominatim (OpenStreetMap) when LOCATION_PROVIDER=nominatim,
-respecting its usage policy (1 request/second, identifying User-Agent, cached results).
-Travel times are only reported when a routing provider is configured; otherwise callers get
-`None` and must say so — distances are never converted into invented durations.
-"""
+"""chestii de locatie: aeroporturi, fusuri orare, geocodare, distante"""
 from __future__ import annotations
 
 import logging
@@ -48,7 +41,7 @@ def _airports() -> dict[str, dict]:
 
 @lru_cache(maxsize=1)
 def _city_index() -> dict[str, list[dict]]:
-    """City name (lower) -> airports in cities of that name (possibly several countries)."""
+    """city name (lower) -> airports in cities of that name (possibly several countries)"""
     index: dict[str, list[dict]] = {}
     for a in _airports().values():
         name = (a.get("city") or "").strip().lower()
@@ -75,7 +68,7 @@ def airport(code: str | None) -> Place | None:
 
 
 def city(name: str | None, country: str | None = None) -> Place | None:
-    """Resolve a city name offline. Curated major destinations first; airport data only when unambiguous."""
+    """resolve a city name offline"""
     from app.services.geo.cities import ALIASES, MAJOR_CITIES
 
     if not name:
@@ -99,8 +92,7 @@ def city(name: str | None, country: str | None = None) -> Place | None:
 
 
 def tz_for_point(lat: float | None, lon: float | None) -> str | None:
-    """IANA zone for coordinates. Known destinations win: timezonefinder's compact dataset merges zones that
-    share rules (it reports Rome as Europe/Paris), which is correct for offsets but confusing to show."""
+    """IANA zone for coordinates"""
     from app.services.geo.cities import MAJOR_CITIES
 
     if lat is None or lon is None:
@@ -132,7 +124,7 @@ def find_airport_code(text: str | None) -> str | None:
 
 
 def resolve_place(text: str | None, *, allow_network: bool = True) -> Place | None:
-    """Best-effort resolution of an airport, city or address string."""
+    """best-effort resolution of an airport, city or address string"""
     from app.services.geo.cities import COUNTRY_NAMES
 
     if not text or not text.strip():
@@ -140,7 +132,7 @@ def resolve_place(text: str | None, *, allow_network: bool = True) -> Place | No
     code = find_airport_code(text)
     if code:
         return airport(code)
-    # Address parts, most specific last ("Via Roma 1, 00153 Rome, Italy"); country names give a hint.
+    # address parts, most specific last ("Via Roma 1, 00153 Rome, Italy"); country names give a hint
     parts = [re.sub(r"\b\d{3,6}(-\d{3})?\b", "", p).strip(" .") for p in text.split(",")]
     country = next((COUNTRY_NAMES[p.lower()] for p in parts if p.lower() in COUNTRY_NAMES), None)
     candidates = [text.strip()] + [p for p in reversed(parts) if p and p.lower() not in COUNTRY_NAMES]
@@ -211,7 +203,7 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def travel_time_minutes(lat1: float, lon1: float, lat2: float, lon2: float, mode: str = "driving") -> float | None:
-    """Routed travel time from a configured OSRM server, or None when no routing provider is available."""
+    """routed travel time from a configured OSRM server, or None when no routing provider is available"""
     base = current_app.config.get("ROUTING_OSRM_URL")
     if not base or current_app.config.get("TESTING"):
         return None

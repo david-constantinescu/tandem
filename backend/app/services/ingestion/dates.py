@@ -1,4 +1,4 @@
-"""Date/time recognition for travel documents (used by the local parser and evidence checks)."""
+"""recunoaste date si ore in documentele de calatorie"""
 from __future__ import annotations
 
 import re
@@ -71,7 +71,7 @@ def find_dates(text: str) -> list[DateHit]:
         elif a == b:
             add(_safe_date(y, b, a), m)
         else:
-            # Day-first (European) reading by default, flagged as ambiguous.
+            # day-first (European) reading by default, flagged as ambiguous
             add(_safe_date(y, b, a), m,
                 ambiguous=f"'{m.group(0)}' could be {a} {_month_name(b)} or {b} {_month_name(a)}; read as day/month")
     hits.sort(key=lambda h: h.start)
@@ -88,7 +88,7 @@ def find_times(text: str) -> list[TimeHit]:
     for m in RE_TIME_24.finditer(text):
         if any(h.start <= m.start() < h.end for h in hits):
             continue
-        # Avoid matching parts of dates like 2026-11-12 or ratios.
+        # avoid matching parts of dates like 2026-11-12 or ratios
         before = text[max(0, m.start() - 1):m.start()]
         if before in ("-", "/", "."):
             continue
@@ -98,7 +98,7 @@ def find_times(text: str) -> list[TimeHit]:
 
 
 def first_datetime(text: str) -> tuple[datetime | None, str | None, str | None]:
-    """First date in text combined with the nearest following time on the same line."""
+    """first date in text combined with the nearest following time on the same line"""
     dates = find_dates(text)
     if not dates:
         return None, None, None
@@ -132,7 +132,7 @@ def _month_name(m: int) -> str:
 
 
 def date_variants(d: date) -> list[str]:
-    """Textual forms a date may take in a source document (used to verify AI-extracted dates)."""
+    """textual forms a date may take in a source document (used to verify AI-extracted dates)"""
     months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
               "november", "december"]
     full = months[d.month - 1]

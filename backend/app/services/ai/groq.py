@@ -1,10 +1,4 @@
-"""Groq provider — strictly NON-FILE tasks.
-
-Tandem never sends uploaded files (PDFs, screenshots, photos, audio) to Groq. This is enforced
-twice: the router rejects any request that carries an original file or ingests a document, and
-this provider refuses every message part that is not plain text, including text that embeds a
-base64 data URL. A router bug therefore cannot leak a file to Groq.
-"""
+"""groq, doar pt text. niciodata fisiere"""
 from __future__ import annotations
 
 import re

@@ -1,5 +1,4 @@
-"""Periodic checks run by the worker: upcoming events, cancellation deadlines, approval expiry,
-Gmail incremental sync and demo workspace cleanup."""
+"""verificari periodice: evenimente apropiate, termene de anulare, aprobari expirate, gmail, mesaje proactive"""
 from __future__ import annotations
 
 import logging

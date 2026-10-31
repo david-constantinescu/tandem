@@ -53,7 +53,7 @@ export default function InboxPage() {
       <div role="tablist" aria-label={t("inbox.title")} className="-mx-4 mb-6 flex gap-1 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
         {TABS.map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setParams(k === "todo" ? {} : { tab: k }, { replace: true })}
-            className={clsx("relative flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium transition-colors pointer-coarse:h-11", tab === k ? "text-white" : "text-ink-500 hover:text-ink-800")}>
+            className={clsx("relative flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium transition-colors pointer-coarse:h-11", tab === k ? "text-paper" : "text-ink-500 hover:text-ink-800")}>
             {tab === k && <motion.span layoutId="inbox-tab" transition={spring} className="absolute inset-0 rounded-full bg-ink-900" />}
             <span className="relative z-10 flex items-center gap-1.5">{labels[k]}</span>
           </button>
@@ -116,7 +116,7 @@ function Documents({ docs, loading, error, retry, retrying }: { docs: DocumentIt
               const on = filter === f.key;
               return (
                 <button key={f.key} onClick={() => setFilter(f.key)} className={clsx("relative h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-colors active:scale-95 pointer-coarse:h-10",
-                  on ? "text-white" : "bg-white text-ink-500 ring-1 ring-sand-200 hover:text-ink-800")}>
+                  on ? "text-paper" : "bg-white text-ink-500 ring-1 ring-sand-200 hover:text-ink-800")}>
                   {on && <motion.span layoutId="inbox-filter" transition={spring} className="absolute inset-0 rounded-full bg-ink-900" />}
                   <span className="relative z-10">{t(f.label)}{f.key !== "all" && n > 0 ? ` · ${n}` : ""}</span>
                 </button>

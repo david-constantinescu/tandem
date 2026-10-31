@@ -146,7 +146,7 @@ class ItineraryEvent(UUIDPk, Timestamps, db.Model):
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lon: Mapped[float | None] = mapped_column(Float, nullable=True)
-    # Transport events have a separate arrival location.
+    # transport events have a separate arrival location
     end_location_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
     end_city: Mapped[str | None] = mapped_column(String(120), nullable=True)
     end_lat: Mapped[float | None] = mapped_column(Float, nullable=True)

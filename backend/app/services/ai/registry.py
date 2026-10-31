@@ -1,9 +1,4 @@
-"""Model registry: what each model can do and whether it is free, as verified against official docs.
-
-The router checks requests against these entries per model. A model ID configured through the
-environment but absent from this registry is treated as *unknown and potentially paid*: it is
-blocked unless AI_ALLOW_PAID_MODELS=true. Update entries when re-verifying documentation.
-"""
+"""ce stie fiecare model si daca e gratis. modelele necunoscute sunt blocate (pot fi platite)"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -132,7 +127,17 @@ for _mid in ("llama-3.1-8b-instant", "llama-3.3-70b-versatile"):
 def lookup(provider: str, model_id: str | None) -> ModelInfo | None:
     if not model_id:
         return None
-    return MODELS.get((provider, model_id))
+    info = MODELS.get((provider, model_id))
+    if info is None and provider == "gemini":
+        # modelele Flash/Flash-Lite noi apar des si toate au tier gratuit, citesc text/poze/PDF si stiu tools
+        # le acceptam dupa nume ca sa nu actualizam registrul la fiecare lansare Google
+        from app.services.ai.gemini_models import PATTERN
+
+        if PATTERN.match(model_id):
+            info = ModelInfo(provider="gemini", id=model_id, free_tier=True, inputs=_ALL_MEDIA, structured="response_schema",
+                             tools=True, structured_with_tools=False, context_tokens=1_048_576, source=GEMINI_MODELS_URL,
+                             id_verified=False, notes=("Picked automatically from Google's model list.",))
+    return info
 
 
 def is_free(provider: str, model_id: str) -> bool:

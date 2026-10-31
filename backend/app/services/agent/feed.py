@@ -1,8 +1,4 @@
-"""Tandem writing first: one "updates" conversation per user where proactive messages land.
-
-Every message has a key, so the same news is never posted twice. The user answers in the same conversation and the
-assistant (with the whole trip in its brief) carries on from there.
-"""
+"""conversatia de 'noutati' unde tandem scrie primul (vreme, greve, suprapuneri, emailuri importate)"""
 from __future__ import annotations
 
 from app.extensions import db
@@ -22,7 +18,7 @@ def updates_conversation(user: User, trip: Trip | None = None) -> Conversation:
         db.session.add(conv)
         db.session.flush()
     elif trip is not None and conv.trip_id != trip.id:
-        conv.trip_id = trip.id  # the assistant answers about the trip the latest update is about
+        conv.trip_id = trip.id  # asistentul raspunde despre calatoria din ultimul mesaj
     return conv
 
 
@@ -32,7 +28,7 @@ def already_posted(user: User, key: str) -> bool:
 
 def post(user: User, key: str, content: str, *, trip: Trip | None = None, options: list[str] | None = None,
          references: list[dict] | None = None, notify_title: T | str | None = None) -> Message | None:
-    """Post once per key. Returns the message, or None when it was already posted."""
+    """post once per key. Returns the message, or None when it was already posted."""
     if already_posted(user, key):
         return None
     conv = updates_conversation(user, trip)

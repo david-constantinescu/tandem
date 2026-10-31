@@ -1,5 +1,4 @@
-"""JSON serialisation of models for the API. Datetimes are ISO 8601; event times are also given
-in their own local zone so clients never have to guess which timezone applies."""
+"""transforma modelele in json pt api. datele sunt iso 8601, orele evenimentelor sunt si locale"""
 from __future__ import annotations
 
 from decimal import Decimal

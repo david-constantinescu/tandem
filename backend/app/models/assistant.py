@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.extensions import db
 from app.models.base import JSONType, Timestamps, UUIDPk, tz_dt, utcnow
 
-# Lifecycle of anything the assistant (or the user via Discover) wants to do.
+# lifecycle of anything the assistant (or the user via Discover) wants to do
 ACTION_STATUSES = (
     "suggested", "prepared", "awaiting_approval", "in_progress", "completed", "failed",
     "requires_manual", "rejected", "expired", "cancelled",
@@ -46,7 +46,7 @@ class Message(UUIDPk, db.Model):
 
 
 class AgentAction(UUIDPk, Timestamps, db.Model):
-    """A proposed or executed action. Consequential actions always pass through an Approval."""
+    """a proposed or executed action"""
 
     __tablename__ = "agent_actions"
     __table_args__ = (UniqueConstraint("user_id", "idempotency_key"),)

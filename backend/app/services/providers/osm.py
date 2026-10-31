@@ -1,9 +1,4 @@
-"""OpenStreetMap places (Overpass API): a real, keyless discovery source.
-
-Search only. OSM lists places (museums, galleries, monuments, viewpoints, attractions); it has no
-tickets, prices or availability, and its opening_hours tags are community data, not verified.
-Results are labelled accordingly and cached to respect the public Overpass instance's usage policy.
-"""
+"""locuri din openstreetmap (overpass). real si fara cheie"""
 from __future__ import annotations
 
 import logging
@@ -104,7 +99,7 @@ class OSMPlacesAdapter(TravelProviderAdapter):
         cached = cache_get("overpass", key)
         if cached is not None:
             return cached
-        # The public Overpass servers are often slow or overloaded: try a couple, briefly, then give up quickly so
+        # the public Overpass servers are often slow or overloaded: try a couple, briefly, then give up quickly so
         # a chat turn isn't spent waiting. (A miss is remembered for a minute so the next question doesn't wait again.)
         if cache_get("overpass_down", "all"):
             raise ProviderRequestError("OpenStreetMap is busy; try again shortly", code=TEMPORARILY_UNAVAILABLE, retryable=True)

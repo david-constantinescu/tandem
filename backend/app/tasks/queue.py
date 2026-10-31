@@ -1,8 +1,4 @@
-"""PostgreSQL-backed job queue.
-
-Jobs are rows in `processing_jobs`. Workers claim them with `SELECT ... FOR UPDATE SKIP LOCKED`,
-so several worker processes can run safely without Redis. See docs/ARCHITECTURE.md (decision log).
-"""
+"""coada de joburi in postgres"""
 from __future__ import annotations
 
 import logging
@@ -27,7 +23,7 @@ STALE_LOCK = timedelta(minutes=15)
 
 
 class RetryableJobError(Exception):
-    """Raise from a handler to retry later (e.g. provider rate limit)."""
+    """raise from a handler to retry later"""
 
     def __init__(self, message: str, delay_seconds: int = 60):
         super().__init__(message)
@@ -52,7 +48,7 @@ def enqueue(kind: str, payload: dict | None = None, *, user_id: uuid.UUID | None
 
 
 def run_inline_if_configured(job: ProcessingJob) -> None:
-    """In JOB_RUNNER=inline mode (tests, single-process demos) run the job immediately after commit."""
+    """in JOB_RUNNER=inline mode (tests, single-process demos) run the job immediately after commit"""
     if current_app.config.get("JOB_RUNNER") == "inline":
         db.session.commit()
         execute(job.id)
@@ -151,7 +147,7 @@ def on_failure(kind: str):
 
 
 def run_pending(limit: int = 100) -> int:
-    """Process all currently due jobs synchronously (used by tests and the CLI)."""
+    """process all currently due jobs synchronously (used by tests and the CLI)"""
     worker_id = f"sync-{os.getpid()}"
     count = 0
     while count < limit:

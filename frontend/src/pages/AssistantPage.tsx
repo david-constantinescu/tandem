@@ -9,6 +9,7 @@ import { ActionCard } from "@/components/activities/ActionCard";
 import { ActivityCard } from "@/components/activities/ActivityCard";
 import { Choices } from "@/components/assistant/Choices";
 import { Composer } from "@/components/assistant/Composer";
+import { MD } from "@/components/assistant/markdown";
 import { spring } from "@/components/motion";
 import { Badge, Button, PageLoader } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
@@ -30,14 +31,17 @@ export default function AssistantPage() {
   const { t } = useT();
   const [history, setHistory] = useState(false);
 
+  const started = useRef(false);
   useEffect(() => {
-    if (!id && conversations.data?.length) navigate(`/assistant/${conversations.data[0].id}`, { replace: true });
-  }, [id, conversations.data, navigate]);
+    if (id || !conversations.data || !trips.data) return;
+    if (conversations.data.length) navigate(`/assistant/${conversations.data[0].id}`, { replace: true });
+    else if (!started.current) { started.current = true; start(); } // first visit: straight into a chat with suggestions
+  }, [id, conversations.data, trips.data, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = async (tripId?: string) => {
     const conv = await api.post<Conversation>("/assistant/conversations", { trip_id: tripId ?? trips.data?.find((t) => t.stats.phase !== "past")?.id ?? null });
     qc.invalidateQueries({ queryKey: keys.conversations });
-    navigate(`/assistant/${conv.id}`);
+    navigate(`/assistant/${conv.id}`, { replace: !id });
   };
 
   return (
@@ -256,7 +260,7 @@ function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: Convers
           ))}
         </div>
       )}
-      <div className="prose-chat min-w-0 rounded-[20px] rounded-bl-md bg-sand-100/80 px-4 py-3 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown>{m.content}</ReactMarkdown></div>
+      <div className="prose-chat min-w-0 rounded-[20px] rounded-bl-md bg-sand-100/80 px-4 py-3 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown components={MD}>{m.content}</ReactMarkdown></div>
       {activities.length > 0 && (
         <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
           {activities.map((r) => <ActivityCard key={r.id} a={r.activity as ActivityResult & typeof r.activity} tripId={r.trip_id ?? tripId} date={r.date} />)}

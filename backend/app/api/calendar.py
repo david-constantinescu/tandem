@@ -1,4 +1,4 @@
-"""Calendar export: a per-trip .ics download and a private subscription feed for Apple/Google Calendar."""
+"""export de calendar: un .ics pe calatorie si un feed privat pt apple/google calendar"""
 from __future__ import annotations
 
 import re
@@ -37,7 +37,7 @@ def _events_query(user_id):
 def _ics_response(body: str, filename: str) -> Response:
     resp = Response(body, mimetype="text/calendar")
     resp.headers["Content-Type"] = "text/calendar; charset=utf-8"
-    # inline: iOS Safari offers "Add to Calendar" for the whole file instead of a download.
+    # inline: iOS Safari offers "Add to Calendar" for the whole file instead of a download
     resp.headers["Content-Disposition"] = f'inline; filename="{filename}"'
     resp.headers["Cache-Control"] = "private, no-cache"
     resp.headers["X-Robots-Tag"] = "noindex"

@@ -1,4 +1,4 @@
-"""Provider-neutral AI request/response types and the AIProvider interface."""
+"""tipurile comune pt request/raspuns ai si interfata AIProvider"""
 from __future__ import annotations
 
 import uuid
@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-# Tasks the router understands. Groq is never eligible for tasks that carry or ingest documents.
+# tasks the router understands. Groq is never eligible for tasks that carry or ingest documents.
 TASK_DOCUMENT_EXTRACTION = "document_extraction"  # original file (PDF/image) sent to a provider
 TASK_DOCUMENT_TEXT_EXTRACTION = "document_text_extraction"  # text we extracted locally from a file
 TASK_TEXT_EXTRACTION = "text_extraction"  # user-pasted text (not from a file)
@@ -37,7 +37,7 @@ class ImagePart:
 
 @dataclass
 class FilePart:
-    """An original uploaded file (e.g. PDF). Only providers with official document support may receive it."""
+    """an original uploaded file"""
 
     data: bytes
     mime_type: str
@@ -69,7 +69,7 @@ class ChatMessage:
     tool_calls: list[ToolCall] = field(default_factory=list)
     tool_call_id: str | None = None
     tool_name: str | None = None
-    # Opaque provider-specific data that must be echoed back (e.g. Gemini thought signatures)
+    # opaque provider-specific data that must be echoed back (e.g. Gemini thought signatures)
     provider_state: Any = None
 
     @staticmethod
@@ -182,10 +182,10 @@ class NoProviderAvailable(AIError):
 
 
 class AIProvider:
-    """Common interface. Providers implement `generate`; the convenience methods enforce capabilities."""
+    """common interface. Providers implement `generate`; the convenience methods enforce capabilities."""
 
     name: str = "base"
-    # Hard architectural flag checked by the router *and* by the provider itself.
+    # hard architectural flag checked by the router *and* by the provider itself
     supports_original_file_processing: bool = False
 
     def configured(self) -> bool:
@@ -200,7 +200,7 @@ class AIProvider:
     def generate(self, request: AIRequest, model: str) -> AIResponse:
         raise NotImplementedError
 
-    # Convenience wrappers mirroring the specification's interface -------------------------
+    # convenience wrappers mirroring the specification's interface -------------------------
     def generate_text(self, request: AIRequest) -> AIResponse:
         return self.generate(request, self._require_model(request.role))
 

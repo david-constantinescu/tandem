@@ -3,6 +3,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Choices } from "@/components/assistant/Choices";
 import { Composer } from "@/components/assistant/Composer";
+import { MD } from "@/components/assistant/markdown";
 import { Link, useNavigate } from "react-router-dom";
 import { useAdd } from "@/components/AddSheet";
 import { RouteDoodle } from "@/components/motion";
@@ -72,7 +73,7 @@ function LatestUpdate() {
         <span className="text-[12px] text-ink-400">· {relativeTime(last.created_at)}</span>
         <Link to={`/assistant/${updates.id}`} className="ml-auto text-[13px] font-medium text-lagoon-600">{t("home.openChat")}</Link>
       </div>
-      <div className="prose-chat mt-2.5 line-clamp-6 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown>{last.content}</ReactMarkdown></div>
+      <div className="prose-chat mt-2.5 line-clamp-6 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown components={MD}>{last.content}</ReactMarkdown></div>
       {options.length > 0 && <div className="mt-3"><Choices options={options} onChoose={(o) => navigate(`/assistant/${updates.id}`, { state: { prompt: o } })} /></div>}
     </section>
   );
@@ -108,7 +109,7 @@ function Welcome() {
       <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-clay-500/30 blur-3xl" />
       <Plane className="relative h-6 w-6 text-apricot" />
       <h2 className="display relative mt-3 text-[28px] leading-tight">{t("home.welcome.title")}</h2>
-      <p className="relative mt-1.5 max-w-md text-[14.5px] text-lagoon-100/85">{t("home.welcome.body")}</p>
+      <p className="relative mt-1.5 max-w-md text-[14.5px] text-white/75">{t("home.welcome.body")}</p>
       <Button onClick={openAdd} size="lg" className="relative mt-5 w-full sm:w-auto" icon={<FileUp className="h-4 w-4" />}>{t("home.welcome.cta")}</Button>
     </section>
   );
@@ -143,7 +144,7 @@ function BoardingPass({ trip }: { trip: Trip }) {
         <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-clay-500/30 blur-3xl" />
         <div className="relative flex items-center justify-between gap-3">
           <span className="flex items-center gap-2.5">
-            <span className="rounded-full bg-white/12 px-2.5 py-0.5 text-[12px] font-medium text-lagoon-50">{when}</span>
+            <span className="rounded-full bg-white/12 px-2.5 py-0.5 text-[12px] font-medium text-white/90">{when}</span>
             {(trip.stats.reservations ?? 0) > 0 && (
               <span className="rotate-[-5deg] rounded-md border-2 border-apricot/80 px-1.5 py-px text-[10.5px] font-bold uppercase tracking-[0.14em] text-apricot">{tp("home.booked", trip.stats.reservations ?? 0)}</span>
             )}
@@ -151,8 +152,8 @@ function BoardingPass({ trip }: { trip: Trip }) {
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 transition group-hover:rotate-45"><ArrowUpRight className="h-4 w-4" /></span>
         </div>
         <h2 className="display relative mt-2.5 text-[32px] leading-[1.02] tracking-[-0.02em] text-white sm:text-[40px]">{dest}</h2>
-        <p className="relative mt-1 truncate text-[13.5px] text-lagoon-100/85">{trip.name} · {fmtRange(trip.start_date, trip.end_date)}</p>
-        <RouteDoodle light className="relative mt-2 w-full text-lagoon-50 [&>svg]:!h-9" from={from} to={to} />
+        <p className="relative mt-1 truncate text-[13.5px] text-white/75">{trip.name} · {fmtRange(trip.start_date, trip.end_date)}</p>
+        <RouteDoodle light className="relative mt-2 w-full text-white/90 [&>svg]:!h-9" from={from} to={to} />
       </Link>
       <div className="perforated shrink-0" />
       <div className="flex flex-col gap-3 px-5 pb-4 pt-3">

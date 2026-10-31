@@ -19,7 +19,9 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"form" | "demo" | null>(null);
   const { t } = useT();
-  const next = params.get("next") || "/";
+  // Only in-app paths: "//evil.com" or "https://…" would send people elsewhere after signing in.
+  const asked = params.get("next") || "/";
+  const next = asked.startsWith("/") && !asked.startsWith("//") && !asked.startsWith("/\\") ? asked : "/";
 
   if (user) return <Navigate to={next} replace />;
 
@@ -53,7 +55,7 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
 
   return (
     <div className="grid grid-cols-1 min-h-screen lg:grid-cols-[1.05fr_1fr]">
-      <section className="relative hidden overflow-hidden bg-lagoon-900 px-14 py-12 text-lagoon-50 lg:flex lg:flex-col">
+      <section className="relative hidden overflow-hidden bg-lagoon-900 px-14 py-12 text-white/90 lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-clay-500/20 blur-3xl" />
         <div className="absolute -bottom-32 left-10 h-96 w-96 rounded-full bg-lagoon-500/25 blur-3xl" />
         <div className="relative flex items-center gap-2.5">
@@ -76,8 +78,8 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
           <RouteDoodle light className="mb-10 h-20 w-full max-w-md" from={t("auth.doodleFrom")} to={t("auth.doodleTo")} />
           <p className="kicker !text-apricot">{t("auth.kicker")}</p>
           <h1 className="display mt-2 text-[46px] leading-[1.04] tracking-[-0.02em] text-white">{t("auth.headline")}</h1>
-          <p className="mt-5 text-[16px] leading-relaxed text-lagoon-100/85">{t("auth.pitch")}</p>
-          <ul className="mt-10 space-y-4 text-[14.5px] text-lagoon-50/90">
+          <p className="mt-5 text-[16px] leading-relaxed text-white/75">{t("auth.pitch")}</p>
+          <ul className="mt-10 space-y-4 text-[14.5px] text-white/85">
             <li className="flex gap-3"><FileText className="mt-0.5 h-5 w-5 text-clay-100" /> {t("auth.point1")}</li>
             <li className="flex gap-3"><MessageCircle className="mt-0.5 h-5 w-5 text-clay-100" /> {t("auth.point2")}</li>
             <li className="flex gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 text-clay-100" /> {t("auth.point3")}</li>

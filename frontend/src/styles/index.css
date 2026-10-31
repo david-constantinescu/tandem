@@ -42,6 +42,59 @@
   --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Dark is the default; light only when chosen (data-theme="light" on <html>). The palette keeps its names, so every
+   component follows without changes: sand = surfaces and borders, ink = text, the accents get brighter to read on
+   dark. "white" means two things in the markup (cards, and text on dark buttons), so it's split further down. */
+:root:not([data-theme="light"]) {
+  color-scheme: dark;
+  --color-paper: #0e1416;
+  --color-sand-50: #151d20;
+  --color-sand-100: #1b2529;
+  --color-sand-200: #28343a;
+  --color-sand-300: #3a484e;
+  --color-ink-900: #eef3f3;
+  --color-ink-800: #dbe3e4;
+  --color-ink-700: #bccacc;
+  --color-ink-500: #95a6a9;
+  --color-ink-400: #7a8d91;
+  --color-ink-300: #5a6d71;
+  --color-lagoon-50: #12292b;
+  --color-lagoon-100: #183539;
+  --color-lagoon-500: #4fb3a7;
+  --color-lagoon-600: #63c6b9;
+  --color-lagoon-700: #86d8cc;
+  --color-lagoon-900: #173f43;
+  --color-clay-50: #2b1a12;
+  --color-clay-100: #3b2418;
+  --color-clay-500: #de7448;
+  --color-clay-600: #f08a5d;
+  --color-amber-soft: #2c2410;
+  --color-amber-ink: #f1c260;
+  --color-apricot-soft: #2b2016;
+  --color-violet-soft: #221e36;
+  --color-violet-ink: #ab9dff;
+  --color-rose-soft: #351c1c;
+  --color-rose-ink: #ff8e8e;
+  --surface: #172024;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  --shadow-float: 0 20px 50px -18px rgb(0 0 0 / 0.8), 0 2px 6px rgb(0 0 0 / 0.3);
+}
+/* Surfaces: cards, fields and anything bg-white become the dark surface. */
+:root:not([data-theme="light"]) :is(.card, .field, .bg-white, [class*="bg-white/9"], [class*="bg-white/8"], [class*="bg-white/7"], [class*="bg-white/6"], [class*="bg-white/5"], [class*="bg-white/4"], .glass) {
+  --color-white: var(--surface);
+}
+/* Text on coloured buttons stays white... */
+:root:not([data-theme="light"]) [class*="text-white"] { --color-white: #ffffff; }
+/* ...except on the inverted pills (dark in light mode, light in dark mode), where it turns dark. */
+:root:not([data-theme="light"]) :is([class^="bg-ink-9"], [class*=" bg-ink-9"], [class^="bg-ink-8"], [class*=" bg-ink-8"])[class*="text-white"],
+:root:not([data-theme="light"]) :is([class^="bg-ink-9"], [class*=" bg-ink-9"], [class^="bg-ink-8"], [class*=" bg-ink-8"]) > [class*="text-white"] { --color-white: #0e1416; }
+/* Sliding thumbs in segmented controls and switches need to stand out from their track. */
+:root:not([data-theme="light"]) :is([role="tablist"], [role="radiogroup"]) .bg-white { --color-white: #34444b; }
+:root:not([data-theme="light"]) body::before { opacity: 0.025; }
+:root:not([data-theme="light"]) select.field { background-color: var(--surface); }
+:root:not([data-theme="light"]) .leaflet-container img.leaflet-tile { filter: brightness(0.75) contrast(1.1) saturate(0.8); }
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
@@ -109,7 +162,7 @@
   }
   select.field {
     padding-right: 2.5rem;
-    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237d8c8e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5M7 9l5-5 5 5'/%3E%3C/svg%3E") no-repeat right 0.85rem center / 1rem;
+    background: var(--color-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237d8c8e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5M7 9l5-5 5 5'/%3E%3C/svg%3E") no-repeat right 0.85rem center / 1rem;
   }
   input.field::-webkit-date-and-time-value {
     text-align: left;

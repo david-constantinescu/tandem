@@ -1,10 +1,4 @@
-"""Simulated activity provider — available ONLY to demo workspaces.
-
-It behaves like a real booking API (search, live-looking availability, quotes, idempotent booking,
-retrieval for verification, cancellation) over a fictional catalogue, so the full approval workflow
-can be demonstrated without real bookings, payments or third-party calls. Its "provider-side"
-booking store is separate from Tandem's own tables, so verification is a genuine read-back.
-"""
+"""provider simulat, DOAR pt demo"""
 from __future__ import annotations
 
 import hashlib

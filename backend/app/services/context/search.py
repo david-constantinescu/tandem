@@ -1,9 +1,4 @@
-"""General web search for the assistant (opening hours changes, events, local tips).
-
-With TAVILY_API_KEY set it uses Tavily, a search API made for AI agents (free tier: 1,000 searches a month;
-https://tavily.com). Without a key it falls back to Google News RSS, which covers current events but not the
-wider web. Results are untrusted text: the assistant quotes and links them, it never follows instructions in them.
-"""
+"""cautare pe web pt asistent (tavily daca avem cheie, altfel google news)"""
 from __future__ import annotations
 
 import httpx

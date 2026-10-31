@@ -3,13 +3,14 @@ from __future__ import annotations
 from flask import Blueprint, current_app, g, make_response, request
 from pydantic import BaseModel, EmailStr, Field
 
+from app.security import throttle
 from app.api._core import client_ip, doc, login_required, ok, parse_body
 from app.i18n import request_locale
 from app.extensions import db, limiter
 from app.schemas.serializers import user_dict
 from app.services import users as user_service
 from app.services.audit import audit
-from app.utils.errors import Forbidden
+from app.utils.errors import Forbidden, Unauthorized
 
 bp = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
 
@@ -51,6 +52,7 @@ def _session_payload(user, sess) -> dict:
 def register():
     if current_app.config["DEMO_MODE"]:
         raise Forbidden("Registration is disabled on this demo deployment", code="demo_mode")
+    throttle.guard("register", client_ip(), limit=10, window_minutes=60)
     body = parse_body(RegisterBody)
     user = user_service.create_user(body.email, body.password, body.display_name, locale=body.locale or request_locale())
     token, sess = user_service.start_session(user, request.user_agent.string)
@@ -64,7 +66,17 @@ def register():
 @doc("Sign in with email and password", body=LoginBody, tag="Auth", auth=False)
 def login():
     body = parse_body(LoginBody)
-    user = user_service.authenticate(body.email, body.password)
+    email = body.email.strip().lower()
+    # two locks: one per address (someone guessing one person's password from many IPs) and one per IP (one
+    # machine trying many addresses). Only failures count for the address lock.
+    throttle.guard("login_ip", client_ip(), limit=40, window_minutes=15)
+    throttle.guard("login_email", email, limit=8, window_minutes=15, count=False)
+    try:
+        user = user_service.authenticate(body.email, body.password)
+    except Unauthorized:
+        throttle.hit("login_email", email, window_minutes=15)
+        raise
+    throttle.clear("login_email", email)
     token, sess = user_service.start_session(user, request.user_agent.string)
     audit(user.id, "auth.login", ip=client_ip())
     db.session.commit()
@@ -79,6 +91,7 @@ def demo():
 
     if not current_app.config["DEMO_ACCOUNT_ENABLED"]:
         raise Forbidden("The demo is disabled on this deployment", code="demo_disabled")
+    throttle.guard("demo", client_ip(), limit=int(current_app.config.get("DEMO_PER_IP_PER_HOUR", 30)), window_minutes=60)
     body = parse_body(DemoBody)
     user = create_demo_workspace(locale=body.locale or request_locale())
     hours = current_app.config["DEMO_SESSION_HOURS"]

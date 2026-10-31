@@ -1,4 +1,4 @@
-"""OpenAPI 3.1 document generated from the URL map, view metadata and Pydantic request models."""
+"""genereaza documentul openapi din rutele flask si modelele pydantic"""
 from __future__ import annotations
 
 import re

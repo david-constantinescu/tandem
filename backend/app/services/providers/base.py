@@ -1,10 +1,10 @@
-"""Travel provider adapter interface and capability states."""
+"""interfata pt provideri de activitati si starile lor"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import date
 
-# Capability states shown in the UI. A provider must never look more capable than its state.
+# capability states shown in the UI. A provider must never look more capable than its state.
 NOT_CONFIGURED = "not_configured"
 CONFIGURATION_REQUIRED = "configuration_required"
 AWAITING_PARTNER_APPROVAL = "awaiting_partner_approval"

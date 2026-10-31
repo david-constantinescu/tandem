@@ -58,7 +58,7 @@ class AIUsageRecord(UUIDPk, db.Model):
 
 
 class CacheEntry(db.Model):
-    """Small key/value cache (AI responses, geocoding, provider searches)."""
+    """small key/value cache (AI responses, geocoding, provider searches)"""
 
     __tablename__ = "cache_entries"
     namespace: Mapped[str] = mapped_column(String(40), primary_key=True)
@@ -69,7 +69,7 @@ class CacheEntry(db.Model):
 
 
 class ProviderStatus(db.Model):
-    """Last observed health/quota state of an AI or travel provider (application-wide)."""
+    """last observed health/quota state of an AI or travel provider (application-wide)"""
 
     __tablename__ = "provider_status"
     provider: Mapped[str] = mapped_column(String(40), primary_key=True)
@@ -117,8 +117,7 @@ class EmailCandidate(UUIDPk, db.Model):
 
 
 class StoredObject(db.Model):
-    """File storage inside PostgreSQL for hosts without a persistent filesystem (STORAGE_TYPE=database).
-    Bytes are already encrypted by the storage layer before they reach this table."""
+    """file storage inside PostgreSQL for hosts without a persistent filesystem (STORAGE_TYPE=database)"""
 
     __tablename__ = "stored_objects"
     key: Mapped[str] = mapped_column(String(300), primary_key=True)
@@ -129,7 +128,7 @@ class StoredObject(db.Model):
 
 
 class BrowserTask(UUIDPk, Timestamps, db.Model):
-    """An agentic website workflow (search, select, checkout hand-off) run by the browser agent."""
+    """an agentic website workflow (search, select, checkout hand-off) run by the browser agent"""
 
     __tablename__ = "browser_tasks"
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)

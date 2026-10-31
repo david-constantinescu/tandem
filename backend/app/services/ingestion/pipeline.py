@@ -1,10 +1,4 @@
-"""Universal Inbox ingestion pipeline.
-
-ingest_* functions validate input, store the original privately, de-duplicate by checksum and queue a
-`process_document` job. The job extracts content locally, asks the AI router for structured extraction
-(original file → Gemini or a verified alternative; otherwise locally extracted text), falls back to the
-local rules parser, verifies evidence, and proposes trips or detects changes to existing reservations.
-"""
+"""pipeline-ul pt inbox: primeste fisierul, il citeste, il pune in calatoria buna"""
 from __future__ import annotations
 
 import logging
@@ -42,7 +36,7 @@ MAX_EMAIL_ATTACHMENTS = 10
 
 
 # ---------------------------------------------------------------------------------------
-# Intake
+# intake
 def _store_and_queue(user: User, *, filename: str, mime_type: str, data: bytes, source: str,
                      source_url: str | None = None, parent: Document | None = None,
                      email_message_id: str | None = None, trip_id=None) -> Document:
@@ -110,7 +104,7 @@ def queue_after_commit(docs: list[Document]) -> None:
 
 
 # ---------------------------------------------------------------------------------------
-# Processing
+# processing
 def _set_status(doc: Document, status: str, detail: str = "") -> None:
     doc.status = status
     doc.status_detail = detail[:500]
@@ -217,7 +211,7 @@ def persist_result(user: User, doc: Document, result: ExtractionResult, method: 
         match = trips.find_matching_reservation(user, data)
         if match is not None:
             if data.get("start_tz_assumed") or data.get("end_tz_assumed"):
-                # The update doesn't say where it is; read its times in the existing booking's timezones.
+                # the update doesn't say where it is; read its times in the existing booking's timezones
                 data = trips.relocalize(data, match.start_tz, match.end_tz or match.start_tz)
                 record.data = data
             changes = trips.diff_reservation(match, data)

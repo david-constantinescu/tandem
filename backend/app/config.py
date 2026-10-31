@@ -1,8 +1,4 @@
-"""Application configuration.
-
-All settings come from environment variables (see `.env.example`). `validate_config`
-runs at startup and refuses to boot a production deployment with unsafe defaults.
-"""
+"""configul aplicatiei, totul vine din variabile de mediu"""
 from __future__ import annotations
 
 import os
@@ -29,7 +25,7 @@ def _str(name: str, default: str = "") -> str:
 
 
 def load_dotenv(path: Path | None = None) -> None:
-    """Minimal .env loader (does not override variables already set)."""
+    """minimal .env loader (does not override variables already set)"""
     path = path or BACKEND_DIR / ".env"
     if not path.exists():
         return
@@ -47,7 +43,7 @@ def load_dotenv(path: Path | None = None) -> None:
 
 
 def normalise_database_url(url: str) -> str:
-    """Accept provider-style URLs (postgres://, postgresql://) and select the psycopg 3 driver."""
+    """accept provider-style URLs (postgres://, postgresql://) and select the psycopg 3 driver"""
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):
             return "postgresql+psycopg://" + url[len(prefix):]
@@ -69,12 +65,12 @@ class Config:
         self.BACKEND_URL = _str("BACKEND_URL", "http://localhost:5050")
         self.FRONTEND_DIST = _str("FRONTEND_DIST", str(BACKEND_DIR.parent / "frontend" / "dist"))
 
-        # Sessions
+        # sessions
         self.SESSION_COOKIE_NAME = "tandem_session"
         self.SESSION_TTL_HOURS = _int("SESSION_TTL_HOURS", 24 * 14)
         self.SESSION_COOKIE_SECURE = _bool("SESSION_COOKIE_SECURE", self.APP_ENV == "production")
 
-        # Storage
+        # storage
         # local | s3 | database (serverless hosts such as Vercel have no persistent filesystem)
         self.STORAGE_TYPE = _str("STORAGE_TYPE", "database" if on_vercel else "local")
         self.STORAGE_LOCAL_PATH = _str("STORAGE_LOCAL_PATH", str(BACKEND_DIR / "var" / "storage"))
@@ -86,7 +82,7 @@ class Config:
         self.MAX_UPLOAD_BYTES = _int("MAX_UPLOAD_BYTES", 20 * 1024 * 1024)
         self.MAX_FILES_PER_UPLOAD = _int("MAX_FILES_PER_UPLOAD", 10)
 
-        # Jobs
+        # jobs
         self.JOB_RUNNER = _str("JOB_RUNNER", "inline" if on_vercel else "worker")  # worker | inline
         self.CRON_SECRET = _str("CRON_SECRET")
         self.WORKER_POLL_SECONDS = float(_str("WORKER_POLL_SECONDS", "1.0"))
@@ -96,19 +92,19 @@ class Config:
         self.AI_DEFAULT_PROVIDER = _str("AI_DEFAULT_PROVIDER", "gemini")
         self.AI_ALLOW_PAID_MODELS = _bool("AI_ALLOW_PAID_MODELS", False)
         self.AI_ENABLE_FALLBACK = _bool("AI_ENABLE_FALLBACK", True)
-        # A single AI request (a document, a chat turn) never runs longer than this: serverless functions stop at 60 s.
+        # a single AI request (a document, a chat turn) never runs longer than this: serverless functions stop at 60 s
         self.AI_TURN_SECONDS = _int("AI_TURN_SECONDS", 40)
         self.AI_REQUEST_TIMEOUT = _int("AI_REQUEST_TIMEOUT", 90)
         self.AI_MAX_RETRIES = _int("AI_MAX_RETRIES", 2)
         self.AI_CACHE_TTL_HOURS = _int("AI_CACHE_TTL_HOURS", 24 * 7)
 
         self.GEMINI_API_KEY = _str("GEMINI_API_KEY")
-        self.GEMINI_EXTRACTION_MODEL = _str("GEMINI_EXTRACTION_MODEL", "gemini-2.5-flash")
-        self.GEMINI_REASONING_MODEL = _str("GEMINI_REASONING_MODEL", "gemini-2.5-flash")
-        self.GEMINI_VISION_MODEL = _str("GEMINI_VISION_MODEL", "gemini-2.5-flash")
-        self.GEMINI_FAST_MODEL = _str("GEMINI_FAST_MODEL", "gemini-2.5-flash-lite")
-        # Tried in order when the main model is out of quota, at capacity or slow (free-tier limits are per model).
-        self.GEMINI_FALLBACK_MODELS = _str("GEMINI_FALLBACK_MODELS", "gemini-3.5-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-2.5-flash-lite")
+        self.GEMINI_EXTRACTION_MODEL = _str("GEMINI_EXTRACTION_MODEL", "auto")
+        self.GEMINI_REASONING_MODEL = _str("GEMINI_REASONING_MODEL", "auto")
+        self.GEMINI_VISION_MODEL = _str("GEMINI_VISION_MODEL", "auto")
+        self.GEMINI_FAST_MODEL = _str("GEMINI_FAST_MODEL", "auto")
+        # tried in order when the main model is out of quota, at capacity or slow (free-tier limits are per model)
+        self.GEMINI_FALLBACK_MODELS = _str("GEMINI_FALLBACK_MODELS", "auto")
         self.GEMINI_EMBEDDING_MODEL = _str("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
 
         self.ZAI_API_KEY = _str("ZAI_API_KEY")
@@ -132,7 +128,7 @@ class Config:
             "GOOGLE_REDIRECT_URI", f"{self.BACKEND_URL}/api/v1/integrations/gmail/callback"
         )
 
-        # Travel providers
+        # travel providers
         self.BOOKING_COM_AFFILIATE_ID = _str("BOOKING_COM_AFFILIATE_ID")
         self.BOOKING_COM_API_TOKEN = _str("BOOKING_COM_API_TOKEN")
         self.BOOKING_COM_ENV = _str("BOOKING_COM_ENV", "sandbox")
@@ -147,19 +143,19 @@ class Config:
         self.OSM_PLACES_ENABLED = _bool("OSM_PLACES_ENABLED", True)
         self.OVERPASS_URL = _str("OVERPASS_URL", "https://overpass-api.de/api/interpreter")
 
-        # Live trip context: weather (Open-Meteo) and local news (Google News RSS, GDELT) need no keys.
-        # TAVILY_API_KEY adds general web search for the assistant (free tier: 1,000 searches a month).
+        # live trip context: weather (Open-Meteo) and local news (Google News RSS, GDELT) need no keys
+        # TAVILY_API_KEY adds general web search for the assistant (free tier: 1,000 searches a month)
         self.WEATHER_ENABLED = _bool("WEATHER_ENABLED", True)
         self.OPEN_METEO_URL = _str("OPEN_METEO_URL", "https://api.open-meteo.com/v1/forecast")
         self.NEWS_ENABLED = _bool("NEWS_ENABLED", True)
         self.TAVILY_API_KEY = _str("TAVILY_API_KEY")
 
-        # Browser agent (see docs/BROWSER_AGENT.md)
+        # browser agent (see docs/BROWSER_AGENT.md)
         self.BROWSER_ASSIST_SITES = _str("BROWSER_ASSIST_SITES")  # comma-separated site keys, after terms review
         self.BROWSER_WORKER_ENABLED = _bool("BROWSER_WORKER_ENABLED", False)  # Playwright installed in the worker
         self.BROWSER_CDP_URL = _str("BROWSER_CDP_URL")  # optional remote Chromium over CDP
 
-        # Location services
+        # location services
         self.LOCATION_PROVIDER = _str("LOCATION_PROVIDER", "offline" if on_vercel else "nominatim")  # nominatim | offline
         self.NOMINATIM_URL = _str("NOMINATIM_URL", "https://nominatim.openstreetmap.org")
         self.OSM_CONTACT_EMAIL = _str("OSM_CONTACT_EMAIL")
@@ -167,7 +163,7 @@ class Config:
         self.MIN_TRANSFER_BUFFER_MINUTES = _int("MIN_TRANSFER_BUFFER_MINUTES", 30)
         self.AIRPORT_EXIT_BUFFER_MINUTES = _int("AIRPORT_EXIT_BUFFER_MINUTES", 60)
 
-        # Demo
+        # demo
         self.DEMO_MODE = _bool("DEMO_MODE", False)
         self.DEMO_ACCOUNT_ENABLED = _bool("DEMO_ACCOUNT_ENABLED", True)
         self.DEMO_ACCOUNT_EMAIL = _str("DEMO_ACCOUNT_EMAIL", "demo@tandem.travel")
@@ -176,11 +172,11 @@ class Config:
         self.DEMO_SESSION_HOURS = _int("DEMO_SESSION_HOURS", 24)
         self.DEMO_DAILY_AI_REQUESTS = _int("DEMO_DAILY_AI_REQUESTS", 60)
 
-        # Rate limiting
+        # rate limiting
         self.RATELIMIT_STORAGE_URI = _str("RATELIMIT_STORAGE_URI", self.REDIS_URL or "memory://")
         self.RATELIMIT_ENABLED = _bool("RATELIMIT_ENABLED", True)
         self.DEMO_RATE_LIMIT = _str("DEMO_RATE_LIMIT", "120 per hour")
-        # Number of reverse proxies in front of the app whose X-Forwarded-* headers are trusted.
+        # number of reverse proxies in front of the app whose X-Forwarded-* headers are trusted
         self.TRUSTED_PROXIES = _int("TRUSTED_PROXIES", 0)
 
         self.TESTING = False
@@ -198,7 +194,7 @@ class ConfigError(RuntimeError):
 
 
 def validate_config(cfg: dict) -> list[str]:
-    """Return warnings; raise ConfigError on fatal misconfiguration."""
+    """return warnings; raise ConfigError on fatal misconfiguration"""
     warnings: list[str] = []
     production = cfg.get("APP_ENV") == "production"
     if cfg["SECRET_KEY"].startswith("dev-insecure") or len(cfg["SECRET_KEY"]) < 32:

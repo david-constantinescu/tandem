@@ -1,14 +1,4 @@
-"""AI provider router.
-
-Chooses a (provider, model) for each request and enforces, in code:
-  * user consent mode (off / text_only / full) and per-provider permissions;
-  * model capabilities from the registry (modality, structured output, tools);
-  * the free-tier policy (unknown or paid models are blocked unless AI_ALLOW_PAID_MODELS=true);
-  * the Groq restriction (no original files, no document ingestion tasks);
-  * quota cooldowns, retries, and capability-respecting fallback.
-Every attempt is recorded in ai_usage_records on an independent connection so usage survives
-rollbacks of the calling transaction.
-"""
+"""routerul ai: alege providerul, respecta setarile omului, trece la urmatorul daca unul pica"""
 from __future__ import annotations
 
 import hashlib
@@ -87,8 +77,8 @@ class AIRouter:
             return RoutePlan([], [{"provider": "*", "reason": "file_upload_not_permitted"}])
 
         order = list(DEFAULT_ORDER.get(request.task, ["gemini", "zai", "groq"]))
-        # Every provider is evaluated, so restrictions are enforced (and reported) explicitly rather than
-        # relying on a provider being absent from the preferred order.
+        # verificam toti providerii, ca restrictiile sa fie aplicate (si raportate) clar, nu doar
+        # pentru ca un provider lipseste din ordine
         order += [name for name in self.providers if name not in order]
         preferred = (settings.preferred_provider if settings else None) or self.cfg.get("AI_DEFAULT_PROVIDER")
         if preferred in order:
@@ -238,7 +228,7 @@ class AIRouter:
                 raise
             except AIError as exc:
                 self._record(user, provider.name, model, request.task, "error", 0, 0, _ms(started), exc.code)
-                # A reply someone is waiting for can't sleep and retry: the next provider is the retry.
+                # daca cineva asteapta raspunsul nu dormim si reincercam, trecem la urmatorul provider
                 if exc.retryable and attempt < retries and request.deadline is None:
                     attempt += 1
                     time.sleep(min(2 ** attempt, 8) if not current_app.config.get("TESTING") else 0)
@@ -283,7 +273,7 @@ class AIRouter:
 
     @staticmethod
     def _cache_key(request: AIRequest) -> str:
-        # Scoped to the user so cached outputs are never shared across accounts.
+        # pe user, ca sa nu se amestece raspunsurile intre conturi
         h = hashlib.sha256()
         h.update(str(request.user_id).encode())
         h.update(request.task.encode())
@@ -317,7 +307,7 @@ def ai_router() -> AIRouter:
 
 
 def provider_overview(cfg=None) -> list[dict]:
-    """Configuration and capability summary for the Settings page (no network calls)."""
+    """configuration and capability summary for the Settings page (no network calls)"""
     cfg = cfg or current_app.config
     out = []
     for name, provider in build_providers(cfg).items():

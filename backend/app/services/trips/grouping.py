@@ -1,10 +1,4 @@
-"""Deterministic trip grouping.
-
-A record joins an existing trip only with corroborating evidence: overlapping/adjacent dates *and*
-a destination or geographic match, or a shared booking reference. Similar dates alone never
-group records. Every decision stores its score and reasons so the UI can explain it and users
-can move records afterwards.
-"""
+"""grupeaza rezervarile in calatorii, dupa reguli simple"""
 from __future__ import annotations
 
 import re
@@ -32,7 +26,7 @@ def record_dates(data: dict) -> tuple[date | None, date | None]:
 
 
 def record_destination(data: dict, user: User) -> tuple[str | None, float | None, float | None]:
-    """City that represents where the traveller *is* for this record."""
+    """city that represents where the traveller *is* for this record"""
     home = _norm(user.home_city)
     if data.get("type") in ("flight", "train", "bus", "ferry"):
         end_city, start_city = data.get("end_city"), data.get("city")
@@ -54,7 +48,7 @@ def trip_places(trip: Trip) -> list[tuple[str, float | None, float | None]]:
 
 
 def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
-    # Reasons are shown to the user and stored with the proposal, so they're written in the user's language.
+    # reasons are shown to the user and stored with the proposal, so they're written in the user's language
     loc = locale_of(user)
     reasons: list[str] = []
     score = 0.0
@@ -97,7 +91,7 @@ def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
             place_ok = True
             reasons.append(tr("Within 60 km of {name}", loc, name=name))
             break
-    # Outbound/return flights from home: the home-side city matches via arrival/departure city above.
+    # outbound/return flights from home: the home-side city matches via arrival/departure city above
     names = {_norm(n) for n in data.get("travellers") or []}
     if names and any(_norm(t.full_name) in names for t in trip.travellers):
         score += 0.05
@@ -107,7 +101,7 @@ def score_trip(trip: Trip, data: dict, user: User) -> tuple[float, list[str]]:
     if not date_ok:
         return min(score, 0.4), reasons + [tr("Dates do not match", loc)]
     if not place_ok:
-        # Similar dates alone are never enough to group records.
+        # similar dates alone are never enough to group records
         return min(score, 0.3), reasons + [tr("No destination match", loc)]
     return round(min(score, 1.0), 2), reasons
 

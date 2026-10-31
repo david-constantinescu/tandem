@@ -1,8 +1,4 @@
-"""Symmetric encryption for sensitive data at rest (OAuth tokens, document text, stored files).
-
-Uses Fernet (AES-128-CBC + HMAC-SHA256). The key comes from ENCRYPTION_KEY; in
-development it is derived from SECRET_KEY so the app runs without extra setup.
-"""
+"""criptare pt ce e sensibil in baza de date (tokenuri oauth, textul documentelor, fisiere)"""
 from __future__ import annotations
 
 import base64
@@ -58,7 +54,7 @@ def generate_token(nbytes: int = 32) -> str:
 
 
 def hash_token(token: str) -> str:
-    """Stable keyed hash for looking up opaque tokens (session ids) without storing them."""
+    """stable keyed hash for looking up opaque tokens (session ids) without storing them"""
     key = current_app.config["SECRET_KEY"].encode()
     return hmac.new(key, token.encode(), hashlib.sha256).hexdigest()
 
@@ -68,7 +64,7 @@ def sha256_hex(data: bytes) -> str:
 
 
 class EncryptedText(TypeDecorator):
-    """Text column transparently encrypted with Fernet."""
+    """text column transparently encrypted with Fernet"""
 
     impl = Text
     cache_ok = True

@@ -16,6 +16,7 @@ import { NewTripDialog } from "@/components/trips/NewTripDialog";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { spring } from "@/components/motion";
 import { OfflineBanner } from "@/components/pwa";
+import { ThemeToggle } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -205,6 +206,7 @@ function Shell({ children }: { children: ReactNode }) {
               className="flex h-9 items-center gap-1.5 rounded-full bg-ink-900 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-sm transition active:scale-95 lg:hidden">
               <Plus className="h-4 w-4" strokeWidth={2.5} /><span>{t("nav.trip")}</span>
             </button>
+            <ThemeToggle />
             <Notifications />
             <HeaderLink to="/settings" label={t("nav.settings")}><Settings /></HeaderLink>
           </div>

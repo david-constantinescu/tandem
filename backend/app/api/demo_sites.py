@@ -1,10 +1,4 @@
-"""Tandem's simulated booking websites (served at /demo-sites/<kind>/).
-
-They are ordinary multi-page HTML sites — search form, results, passenger details, payment, confirmation —
-so the browser agent navigates them exactly as it would a real site. Offers travel between pages in a
-signed token, and the confirmation page is the "provider record" the agent reads back to verify a booking.
-Everything is fictional; no card details are requested and nothing is charged.
-"""
+"""site-urile noastre de rezervari simulate (/demo-sites/<kind>/). totul e fictiv, nu se plateste nimic"""
 from __future__ import annotations
 
 import base64
@@ -158,7 +152,7 @@ def results(kind):
         if not origin or not destination:
             return _page(kind, "Please check your search", '<p>Enter where you travel from and to. <a href="./">Back</a></p>')
         offers = _offers(kind, origin, destination, day, adults)
-        heading = f"{html.escape(origin)} → {html.escape(destination)} on {day}"
+        heading = f"{html.escape(origin)} → {html.escape(destination)} on {html.escape(str(day))}"
     if not offers:
         return _page(kind, heading, "<p>No availability on this date.</p>")
     items = []
