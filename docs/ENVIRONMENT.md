@@ -99,8 +99,12 @@ npm --prefix frontend run dev                               # http://localhost:5
 Production already has `SECRET_KEY`, `ENCRYPTION_KEY`, `DATABASE_URL` (Neon), `CRON_SECRET`, `APP_ENV=production`
 and the demo settings. To add the keys you collect:
 
-1. Put them in `.env.production.local` at the repo root, one `KEY=value` per line (the file is gitignored).
-2. Run `scripts/vercel-env-push.sh` — values go to Vercel over stdin and are never printed.
-3. Redeploy: `vercel deploy --prod`.
+1. Put them in `.env.production.local` at the repo root, one `KEY=value` per line (the file is gitignored). Starting
+   from a copy of `.env.example` is fine.
+2. Check what would change: `scripts/vercel-env-push.sh --dry-run` (prints key names only).
+3. Apply: `scripts/vercel-env-push.sh` — values go to Vercel over stdin and are never printed. It skips empty values,
+   unchanged defaults, anything pointing at localhost, and the core settings production already has (secrets,
+   database, URLs) unless you pass `--include-core`.
+4. Redeploy: `vercel deploy --prod`.
 
 If you add Gmail on Vercel, set `GOOGLE_REDIRECT_URI` to the production URL and register the same URL in Google Cloud.

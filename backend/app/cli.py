@@ -172,7 +172,8 @@ def register_cli(app: Flask) -> None:
         has = lambda *keys: all(cfg.get(k) for k in keys)  # noqa: E731
         rows = [
             ("Core", [
-                ("SECRET_KEY", cfg.get("SECRET_KEY") not in (None, "", "dev-insecure-secret-change-me"), "sessions and CSRF (dev default in use)"),
+                ("SECRET_KEY", cfg.get("SECRET_KEY") not in (None, "", "dev-insecure-secret-change-me"),
+                 "signs sessions" if cfg.get("SECRET_KEY") != "dev-insecure-secret-change-me" else "signs sessions (insecure dev default in use)"),
                 ("ENCRYPTION_KEY", has("ENCRYPTION_KEY"), "encrypts stored files, tokens and extracted data"),
                 ("DATABASE_URL", has("SQLALCHEMY_DATABASE_URI"), "PostgreSQL"),
                 ("CRON_SECRET", has("CRON_SECRET"), "protects the scheduled-checks endpoint (needed on Vercel)"),
@@ -192,7 +193,7 @@ def register_cli(app: Flask) -> None:
                 ("ROUTING_OSRM_URL", has("ROUTING_OSRM_URL"), "travel times between places"),
             ]),
             ("Infrastructure", [
-                ("STORAGE (s3)", cfg.get("STORAGE_TYPE") != "s3" or has("STORAGE_BUCKET", "STORAGE_ACCESS_KEY", "STORAGE_SECRET_KEY"),
+                ("STORAGE", cfg.get("STORAGE_TYPE") != "s3" or has("STORAGE_BUCKET", "STORAGE_ACCESS_KEY", "STORAGE_SECRET_KEY"),
                  f"file storage: {cfg.get('STORAGE_TYPE')}"),
                 ("REDIS_URL", has("REDIS_URL"), "shared rate-limit storage across web workers"),
                 ("BROWSER_WORKER_ENABLED", bool(cfg.get("BROWSER_WORKER_ENABLED")), "Playwright worker for assisted search on real sites"),
