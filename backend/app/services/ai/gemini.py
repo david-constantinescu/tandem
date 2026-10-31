@@ -100,10 +100,13 @@ class GeminiProvider(AIProvider):
             chain += [m for m in str(self.cfg.get("GEMINI_FALLBACK_MODELS") or "").split(",")
                       if m.strip() and m.strip() != model]
         last: Exception | None = None
+        resting = self._resting(chain)
         for i, name in enumerate(chain):
             name = name.strip()
             if i and (request.remaining is not None and request.remaining < 6):
                 break
+            if name in resting and i + 1 < len(chain):  # out of quota a moment ago: don't spend a request finding out again
+                continue
             req = request
             if i:  # reasoning state (thought signatures) from another model can't be replayed to this one
                 from dataclasses import replace
@@ -113,9 +116,30 @@ class GeminiProvider(AIProvider):
                 return self._generate_one(req, name)
             except (QuotaExceeded, ProviderUnavailable, ProviderTimeout) as exc:
                 last = exc
+                if isinstance(exc, QuotaExceeded):
+                    self._rest(name)
                 log.info("gemini %s unavailable (%s)%s", name, exc.code, "; trying the next model" if i + 1 < len(chain) else "")
         assert last is not None
         raise last
+
+    @staticmethod
+    def _resting(chain: list[str]) -> set[str]:
+        """Models that reported their quota used up in the last minute (shared by every instance through the cache)."""
+        from app.services.cache import cache_get
+
+        try:
+            return {m.strip() for m in chain if cache_get("gemini_rest", m.strip())}
+        except Exception:  # noqa: BLE001 - the cache is an optimisation
+            return set()
+
+    @staticmethod
+    def _rest(model: str) -> None:
+        from app.services.cache import cache_set
+
+        try:
+            cache_set("gemini_rest", model, True, ttl_hours=1 / 60)
+        except Exception:  # noqa: BLE001
+            log.debug("could not record the model's rest", exc_info=True)
 
     def _generate_one(self, request: AIRequest, model: str) -> AIResponse:
         from google.genai import errors, types

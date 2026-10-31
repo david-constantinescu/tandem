@@ -49,6 +49,7 @@ def _add(info: ModelInfo) -> None:
 for _mid, _note in (
     ("gemini-3.8-flash", "Newest Flash. Thinking levels low/medium/high; 'minimal' is rejected."),
     ("gemini-3.6-flash", "Previous-generation Flash, still supported for production."),
+    ("gemini-3.5-flash", "Flash from the 3.5 generation; answers in ~2 s and has its own free-tier quota."),
     ("gemini-3.5-flash-lite", "Lowest-cost Flash-Lite; used for quick classification."),
 ):
     _add(ModelInfo(

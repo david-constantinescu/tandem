@@ -68,13 +68,17 @@ def main() -> int:
     def ask(text: str):
         t0 = time.time()
         s, d = call("POST", f"/assistant/conversations/{cid}/messages", {"content": text})
-        return (d["data"]["reply"] if s == 200 else None), time.time() - t0
+        if s not in (200, 201):
+            print(f"  (HTTP {s}: {str(d)[:300]})")
+            return None, time.time() - t0
+        data = d["data"]
+        return data.get("reply") or data["messages"][-1], time.time() - t0
 
     r, dt = ask("Cum e vremea sâmbătă? Merită să stau afară?")
     low = (r or {}).get("content", "").lower()
     check("weather answer from the real AI", r and r["provider"] != "local" and any(x in low for x in ("°", "%", "ploa", "ceață", "senin")), f"{r and r['model']} {dt:.0f}s {short(r)}")
     r, dt = ask("E grevă sau vreun protest? Pot lua autobuzul?")
-    check("news answer with source links", r and r["provider"] != "local" and any(x.get("type") == "link" for x in r["references"]), f"{dt:.0f}s {[c['name'] for c in r['tool_calls']]} {short(r)}")
+    check("news answer with source links", r and r["provider"] != "local" and any(x.get("type") == "link" for x in r["references"]), f"{dt:.0f}s {short(r)}")
     r, dt = ask("Adaugă cină la Roscioli sâmbătă la 20:00")
     check("adds dinner when asked", r and any(c["name"] == "create_itinerary_event" and c["status"] == "ok" for c in r["tool_calls"]), f"{dt:.0f}s {short(r)}")
     s, ev = call("GET", f"/trips/{tid}/itinerary")

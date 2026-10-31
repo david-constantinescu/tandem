@@ -168,3 +168,23 @@ def test_a_fallback_model_gets_earlier_tool_results_as_text_not_as_function_call
     assert [m.role for m in out] == ["user"] and not any(m.tool_calls or m.provider_state for m in out)
     assert "get_weather returned" in out[0].parts[-1].text and "fog" in out[0].parts[-1].text
     assert flatten_tool_turns(msgs[:1]) is msgs[:1] or flatten_tool_turns(msgs[:1]) == msgs[:1]
+
+
+def test_a_model_that_just_ran_out_of_quota_is_skipped_by_the_next_request(app, monkeypatch):
+    from app.services.ai.base import AIResponse
+    from app.services.ai.gemini import GeminiProvider
+
+    tried = []
+
+    def fake(self, request, model):
+        tried.append(model)
+        if model == "main":
+            raise QuotaExceeded("quota", provider="gemini")
+        return AIResponse(provider="gemini", model=model, text="ok")
+
+    monkeypatch.setattr(GeminiProvider, "_generate_one", fake)
+    provider = GeminiProvider({"GEMINI_API_KEY": "x", "AI_REQUEST_TIMEOUT": 20, "GEMINI_FALLBACK_MODELS": "backup"})
+    req = AIRequest(task="agent", system="", messages=[ChatMessage(role="user", parts=[TextPart("hi")])])
+    assert provider.generate(req, "main").model == "backup"
+    assert provider.generate(req, "main").model == "backup"
+    assert tried == ["main", "backup", "backup"]  # the second request didn't ask "main" again
