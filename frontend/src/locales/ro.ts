@@ -923,7 +923,7 @@ export const ro: Record<Key, string> = {
   "activity.outdoorRain": "În aer liber — se anunță ploaie",
   "activity.indoorRain": "În interior — bun pe ploaie",
   "journey.title": "Cum ajungi",
-  "journey.hint": "Planificatoare reale și operatorii oficiali, cu ruta completată. Rezervi pe site-ul lor; trimite confirmarea și Tandem o adaugă.",
+  "journey.hint": "Google Maps și Google Flights se deschid cu ruta ta; operatorii oficiali pentru ea se deschid pe site-urile lor. Rezervi acolo; trimite confirmarea și Tandem o adaugă.",
   "journey.any": "Oricum",
   "journey.mode": "Cu ce",
   "journey.find": "Arată opțiunile",

@@ -938,7 +938,7 @@ export const en = {
   "activity.outdoorRain": "Outdoors — rain expected",
   "activity.indoorRain": "Indoors — good on a rainy day",
   "journey.title": "Get there",
-  "journey.hint": "Real planners and the official operators, with your route filled in. You book on their site; forward the confirmation and Tandem adds it.",
+  "journey.hint": "Google Maps and Google Flights open with your route; the official operators for it open on their own sites. You book there; forward the confirmation and Tandem adds it.",
   "journey.any": "Any",
   "journey.mode": "How",
   "journey.find": "Show options",

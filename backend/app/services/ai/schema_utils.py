@@ -17,13 +17,15 @@ def inline_schema(model: type[BaseModel] | dict) -> dict:
     schema = model.model_json_schema() if not isinstance(model, dict) else copy.deepcopy(model)
     defs = schema.pop("$defs", {})
 
-    def resolve(node):
+    def resolve(node, names: bool = False):
+        # In a "properties" map the keys are field names: a field called "title" must survive.
         if isinstance(node, dict):
-            if "$ref" in node:
+            if "$ref" in node and not names:
                 name = node["$ref"].split("/")[-1]
                 merged = {**resolve(copy.deepcopy(defs[name])), **{k: v for k, v in node.items() if k != "$ref"}}
                 return merged
-            return {k: resolve(v) for k, v in node.items() if k not in _DROP_KEYS}
+            return {k: resolve(v, names=(k == "properties" and not names))
+                    for k, v in node.items() if names or k not in _DROP_KEYS}
         if isinstance(node, list):
             return [resolve(v) for v in node]
         return node

@@ -45,8 +45,8 @@ The demo is a fictional long weekend in Rome. Each visitor gets their own privat
 3. **Assistant** answers from your actual plans ("what's still unconfirmed?").
 4. **The trip page** shows the real Open-Meteo forecast for each day and real local headlines about strikes, protests
    and closures (from Google News, in Italian). Wet days are marked, and outdoor activities sink to the bottom.
-5. **Explore → Tickets → Get there** opens the real planners (Google Maps, Google Flights) and the official operators
-   (Trenitalia, Italo, ITA Airways…) with the route already filled in.
+5. **Explore → Tickets → Get there** opens Google Maps and Google Flights with the route filled in, and lists the
+   official operators for that route (Trenitalia, Italo, ITA Airways…), which open on their own sites.
 6. **Explore → Tickets → Practice runs** lets the browser agent search a simulated rail site, pick a train that fits,
    and stop for your approval. Approve it and the confirmation is read back into your trip. No real money moves.
 

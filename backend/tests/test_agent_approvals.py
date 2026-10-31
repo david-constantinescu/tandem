@@ -471,3 +471,35 @@ def test_gmail_flow_with_mocked_google(app, user_api, monkeypatch):
         assert user_api.get("/api/v1/inbox").get_json()["data"] == []
     finally:
         app.config.update(GOOGLE_CLIENT_ID="", GOOGLE_CLIENT_SECRET="")
+
+
+def test_agent_checks_weather_then_adds_what_was_asked(app, scripted, monkeypatch):
+    """The AI path: live context tools run inside the one agent, and a requested event lands in the plan."""
+    from app.services.context import weather
+
+    app.config["WEATHER_ENABLED"] = True
+    monkeypatch.setattr(weather, "forecast", lambda *a, **k: {"available": True, "source": "Open-Meteo", "days": [
+        {"date": a[3].isoformat(), "condition": "rain", "temp_max": 15, "temp_min": 9, "precip_probability": 90,
+         "precip_mm": 10, "wind_kmh": 10, "wet_hours": ["15:00"], "outdoor_ok": False}]})
+    user, trip = _demo_user()
+    user.ai_settings.mode = "full"
+    db.session.commit()
+    sat = (trip.start_date + timedelta(days=2)).isoformat()
+    p = scripted([[ToolCall("1", "get_weather", {"date": sat})],
+                  [ToolCall("2", "create_itinerary_event", {"title": "Dinner at Roscioli", "type": "restaurant",
+                                                            "start_local": f"{sat}T20:00", "requested_by_user": True})],
+                  "Saturday looks wet, so I added dinner at Roscioli at 20:00 and kept the day indoors."])
+    conv = orchestrator.Conversation(user_id=user.id, trip_id=trip.id, title="New conversation")
+    db.session.add(conv)
+    db.session.commit()
+    msg = orchestrator.respond(user, conv, "What's the weather Saturday? Add dinner at Roscioli at 8pm.")
+    assert [c["name"] for c in msg.tool_calls] == ["get_weather", "create_itinerary_event"]
+    sent = " ".join(getattr(part, "text", "") or "" for m in p.seen[-1].messages for part in m.parts)
+    assert '"condition":"rain"' in sent and '"outdoor_ok":false' in sent  # the model saw the forecast
+    names = {t.name for t in p.seen[0].tools}
+    assert {"get_weather", "check_local_news", "web_search", "plan_journey"} <= names
+    title = next(t for t in p.seen[0].tools if t.name == "create_itinerary_event").parameters["properties"]["title"]
+    assert title["type"] == "string"
+    from app.models import ItineraryEvent
+    e = db.session.execute(db.select(ItineraryEvent).where(ItineraryEvent.title == "Dinner at Roscioli")).scalar_one()
+    assert e.status == "unbooked"
