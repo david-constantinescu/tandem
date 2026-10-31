@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Page } from "./components/motion";
 import { AppShell } from "./components/layout/AppShell";
@@ -24,6 +24,11 @@ function Moved({ to, extra }: { to: string; extra?: Record<string, string> }) {
   return <Navigate to={`${to}${q ? `?${q}` : ""}`} replace />;
 }
 
+/** Inbox, documents and settings are lists that can grow without limit: they scroll inside the fixed screen, not the page. */
+function Pane({ children }: { children: ReactNode }) {
+  return <div className="h-full overflow-y-auto overscroll-contain pb-4">{children}</div>;
+}
+
 function Protected() {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -37,15 +42,15 @@ function Protected() {
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
-          <Route path="/inbox" element={<InboxPage />} />
-          <Route path="/inbox/:id" element={<InboxItemPage />} />
+          <Route path="/inbox" element={<Pane><InboxPage /></Pane>} />
+          <Route path="/inbox/:id" element={<Pane><InboxItemPage /></Pane>} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/assistant/:id" element={<AssistantPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/:section" element={<SettingsPage />} />
-          <Route path="/discover" element={<Moved to="/explore" />} />
-          <Route path="/websites" element={<Moved to="/explore" extra={{ tab: "tickets" }} />} />
+          <Route path="/settings" element={<Pane><SettingsPage /></Pane>} />
+          <Route path="/settings/:section" element={<Pane><SettingsPage /></Pane>} />
+          <Route path="/discover" element={<Moved to="/assistant" />} />
+          <Route path="/websites" element={<Moved to="/assistant" />} />
           <Route path="/approvals" element={<Moved to="/inbox" extra={{ tab: "approvals" }} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

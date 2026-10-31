@@ -129,3 +129,12 @@ export function whenLabel(days: number | null, locale: Locale = getLocale()): st
   if (days === 1) return translate("fmt.tomorrow", undefined, locale);
   return translatePlural("fmt.inDays", days, undefined, locale);
 }
+
+/** Every date from `start` to `end` (inclusive, YYYY-MM-DD). One date when there is no end; capped at 60 days. */
+export function eachDay(start: string | null, end: string | null): string[] {
+  if (!start) return [];
+  const out: string[] = [];
+  const last = end ?? start;
+  for (let d = new Date(`${start}T12:00:00Z`); d.toISOString().slice(0, 10) <= last && out.length < 60; d.setUTCDate(d.getUTCDate() + 1)) out.push(d.toISOString().slice(0, 10));
+  return out;
+}

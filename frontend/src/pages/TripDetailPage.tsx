@@ -1,44 +1,25 @@
-import * as Tabs from "@radix-ui/react-tabs";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { clsx } from "clsx";
-import { CalendarPlus, ChevronLeft, Compass, FilePlus, FileText, MessageCircle, MoreHorizontal, Plus, Ticket, Trash2, Users } from "lucide-react";
-import { motion } from "motion/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { AlertTriangle, CalendarPlus, Check, ChevronLeft, CloudSun, FilePlus, FileText, MessageCircle, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Users, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdd } from "@/components/AddSheet";
-import { spring } from "@/components/motion";
+import { Segmented } from "@/components/motion";
 import { ConflictList } from "@/components/trips/ConflictList";
 import { EventDialog, ReservationDialog } from "@/components/trips/EditDialogs";
-import { ReservationCard } from "@/components/trips/ReservationCard";
-import { Timeline, TimelineLegend } from "@/components/trips/Timeline";
-import { TripContextCard } from "@/components/trips/TripContext";
+import { EventIcon } from "@/components/trips/EventIcon";
+import { TripContextCard, WeatherChip, WeatherIcon } from "@/components/trips/TripContext";
 import { TripMap } from "@/components/trips/TripMap";
 import { Badge, Button, EmptyState, LoadError, PageLoader, StatusPill } from "@/components/ui";
+import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, api, errorMessage } from "@/lib/api";
-import { fmtRange, relativeTime } from "@/lib/format";
+import { dayKey, eachDay, fmtDate, fmtRange, fmtTime, relativeTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useConflicts, useInvalidateTripData, useItinerary, useReservations, useTrip, useTripContext, useTripDocuments } from "@/lib/queries";
 import type { Conversation, ItineraryEvent, Reservation } from "@/lib/types";
 
-function Tab({ value, current, children }: { value: string; current: string; children: ReactNode }) {
-  const active = value === current;
-  return (
-    <Tabs.Trigger value={value} className={clsx("relative flex h-10 shrink-0 snap-start items-center gap-1.5 rounded-full px-4 text-[14px] font-medium transition-colors pointer-coarse:h-11", active ? "text-white" : "text-ink-500 hover:text-ink-800")}>
-      {active && <motion.span layoutId="trip-tab" transition={spring} className="absolute inset-0 rounded-full bg-ink-900" />}
-      <span className="relative z-10 flex items-center gap-1.5">{children}</span>
-    </Tabs.Trigger>
-  );
-}
-
-/** One big, labelled action. On phones they sit in a row of four like iOS's contact actions. */
-function ActionTile({ icon, label, onClick, to, href }: { icon: ReactNode; label: string; onClick?: () => void; to?: string; href?: string }) {
-  const cls = "flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border border-sand-200 bg-white px-2 py-2.5 text-[12.5px] font-medium text-ink-800 shadow-[var(--shadow-card)] transition active:scale-[0.96] hover:border-sand-300 sm:min-h-0 sm:flex-row sm:gap-2 sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-[14px] [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-clay-600 sm:[&>svg]:h-4 sm:[&>svg]:w-4";
-  if (href) return <a href={href} className={cls}>{icon}<span className="text-center leading-tight">{label}</span></a>;
-  if (to) return <Link to={to} className={cls}>{icon}<span className="text-center leading-tight">{label}</span></Link>;
-  return <button type="button" onClick={onClick} className={cls}>{icon}<span className="text-center leading-tight">{label}</span></button>;
-}
-
+/** A trip is one screen: header, four tabs, and a day pager inside the plan. The lists inside fit; only an unusually long day scrolls. */
 export default function TripDetailPage() {
   const { id = "" } = useParams();
   const trip = useTrip(id);
@@ -52,12 +33,24 @@ export default function TripDetailPage() {
   const navigate = useNavigate();
   const { openAdd } = useAdd();
   const { t, tp } = useT();
+  const [tab, setTab] = useState<"plan" | "bookings" | "map" | "docs">("plan");
+  const [day, setDay] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<"checks" | "notes" | "event" | null>(null);
+  const [picked, setPicked] = useState<ItineraryEvent | null>(null);
   const [editing, setEditing] = useState<ItineraryEvent | null | "new">(null);
   const [editingRes, setEditingRes] = useState<Reservation | null | "new">(null);
   const [notes, setNotes] = useState<string | null>(null);
-  const [tab, setTab] = useState("plan");
+  const touch = useRef<number | null>(null);
 
   useEffect(() => { if (trip.data && notes === null) setNotes(trip.data.notes); }, [trip.data, notes]);
+
+  const events = useMemo(() => itinerary.data ?? [], [itinerary.data]);
+  const days = useMemo(() => {
+    const fromTrip = eachDay(trip.data?.start_date ?? null, trip.data?.end_date ?? null);
+    const extra = events.map((e) => dayKey(e.start_local)).filter((d) => !fromTrip.includes(d));
+    return [...fromTrip, ...new Set(extra)].sort();
+  }, [trip.data?.start_date, trip.data?.end_date, events]);
+  const current = day && days.includes(day) ? day : (days.find((d) => d >= new Date().toISOString().slice(0, 10)) ?? days[0] ?? null);
 
   if (trip.isLoading) return <PageLoader />;
   if (trip.isError && !trip.data && !(trip.error instanceof ApiError && trip.error.status === 404))
@@ -65,33 +58,31 @@ export default function TripDetailPage() {
   if (!trip.data) return <EmptyState title={t("trip.notFound")} action={<Link to="/trips" className="text-lagoon-600">{t("trip.backToTrips")}</Link>} />;
   const tr = trip.data;
   const tz = tr.destinations.find((d) => d.timezone)?.timezone ?? null;
-  const allConflicts = conflicts.data ?? [];
-  const serious = allConflicts.filter((c) => c.severity !== "info");
-  const minor = allConflicts.filter((c) => c.severity === "info");
+  const all = conflicts.data ?? [];
+  const serious = all.filter((c) => c.severity !== "info");
+  const weatherByDay = new Map((context.data?.weather.days ?? []).map((w) => [w.date, w]));
+  const flagged = new Map<string, number>();
+  for (const c of all) for (const eid of c.event_ids) flagged.set(eid, (flagged.get(eid) ?? 0) + 1);
+  const dayEvents = events.filter((e) => dayKey(e.start_local) === current);
+  const idx = current ? days.indexOf(current) : -1;
+  const step = (n: number) => { const next = days[idx + n]; if (next) setDay(next); };
+  const todaysWeather = current ? weatherByDay.get(current) : undefined;
 
   const askAssistant = async () => {
     try {
       const conv = await api.post<Conversation>("/assistant/conversations", { trip_id: tr.id, title: t("trip.askTitle", { name: tr.name }) });
       navigate(`/assistant/${conv.id}`);
-    } catch (err) {
-      toast(errorMessage(err), "error");
-    }
+    } catch (err) { toast(errorMessage(err), "error"); }
   };
   const setStatus = async (e: ItineraryEvent, status: string) => {
-    try { await api.patch(`/itinerary/events/${e.id}`, { status }); invalidate(); } catch (err) { toast(errorMessage(err), "error"); }
+    try { await api.patch(`/itinerary/events/${e.id}`, { status }); invalidate(); setSheet(null); setPicked(null); } catch (err) { toast(errorMessage(err), "error"); }
   };
   const remove = async (e: ItineraryEvent) => {
-    try { await api.del(`/itinerary/events/${e.id}`); invalidate(); } catch (err) { toast(errorMessage(err), "error"); }
+    try { await api.del(`/itinerary/events/${e.id}`); invalidate(); setSheet(null); setPicked(null); } catch (err) { toast(errorMessage(err), "error"); }
   };
   const saveNotes = async () => {
     if (notes === tr.notes) return;
-    try {
-      await api.patch(`/trips/${tr.id}`, { notes });
-      invalidate();
-      toast(t("trip.notesSaved"), "success");
-    } catch (err) {
-      toast(errorMessage(err), "error");
-    }
+    try { await api.patch(`/trips/${tr.id}`, { notes }); invalidate(); toast(t("trip.notesSaved"), "success"); } catch (err) { toast(errorMessage(err), "error"); }
   };
   const deleteTrip = async () => {
     if (!confirm(t("trip.deleteConfirm"))) return;
@@ -101,118 +92,193 @@ export default function TripDetailPage() {
   };
 
   return (
-    <div>
-      <header className="mb-6">
-        <Link to="/trips" className="-ml-1 inline-flex min-h-11 items-center gap-1 pr-3 text-[15px] text-lagoon-600 hover:text-lagoon-700"><ChevronLeft className="h-5 w-5" />{t("nav.trips")}</Link>
-        <div className="mt-1 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="display text-[34px] leading-[1.06] tracking-[-0.02em] sm:text-[40px]">{tr.name}</h1>
-            <p className="mt-1.5 text-[15px] text-ink-500">{fmtRange(tr.start_date, tr.end_date)} · {tr.destinations.map((d) => d.name).join(" → ") || tr.primary_destination || t("trip.noDestination")}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-400">
-              {tr.travellers.length > 0 && <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{tr.travellers.map((x) => x.full_name).join(", ")}</span>}
-              {tr.created_via === "auto" && <Badge tone="neutral">{t("trip.fromDocuments")}</Badge>}
-              {tr.created_via === "demo" && <Badge tone="violet">{t("trip.demo")}</Badge>}
-            </div>
-          </div>
+    <div className="flex h-full min-h-0 flex-col gap-2.5">
+      <header className="shrink-0">
+        <div className="flex items-center gap-1">
+          <Link to="/trips" aria-label={t("trip.backToTrips")} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lagoon-600 active:bg-sand-100"><ChevronLeft className="h-6 w-6" /></Link>
+          <h1 className="display min-w-0 flex-1 truncate text-[24px] leading-tight tracking-[-0.01em] sm:text-[30px]">{tr.name}</h1>
+          <button onClick={askAssistant} aria-label={t("trip.ask")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lagoon-900 text-white active:scale-90"><MessageCircle className="h-[18px] w-[18px]" /></button>
           <Menu.Root>
-            <Menu.Trigger className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 hover:bg-sand-50 active:scale-90" aria-label={t("trip.more")}><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
+            <Menu.Trigger className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 active:scale-90" aria-label={t("trip.more")}><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
             <Menu.Portal>
-              <Menu.Content align="end" className="z-50 min-w-[210px] rounded-xl border border-sand-200 bg-white p-1 text-[14px] shadow-[var(--shadow-lift)]">
-                <Menu.Item onSelect={() => setEditing("new")} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50"><Plus className="h-4 w-4" /> {t("trip.addEvent")}</Menu.Item>
-                <Menu.Item onSelect={() => setEditingRes("new")} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50"><FilePlus className="h-4 w-4" /> {t("trip.addReservation")}</Menu.Item>
+              <Menu.Content align="end" className="z-50 min-w-[220px] rounded-xl border border-sand-200 bg-white p-1 text-[14px] shadow-[var(--shadow-lift)]">
+                {[
+                  { icon: <Plus className="h-4 w-4" />, label: t("trip.addEvent"), run: () => setEditing("new") },
+                  { icon: <FilePlus className="h-4 w-4" />, label: t("trip.addReservation"), run: () => setEditingRes("new") },
+                  { icon: <StickyNote className="h-4 w-4" />, label: t("trip.tabNotes"), run: () => setSheet("notes") },
+                ].map((o) => (
+                  <Menu.Item key={o.label} onSelect={o.run} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50">{o.icon} {o.label}</Menu.Item>
+                ))}
+                <Menu.Item asChild><a href={`/api/v1/calendar/trips/${tr.id}.ics`} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 outline-none data-[highlighted]:bg-sand-50"><CalendarPlus className="h-4 w-4" /> {t("trip.calendar")}</a></Menu.Item>
                 <Menu.Separator className="my-1 h-px bg-sand-100" />
                 <Menu.Item onSelect={deleteTrip} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-rose-ink outline-none data-[highlighted]:bg-rose-soft"><Trash2 className="h-4 w-4" /> {t("trip.delete")}</Menu.Item>
               </Menu.Content>
             </Menu.Portal>
           </Menu.Root>
         </div>
-        <div className="mt-5 grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
-          <ActionTile icon={<MessageCircle />} label={t("trip.ask")} onClick={askAssistant} />
-          <ActionTile icon={<Compass />} label={t("trip.activities")} to={`/explore?trip=${tr.id}`} />
-          <ActionTile icon={<Ticket />} label={t("trip.tickets")} to={`/explore?tab=tickets&trip=${tr.id}`} />
-          <ActionTile icon={<CalendarPlus />} label={t("trip.calendar")} href={`/api/v1/calendar/trips/${tr.id}.ics`} />
-        </div>
+        <p className="truncate pl-0.5 text-[13.5px] text-ink-500">
+          {fmtRange(tr.start_date, tr.end_date)} · {tr.destinations.map((d) => d.name).join(" → ") || tr.primary_destination || t("trip.noDestination")}
+          {tr.travellers.length > 0 && <span className="text-ink-400"> · <Users className="-mt-0.5 inline h-3 w-3" /> {tr.travellers.map((x) => x.full_name.split(" ")[0]).join(", ")}</span>}
+        </p>
       </header>
 
-      <Tabs.Root value={tab} onValueChange={setTab}>
-        <Tabs.List className="-mx-4 mb-6 flex snap-x gap-1 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" aria-label={t("trip.sections")}>
-          <Tab value="plan" current={tab}>{t("trip.tabPlan")} {serious.length > 0 && <span className="rounded-full bg-clay-500 px-1.5 text-[11px] leading-[18px] text-white">{serious.length}</span>}</Tab>
-          <Tab value="reservations" current={tab}>{t("trip.tabBookings")} <span className="opacity-50">{reservations.data?.length || ""}</span></Tab>
-          <Tab value="map" current={tab}>{t("trip.tabMap")}</Tab>
-          <Tab value="documents" current={tab}>{t("trip.tabDocuments")} <span className="opacity-50">{documents.data?.length || ""}</span></Tab>
-          <Tab value="notes" current={tab}>{t("trip.tabNotes")}</Tab>
-        </Tabs.List>
+      <Segmented id="trip-tab" value={tab} onChange={setTab} className="shrink-0 [&_button]:gap-1 [&_button]:px-1 [&_button]:text-[13px]"
+        options={[
+          { value: "plan", label: <>{t("trip.tabPlan")}{serious.length > 0 && <span className="rounded-full bg-clay-500 px-1.5 text-[11px] leading-[18px] text-white">{serious.length}</span>}</> },
+          { value: "bookings", label: <>{t("trip.tabBookings")}<span className="opacity-50">{reservations.data?.length || ""}</span></> },
+          { value: "map", label: t("trip.tabMap") },
+          { value: "docs", label: <>{t("trip.tabDocuments")}<span className="opacity-50">{documents.data?.length || ""}</span></> },
+        ]} />
 
-        <Tabs.Content value="plan">
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <div>
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <TimelineLegend />
-                <Button size="sm" variant="secondary" onClick={() => setEditing("new")} icon={<Plus className="h-3.5 w-3.5" />}>{t("trip.addEvent")}</Button>
-              </div>
-              {itinerary.isLoading ? <PageLoader /> : (itinerary.data?.length ?? 0) === 0 ? (
-                <EmptyState title={t("trip.emptyPlan")} body={t("trip.emptyPlanBody")}
-                  action={<Button onClick={openAdd} icon={<FilePlus className="h-4 w-4" />}>{t("trip.addBooking")}</Button>} />
-              ) : (
-                <Timeline events={itinerary.data!} conflicts={allConflicts} tripTz={tz} weather={context.data?.weather.days} onEdit={(e) => setEditing(e)} onDelete={remove} onStatus={setStatus} />
-              )}
+      {tab === "plan" && (
+        <section className="flex min-h-0 flex-1 flex-col gap-2.5">
+          {days.length > 0 && (
+            <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label={t("trip.days")}>
+              {days.map((d) => {
+                const w = weatherByDay.get(d);
+                const on = d === current;
+                const hasFlag = events.some((e) => dayKey(e.start_local) === d && flagged.has(e.id));
+                return (
+                  <button key={d} role="tab" aria-selected={on} onClick={() => setDay(d)}
+                    className={clsx("relative flex h-[62px] min-w-[56px] flex-1 flex-col items-center justify-center rounded-2xl border text-center transition active:scale-95",
+                      on ? "border-ink-900 bg-ink-900 text-white" : "border-sand-200 bg-white text-ink-600")}>
+                    <span className="text-[11px] font-medium uppercase tracking-wide opacity-70">{fmtDate(d, { weekday: true }).split(/[ ,.]/)[0]}</span>
+                    <span className="text-[17px] font-semibold leading-tight tabular-nums">{Number(d.slice(8))}</span>
+                    {w ? <WeatherIcon condition={w.condition} className={clsx("h-3.5 w-3.5", on ? "text-white/80" : w.outdoor_ok ? "text-clay-500" : "text-lagoon-600")} /> : <span className="h-3.5" />}
+                    {hasFlag && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-ink" />}
+                  </button>
+                );
+              })}
             </div>
-            <aside className="order-first space-y-3 xl:order-none xl:sticky xl:top-20 xl:self-start">
-              <div className="card p-4">
-                <p className="eyebrow mb-3">{serious.length ? tp("trip.toCheck", serious.length) : t("trip.checks")}</p>
-                <ConflictList conflicts={serious} tripId={tr.id} />
-                {minor.length > 0 && (
-                  <details className="group mt-3">
-                    <summary className="flex min-h-10 cursor-pointer list-none items-center text-[13px] font-medium text-ink-500 [&::-webkit-details-marker]:hidden">{tp("trip.minorNotes", minor.length)}</summary>
-                    <ConflictList conflicts={minor} tripId={tr.id} compact showInfo />
-                  </details>
-                )}
-              </div>
-              <TripContextCard tripId={tr.id} />
-              {tz && <p className="px-1 text-[12.5px] text-ink-400">{t("trip.timesNote", { tz: tz.replace(/_/g, " ") })}</p>}
-            </aside>
+          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-[13.5px] text-ink-500">{current ? fmtDate(current, { weekday: true }) : ""}</p>
+            {todaysWeather && <WeatherChip day={todaysWeather} />}
+            <button onClick={() => setSheet("checks")} className={clsx("flex h-8 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-medium active:scale-95", serious.length ? "bg-amber-soft text-amber-ink" : "bg-sand-100 text-ink-600")}>
+              {serious.length ? <AlertTriangle className="h-3.5 w-3.5" /> : <CloudSun className="h-3.5 w-3.5" />}{serious.length || t("trip.context")}
+            </button>
+            <button onClick={() => setEditing("new")} aria-label={t("trip.addEvent")} className="flex h-8 w-8 items-center justify-center rounded-full bg-sand-100 text-ink-700 active:scale-90"><Plus className="h-4 w-4" /></button>
           </div>
-        </Tabs.Content>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl"
+            onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => { if (touch.current !== null) { const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); touch.current = null; } }}>
+            {itinerary.isLoading ? <PageLoader /> : dayEvents.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-sand-300 text-center">
+                <p className="px-6 text-[14px] text-ink-500">{events.length === 0 ? t("trip.emptyPlanBody") : t("trip.emptyDay")}</p>
+                <Button size="sm" variant="secondary" onClick={() => (events.length === 0 ? openAdd() : setEditing("new"))} icon={<Plus className="h-3.5 w-3.5" />}>{events.length === 0 ? t("trip.addBooking") : t("trip.addEvent")}</Button>
+              </div>
+            ) : (
+              <ol className="space-y-1.5">
+                {dayEvents.map((e) => <DayRow key={e.id} e={e} flags={flagged.get(e.id) ?? 0} onOpen={() => { setPicked(e); setSheet("event"); }} />)}
+              </ol>
+            )}
+          </div>
+        </section>
+      )}
 
-        <Tabs.Content value="reservations">
-          <div className="mb-4 flex flex-wrap justify-end gap-2">
+      {tab === "bookings" && (
+        <section className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 justify-end gap-2">
             <Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button>
             <Button size="sm" variant="secondary" onClick={() => setEditingRes("new")} icon={<Plus className="h-3.5 w-3.5" />}>{t("trip.addManually")}</Button>
           </div>
           {(reservations.data?.length ?? 0) === 0 ? <EmptyState title={t("trip.noReservations")} body={t("trip.noReservationsBody")} /> : (
-            <div className="space-y-3">{reservations.data!.map((r) => <ReservationCard key={r.id} r={r} onEdit={(x) => setEditingRes(x)} />)}</div>
+            <ul className="card min-h-0 flex-1 divide-y divide-sand-100 overflow-y-auto overscroll-contain">
+              {reservations.data!.map((r) => (
+                <li key={r.id}>
+                  <button onClick={() => setEditingRes(r)} className="flex min-h-[58px] w-full items-center gap-3 px-3.5 py-2 text-left active:bg-sand-50">
+                    <EventIcon type={r.type} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-medium text-ink-900">{r.title}</span>
+                      <span className="block truncate text-[12px] text-ink-400">{r.provider_name}{r.booking_reference ? ` · ${r.booking_reference}` : ""}{r.start_local ? ` · ${fmtDate(dayKey(r.start_local))} ${fmtTime(r.start_local)}` : ""}</span>
+                    </span>
+                    <StatusPill status={r.status} />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-        </Tabs.Content>
+        </section>
+      )}
 
-        <Tabs.Content value="map"><TripMap events={itinerary.data ?? []} /></Tabs.Content>
+      {tab === "map" && <section className="min-h-0 flex-1 overflow-hidden rounded-2xl"><TripMap events={events} /></section>}
 
-        <Tabs.Content value="documents">
-          <div className="mb-4 flex justify-end"><Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button></div>
+      {tab === "docs" && (
+        <section className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 justify-end"><Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button></div>
           {(documents.data?.length ?? 0) === 0 ? <EmptyState icon={<FileText className="h-7 w-7" />} title={t("trip.noDocuments")} body={t("trip.noDocumentsBody")} /> : (
-            <ul className="card divide-y divide-sand-100">
+            <ul className="card min-h-0 flex-1 divide-y divide-sand-100 overflow-y-auto overscroll-contain">
               {documents.data!.map((d) => (
                 <li key={d.id}>
-                  <Link to={`/inbox/${d.id}`} className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3 hover:bg-sand-50/70">
+                  <Link to={`/inbox/${d.id}`} className="flex min-h-[54px] items-center justify-between gap-3 px-3.5 py-2.5 active:bg-sand-50">
                     <span className="flex min-w-0 items-center gap-3"><FileText className="h-4 w-4 shrink-0 text-ink-400" /><span className="truncate text-[14px]">{d.filename}</span></span>
-                    <span className="flex shrink-0 items-center gap-3 text-[12px] text-ink-400"><StatusPill status={d.status} /><span className="hidden sm:inline">{relativeTime(d.created_at)}</span></span>
+                    <span className="flex shrink-0 items-center gap-2 text-[12px] text-ink-400"><StatusPill status={d.status} /><span className="hidden sm:inline">{relativeTime(d.created_at)}</span></span>
                   </Link>
                 </li>
               ))}
             </ul>
           )}
-        </Tabs.Content>
+        </section>
+      )}
 
-        <Tabs.Content value="notes">
-          <div className="max-w-3xl">
-            <textarea className="field min-h-[240px] leading-relaxed" value={notes ?? ""} onChange={(e) => setNotes(e.target.value)} onBlur={saveNotes}
-              placeholder={t("trip.notesPlaceholder")} aria-label={t("trip.tabNotes")} />
-            <p className="mt-2 text-[12px] text-ink-400">{t("trip.notesHint")}</p>
-          </div>
-        </Tabs.Content>
-      </Tabs.Root>
+      <Dialog open={sheet === "checks"} onOpenChange={(o) => !o && setSheet(null)} title={serious.length ? tp("trip.toCheck", serious.length) : t("trip.context")}>
+        <div className="max-h-[68dvh] space-y-4 overflow-y-auto pb-2">
+          {serious.length > 0 && <ConflictList conflicts={serious} tripId={tr.id} />}
+          <TripContextCard tripId={tr.id} />
+          {tz && <p className="text-[12px] text-ink-400">{t("trip.timesNote", { tz: tz.replace(/_/g, " ") })}</p>}
+        </div>
+      </Dialog>
+      <Dialog open={sheet === "notes"} onOpenChange={(o) => !o && setSheet(null)} title={t("trip.tabNotes")} description={t("trip.notesHint")}>
+        <textarea className="field min-h-[180px] leading-relaxed" value={notes ?? ""} onChange={(e) => setNotes(e.target.value)} onBlur={saveNotes} placeholder={t("trip.notesPlaceholder")} aria-label={t("trip.tabNotes")} />
+      </Dialog>
+      <Dialog open={sheet === "event" && !!picked} onOpenChange={(o) => { if (!o) { setSheet(null); setPicked(null); } }} title={picked?.title ?? ""}
+        description={picked ? `${fmtDate(dayKey(picked.start_local), { weekday: true })} · ${fmtTime(picked.start_local)}${picked.end_local ? `–${fmtTime(picked.end_local)}` : ""}` : undefined}>
+        {picked && <EventSheet e={picked} flags={all.filter((c) => c.event_ids.includes(picked.id)).map((c) => c.title)}
+          onStatus={(s) => setStatus(picked, s)} onEdit={() => { setEditing(picked); setSheet(null); }} onDelete={() => remove(picked)} />}
+      </Dialog>
 
       {editing && <EventDialog tripId={tr.id} event={editing === "new" ? null : editing} defaultTz={tz} onClose={() => setEditing(null)} />}
       {editingRes && <ReservationDialog tripId={tr.id} reservation={editingRes === "new" ? null : editingRes} defaultTz={tz} onClose={() => setEditingRes(null)} />}
+    </div>
+  );
+}
+
+function DayRow({ e, flags, onOpen }: { e: ItineraryEvent; flags: number; onOpen: () => void }) {
+  const suggested = e.status === "suggested";
+  const free = e.type === "free_time";
+  return (
+    <li>
+      <button onClick={onOpen} className={clsx("flex min-h-[54px] w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition active:scale-[0.99]",
+        suggested ? "border-dashed border-violet-ink/35 bg-violet-soft/40" : free ? "border-dashed border-lagoon-500/30 bg-lagoon-50/40" : "border-sand-200/80 bg-white shadow-[var(--shadow-card)]",
+        flags > 0 && "ring-1 ring-rose-ink/30", e.status === "cancelled" && "opacity-60")}>
+        <span className="w-11 shrink-0 text-right text-[14px] font-semibold tabular-nums text-ink-900">{fmtTime(e.start_local)}</span>
+        <EventIcon type={e.type} size="sm" />
+        <span className="min-w-0 flex-1">
+          <span className={clsx("block truncate text-[14px] font-medium text-ink-900", e.status === "cancelled" && "line-through")}>{e.title}</span>
+          {(e.location_name || e.end_location_name) && <span className="block truncate text-[12px] text-ink-400">{e.location_name}{e.end_location_name ? ` → ${e.end_location_name}` : ""}</span>}
+        </span>
+        {flags > 0 && <AlertTriangle className="h-4 w-4 shrink-0 text-rose-ink" aria-hidden />}
+        {e.status !== "confirmed" && <StatusPill status={e.status} />}
+      </button>
+    </li>
+  );
+}
+
+function EventSheet({ e, flags, onStatus, onEdit, onDelete }: { e: ItineraryEvent; flags: string[]; onStatus: (s: string) => void; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useT();
+  const editable = !e.reservation_id;
+  return (
+    <div className="space-y-3 pb-2">
+      <div className="flex flex-wrap items-center gap-2"><StatusPill status={e.status} />{e.details?.booking_reference && <Badge tone="neutral">{t("timeline.ref")} {e.details.booking_reference}</Badge>}</div>
+      {(e.location_name || e.end_location_name) && <p className="text-[14px] text-ink-600">{e.location_name}{e.end_location_name ? ` → ${e.end_location_name}` : ""}</p>}
+      {e.notes && <p className="text-[13.5px] text-ink-500">{e.notes}</p>}
+      {flags.map((f) => <p key={f} className="flex items-start gap-1.5 rounded-lg bg-amber-soft px-2.5 py-1.5 text-[13px] text-amber-ink"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{f}</p>)}
+      <div className="flex flex-wrap gap-2 pt-1">
+        {e.status === "suggested" && <Button size="sm" onClick={() => onStatus("unbooked")} icon={<Check className="h-3.5 w-3.5" />}>{t("timeline.keep")}</Button>}
+        {e.status !== "completed" && e.status !== "suggested" && <Button size="sm" variant="secondary" onClick={() => onStatus("completed")} icon={<Check className="h-3.5 w-3.5" />}>{t("timeline.complete")}</Button>}
+        <Button size="sm" variant="secondary" onClick={onEdit} icon={<Pencil className="h-3.5 w-3.5" />}>{editable ? t("common.edit") : t("timeline.editNotes")}</Button>
+        {editable && <Button size="sm" variant="ghost" onClick={onDelete} icon={e.status === "suggested" ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}>{e.status === "suggested" ? t("timeline.dismiss") : t("common.delete")}</Button>}
+      </div>
     </div>
   );
 }

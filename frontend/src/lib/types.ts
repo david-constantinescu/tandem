@@ -198,7 +198,7 @@ export type Message = {
   role: "user" | "assistant";
   content: string;
   tool_calls: { name: string; status: string; permission: string; summary: string }[];
-  references: { type: string; id: string; label: string; url?: string; trip_id?: string; activity?: Partial<ActivityResult>; date?: string | null }[];
+  references: { type: string; id: string; label: string; url?: string; options?: string[]; trip_id?: string; activity?: Partial<ActivityResult>; date?: string | null }[];
   action_ids: string[];
   provider: string | null;
   model: string | null;

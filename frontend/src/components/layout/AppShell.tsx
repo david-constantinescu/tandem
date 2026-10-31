@@ -1,12 +1,15 @@
 /**
- * Navigation. Four places plus one action: Home (what's next and what needs you), Trips (each trip is the hub for
- * everything about it), Explore (things to do and tickets to book), Assistant — and Add, in the middle, for anything
- * new. The Inbox (documents, approvals, email) sits in the header with a badge when something waits for you.
+ * Navigation. Home (what's next), Trips (each trip is the hub for everything about it), Assistant (the one place to
+ * explore, plan and ask: it can do everything the rest of the app can), Inbox (documents and approvals, with a badge
+ * when something waits for you) and Add, in the middle, for anything new.
+ *
+ * The shell is exactly the height of the screen and never scrolls; each page fits inside it, and only lists that can
+ * grow without limit (the chat, the inbox) scroll inside their own box.
  */
 import * as Popover from "@radix-ui/react-popover";
 import { clsx } from "clsx";
-import { Bell, CheckCheck, Compass, Home, Inbox, LogOut, Map, MessageCircle, Plus, Settings, Sparkles } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { Bell, CheckCheck, Home, Inbox, LogOut, Map, MessageCircle, Plus, Settings, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
@@ -134,26 +137,17 @@ function Shell({ children }: { children: ReactNode }) {
   const { t } = useT();
   const navigate = useNavigate();
   const waiting = useWaitingCount();
-  const headerRef = useRef<HTMLElement>(null);
-  // Expose the header height so sticky section headers can sit right below it.
-  useEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => document.documentElement.style.setProperty("--hdr", `${el.offsetHeight}px`));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   const tabs = [
     { to: "/", icon: <Home />, label: t("nav.home"), end: true },
     { to: "/trips", icon: <Map />, label: t("nav.trips") },
     null, // the Add button
-    { to: "/explore", icon: <Compass />, label: t("nav.explore") },
     { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant") },
+    { to: "/inbox", icon: <Inbox />, label: t("nav.inbox"), count: waiting },
   ];
 
   return (
-    <div className="min-h-dvh lg:flex">
-      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sand-200/70 bg-sand-50/80 px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
+    <div className="flex h-dvh flex-col overflow-hidden bg-paper lg:flex-row">
+      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sand-200/70 bg-sand-50/80 px-4 py-6 lg:flex">
         <Logo className="px-2" />
         <button onClick={openAdd} className="mt-7 flex h-11 items-center justify-center gap-2 rounded-xl bg-lagoon-900 text-[14px] font-medium text-white shadow-sm transition hover:bg-ink-800 active:scale-[0.98]">
           <Plus className="h-4 w-4" /> {t("nav.add")}
@@ -161,7 +155,6 @@ function Shell({ children }: { children: ReactNode }) {
         <nav className="mt-6 flex flex-col gap-1" aria-label={t("nav.main")}>
           <NavItem to="/" end icon={<Home />} label={t("nav.home")} />
           <NavItem to="/trips" icon={<Map />} label={t("nav.trips")} />
-          <NavItem to="/explore" icon={<Compass />} label={t("nav.explore")} />
           <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} />
           <NavItem to="/inbox" icon={<Inbox />} label={t("nav.inbox")} count={waiting} />
         </nav>
@@ -186,50 +179,51 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header ref={headerRef} className="glass safe-top sticky top-0 z-30 border-x-0 border-t-0 border-b-sand-200/50 lg:border-none lg:bg-transparent lg:backdrop-blur-none">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="safe-top z-30 shrink-0 bg-paper">
           {user?.is_demo && (
-            <div className="flex items-center justify-center gap-2 bg-lagoon-900 px-4 py-1.5 text-center text-[12px] text-lagoon-50">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-apricot" />
+            <div className="flex items-center justify-center gap-1.5 bg-lagoon-900 px-4 py-1 text-center text-[11.5px] text-lagoon-50">
+              <Sparkles className="h-3 w-3 shrink-0 text-apricot" />
               <span className="sm:hidden">{t("demo.bannerShort")}</span>
               <span className="hidden sm:inline">{t("demo.banner")}</span>
             </div>
           )}
           <OfflineBanner />
-          <div className="flex h-[52px] items-center justify-between px-3 lg:h-auto lg:justify-end lg:px-8 lg:pt-5">
+          <div className="flex h-[48px] items-center justify-between px-3 lg:h-14 lg:justify-end lg:px-8">
             <Logo className="pl-1 lg:hidden" />
-            <div className="flex items-center">
-              <HeaderLink to="/inbox" label={waiting ? t("nav.inboxWaiting", { n: waiting }) : t("nav.inbox")} count={waiting}><Inbox /></HeaderLink>
+            <div className="flex items-center gap-0.5">
+              <LanguageSwitch size="sm" className="mr-1 lg:hidden" />
               <Notifications />
               <HeaderLink to="/settings" label={t("nav.settings")}><Settings /></HeaderLink>
             </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-36 pt-5 sm:px-6 lg:px-10 lg:pb-14 lg:pt-2">{children}</main>
-      </div>
-
-      <nav aria-label={t("nav.main")} className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden">
-        <div className="glass mx-auto grid max-w-md grid-cols-5 items-center rounded-[28px] p-1.5 shadow-[var(--shadow-float)]">
-          {tabs.map((item) => item === null ? (
-            <motion.button key="add" onClick={openAdd} whileTap={{ scale: 0.9 }} aria-label={t("nav.addLabel")}
-              className="mx-auto flex h-[54px] w-[54px] items-center justify-center rounded-full bg-clay-500 text-white shadow-[0_6px_16px_-4px_rgba(200,98,58,0.55)]">
-              <Plus className="h-6 w-6" strokeWidth={2.4} />
-            </motion.button>
-          ) : (
-            <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-[54px] flex-col items-center justify-center gap-0.5 rounded-[22px] text-[10.5px] font-semibold">
-              {({ isActive }) => (
-                <>
-                  {isActive && <motion.span layoutId="tab-pill" transition={spring} className="absolute inset-0 rounded-[22px] bg-ink-900" />}
-                  <motion.span whileTap={{ scale: 0.86 }} className={clsx("relative z-10 flex flex-col items-center gap-0.5", isActive ? "text-white" : "text-ink-500")}>
-                    <span className="[&>svg]:h-[21px] [&>svg]:w-[21px]">{item.icon}</span>
+        <main className="min-h-0 flex-1 overflow-hidden">
+          <div className="mx-auto h-full w-full max-w-[1100px] px-4 pb-2 pt-1 sm:px-6 lg:px-10 lg:pb-6">{children}</div>
+        </main>
+        <nav aria-label={t("nav.main")} className="shrink-0 border-t border-sand-200/70 bg-white/90 px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 backdrop-blur lg:hidden">
+          <div className="mx-auto grid max-w-md grid-cols-5 items-center">
+            {tabs.map((item) => item === null ? (
+              <motion.button key="add" onClick={openAdd} whileTap={{ scale: 0.9 }} aria-label={t("nav.addLabel")}
+                className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-clay-500 text-white shadow-[0_6px_16px_-4px_rgba(200,98,58,0.55)]">
+                <Plus className="h-5 w-5" strokeWidth={2.4} />
+              </motion.button>
+            ) : (
+              <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-11 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold">
+                {({ isActive }) => (
+                  <motion.span whileTap={{ scale: 0.86 }} className={clsx("relative flex flex-col items-center gap-0.5", isActive ? "text-clay-600" : "text-ink-400")}>
+                    <span className="relative [&>svg]:h-5 [&>svg]:w-5">
+                      {item.icon}
+                      {!!item.count && <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-clay-500 px-1 text-[10px] font-bold leading-none text-white">{item.count > 9 ? "9+" : item.count}</span>}
+                    </span>
                     {item.label}
                   </motion.span>
-                </>
-              )}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }

@@ -1,23 +1,24 @@
 import { clsx } from "clsx";
-import { ArrowUp, CircleAlert, ExternalLink, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
+import { ArrowUp, Bookmark, CircleAlert, ExternalLink, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type KeyboardEvent, type SubmitEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionCard } from "@/components/activities/ActionCard";
 import { ActivityCard } from "@/components/activities/ActivityCard";
+import { Choices } from "@/components/assistant/Choices";
 import { spring } from "@/components/motion";
 import { Badge, Button, PageLoader } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
-import { relativeTime } from "@/lib/format";
+import { money, relativeTime } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import { keys, useConversation, useConversations, useTrips, type ConversationPayload } from "@/lib/queries";
 import type { ActivityResult, Conversation, Message } from "@/lib/types";
 
-const PROMPTS: Key[] = ["assistant.prompt1", "assistant.prompt2", "assistant.prompt3", "assistant.prompt4", "assistant.prompt5", "assistant.prompt6"];
+const PROMPTS: Key[] = ["assistant.starter1", "assistant.starter2", "assistant.starter3", "assistant.starter4", "assistant.starter5", "assistant.starter6"];
 
 export default function AssistantPage() {
   const { id } = useParams();
@@ -39,7 +40,7 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:h-[calc(100dvh-96px)] xl:grid-cols-[250px_minmax(0,1fr)]">
+    <div className="grid h-full min-h-0 grid-cols-1 gap-6 xl:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="hidden flex-col xl:flex">
         <Button onClick={() => start()} icon={<Plus className="h-4 w-4" />} className="w-full">{t("assistant.new")}</Button>
         <ul className="mt-4 flex-1 space-y-1 overflow-y-auto">
@@ -54,7 +55,7 @@ export default function AssistantPage() {
         </ul>
       </aside>
       {id ? <Chat id={id} onNew={() => start()} onHistory={() => setHistory(true)} /> : (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="flex flex-col items-center justify-center py-8 text-center">
           <p className="display text-2xl">{t("assistant.introTitle")}</p>
           <p className="mt-2 max-w-md text-[14.5px] text-ink-500">{t("assistant.introBody")}</p>
           <Button className="mt-6" onClick={() => start()} icon={<MessageCirclePlus className="h-4 w-4" />}>{t("assistant.start")}</Button>
@@ -89,6 +90,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
   const { t } = useT();
   const location = useLocation();
   const asked = useRef(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [conv.data?.messages.length, sending]);
 
@@ -127,16 +129,17 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
   const trip = trips.data?.find((t) => t.id === conversation.trip_id);
 
   return (
-    <section className="flex min-h-[calc(100dvh-230px)] flex-col lg:min-h-0 lg:rounded-[22px] lg:border lg:border-sand-200 lg:bg-white">
-      <header className="flex items-center justify-between gap-2 pb-3 lg:border-b lg:border-sand-100 lg:px-5 lg:py-3">
+    <section className="flex h-full min-h-0 flex-col lg:rounded-[22px] lg:border lg:border-sand-200 lg:bg-white">
+      <header className="flex shrink-0 items-center justify-between gap-2 pb-2 lg:border-b lg:border-sand-100 lg:px-5 lg:py-3">
         <div className="min-w-0">
-          <p className="display truncate text-[22px] leading-tight lg:font-sans lg:text-[14.5px] lg:font-semibold">{conversation.title}</p>
-          {trip && <Link to={`/trips/${trip.id}`} className="text-[13px] text-lagoon-600 hover:underline">{t("assistant.about", { name: trip.name })}</Link>}
+          <p className="display truncate text-[20px] leading-tight lg:font-sans lg:text-[14.5px] lg:font-semibold">{conversation.title}</p>
+          {trip && <Link to={`/trips/${trip.id}`} className="block truncate text-[12.5px] text-lagoon-600 hover:underline">{t("assistant.about", { name: trip.name })}</Link>}
         </div>
         <div className="flex shrink-0 items-center">
-          <button onClick={onHistory} aria-label={t("assistant.conversations")} className="flex h-11 w-11 items-center justify-center rounded-full text-ink-500 hover:bg-sand-100 active:scale-90 xl:hidden"><History className="h-5 w-5" /></button>
-          <button onClick={onNew} aria-label={t("assistant.new")} className="flex h-11 w-11 items-center justify-center rounded-full text-ink-500 hover:bg-sand-100 active:scale-90 xl:hidden"><Plus className="h-5 w-5" /></button>
-          <button aria-label={t("assistant.delete")} className="flex h-11 w-11 items-center justify-center rounded-full text-ink-300 hover:bg-sand-100 hover:text-rose-ink active:scale-90" onClick={async () => {
+          <button onClick={() => setSaved(true)} aria-label={t("explore.saved")} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-sand-100 active:scale-90"><Bookmark className="h-5 w-5" /></button>
+          <button onClick={onHistory} aria-label={t("assistant.conversations")} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-sand-100 active:scale-90 xl:hidden"><History className="h-5 w-5" /></button>
+          <button onClick={onNew} aria-label={t("assistant.new")} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-sand-100 active:scale-90 xl:hidden"><Plus className="h-5 w-5" /></button>
+          <button aria-label={t("assistant.delete")} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-300 hover:bg-sand-100 hover:text-rose-ink active:scale-90" onClick={async () => {
             if (!confirm(t("assistant.deleteConfirm"))) return;
             await api.del(`/assistant/conversations/${id}`);
             qc.invalidateQueries({ queryKey: keys.conversations });
@@ -145,24 +148,25 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
         </div>
       </header>
 
-      <div className="flex-1 space-y-5 py-2 lg:overflow-y-auto lg:px-6 lg:py-5">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain py-1 lg:px-6 lg:py-5">
         {messages.length === 0 && !sending && (
-          <div className="py-4">
+          <div className="py-1">
             <p className="kicker">{t("assistant.emptyKicker")}</p>
-            <p className="display mt-1 text-[26px] leading-tight">{t("assistant.emptyTitle")}</p>
-            <p className="mt-2 text-[14px] text-ink-500">{t("assistant.emptyBody")}</p>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <p className="display mt-1 text-[24px] leading-tight">{t("assistant.emptyTitle")}</p>
+            <p className="mt-1.5 text-[13.5px] text-ink-500">{t("assistant.emptyBody")}</p>
+            <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
               {PROMPTS.map((k) => t(k)).map((p, i) => (
                 <motion.button key={p} onClick={() => send(p)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.04 * i }} whileTap={{ scale: 0.97 }}
-                  className="min-h-12 rounded-2xl border border-sand-200 bg-white px-4 py-3 text-left text-[14.5px] text-ink-700 transition-colors hover:border-lagoon-500/40 hover:bg-lagoon-50/40">{p}</motion.button>
+                  className="min-h-11 rounded-2xl border border-sand-200 bg-white px-3.5 py-2 text-left text-[14px] leading-snug text-ink-700 transition-colors hover:border-lagoon-500/40 hover:bg-lagoon-50/40">{p}</motion.button>
               ))}
             </div>
           </div>
         )}
         <AnimatePresence initial={false}>
-          {messages.map((m) => (
+          {messages.map((m, i) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
-              <Bubble m={m} actions={actions} tripId={conversation.trip_id ?? undefined} />
+              <Bubble m={m} actions={actions} tripId={conversation.trip_id ?? undefined}
+                onChoose={i === messages.length - 1 && !sending ? send : undefined} />
             </motion.div>
           ))}
           {sending && (
@@ -177,7 +181,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
         <div ref={bottom} />
       </div>
 
-      <form onSubmit={submit} className="sticky bottom-[calc(max(env(safe-area-inset-bottom),12px)+78px)] z-20 pt-3 lg:static lg:border-t lg:border-sand-100 lg:p-4">
+      <form onSubmit={submit} className="shrink-0 pt-2 lg:border-t lg:border-sand-100 lg:p-4">
         <div className="flex items-end gap-2 rounded-[24px] border border-sand-200 bg-white/95 py-1.5 pl-4 pr-1.5 shadow-[var(--shadow-float)] backdrop-blur focus-within:border-lagoon-500 lg:bg-paper lg:shadow-none lg:focus-within:ring-4 lg:focus-within:ring-lagoon-100">
           <textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder={t("assistant.placeholder")} aria-label={t("assistant.message")} enterKeyHint="send"
             className="max-h-40 min-h-[40px] flex-1 resize-none bg-transparent py-2 text-[16px] outline-none placeholder:text-ink-300 lg:text-[15px]" />
@@ -185,11 +189,34 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
         </div>
         <p className="mt-2 hidden px-1 text-[11.5px] text-ink-400 lg:block">{t("assistant.footer")}</p>
       </form>
+      <SavedSheet open={saved} onOpenChange={setSaved} />
     </section>
   );
 }
 
-function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPayload["actions"]; tripId?: string }) {
+function SavedSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { t } = useT();
+  const saved = useQuery({ queryKey: ["saved-activities"], enabled: open, queryFn: () => api.get<{ id: string; provider: string; data: Partial<ActivityResult> }[]>("/activities/saved") });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} title={t("explore.saved")}>
+      {!saved.data?.length ? <p className="pb-4 text-[14px] text-ink-500">{t("assistant.savedEmpty")}</p> : (
+        <ul className="-mx-1 max-h-[60dvh] divide-y divide-sand-100 overflow-y-auto pb-2">
+          {saved.data.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-3 px-1 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-[14px] font-medium">{s.data.title}</p>
+                <p className="text-[12.5px] text-ink-400">{s.data.source_label}{s.data.price ? ` · ${money(s.data.price, s.data.currency)}` : ""}</p>
+              </div>
+              <button onClick={async () => { await api.del(`/activities/saved/${s.id}`); saved.refetch(); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-300 hover:bg-sand-100 hover:text-rose-ink" aria-label={t("explore.removeSaved")}><Trash2 className="h-4 w-4" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Dialog>
+  );
+}
+
+function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: ConversationPayload["actions"]; tripId?: string; onChoose?: (answer: string) => void }) {
   const { t } = useT();
   const tool = (name: string) => { const k = `tool.${name}` as Key; const x = t(k); return x === k ? name : x; };
   if (m.role === "user") {
@@ -197,6 +224,7 @@ function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPaylo
   }
   const activities = m.references.filter((r) => r.type === "activity" && r.activity).slice(0, 3);
   const links = m.references.filter((r) => r.type === "trip" || r.type === "reservation" || r.type === "browser_task");
+  const choices = m.references.find((r) => r.type === "choices")?.options ?? [];
   const sources = m.references.filter((r) => r.type === "link" && r.url?.startsWith("https://")).slice(0, 6);
   return (
     <div className="max-w-[92%] space-y-3">
@@ -226,6 +254,7 @@ function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPaylo
           ))}
         </div>
       )}
+      <Choices options={choices} onChoose={onChoose} />
       {m.action_ids.map((aid) => actions[aid] && <ActionCard key={aid} action={actions[aid]} />)}
       <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-ink-400">
         {m.provider === "local" ? <Badge tone="neutral">{t("assistant.offline")}</Badge> : m.provider && <span>{m.provider} · {m.model}</span>}
