@@ -156,3 +156,15 @@ def test_an_assistant_that_never_answers_says_so_in_the_users_language(app, scri
     scripted([[ToolCall("1", "get_trip", {})], "", ""])
     msg = orchestrator.respond(user, _conversation(user, trip), "Când plec?")
     assert "Nu am reușit" in msg.content
+
+
+def test_a_fallback_model_gets_earlier_tool_results_as_text_not_as_function_calls():
+    from app.services.ai.gemini import flatten_tool_turns
+
+    msgs = [ChatMessage(role="user", parts=[TextPart("Cum e vremea?")]),
+            ChatMessage(role="assistant", parts=[], tool_calls=[ToolCall("c1", "get_weather", {"date": "2026-11-14"})], provider_state=object()),
+            ChatMessage(role="tool", parts=[TextPart('{"condition":"fog"}')], tool_call_id="c1", tool_name="get_weather")]
+    out = flatten_tool_turns(msgs)
+    assert [m.role for m in out] == ["user"] and not any(m.tool_calls or m.provider_state for m in out)
+    assert "get_weather returned" in out[0].parts[-1].text and "fog" in out[0].parts[-1].text
+    assert flatten_tool_turns(msgs[:1]) is msgs[:1] or flatten_tool_turns(msgs[:1]) == msgs[:1]

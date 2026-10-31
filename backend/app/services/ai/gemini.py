@@ -19,6 +19,35 @@ log = logging.getLogger("tandem.ai.gemini")
 INLINE_PDF_LIMIT = 15 * 1024 * 1024
 
 
+def flatten_tool_turns(messages: list[ChatMessage]) -> list[ChatMessage]:
+    """Rewrite earlier tool calls and their results as plain text on the last user message.
+
+    Gemini 3.x refuses a replayed function call that lacks the thought signature of the model that made it, so when
+    a different model takes over mid-conversation it is given what the tools returned as text instead.
+    """
+    from dataclasses import replace
+
+    if not any(m.tool_calls or m.role == "tool" for m in messages):
+        return messages
+    lines: list[str] = []
+    kept: list[ChatMessage] = []
+    for m in messages:
+        if m.role == "tool":
+            body = "".join(p.text for p in m.parts if isinstance(p, TextPart))
+            lines.append(f"- {m.tool_name} returned: {body[:3500]}")
+        elif m.tool_calls:
+            if any(isinstance(p, TextPart) and p.text for p in m.parts):
+                kept.append(replace(m, tool_calls=[], provider_state=None))
+        else:
+            kept.append(replace(m, provider_state=None) if m.provider_state else m)
+    note = TextPart("(Tools I already ran for this request, with what they returned:\n" + "\n".join(lines) + "\n)")
+    for idx in range(len(kept) - 1, -1, -1):
+        if kept[idx].role == "user":
+            kept[idx] = replace(kept[idx], parts=[*kept[idx].parts, note])
+            return kept
+    return [*kept, ChatMessage(role="user", parts=[note])]
+
+
 class GeminiProvider(AIProvider):
     name = "gemini"
     supports_original_file_processing = True
@@ -76,11 +105,10 @@ class GeminiProvider(AIProvider):
             if i and (request.remaining is not None and request.remaining < 6):
                 break
             req = request
-            if i:  # reasoning state from another model can't be replayed to this one
+            if i:  # reasoning state (thought signatures) from another model can't be replayed to this one
                 from dataclasses import replace
 
-                req = replace(request, messages=[replace(m, provider_state=None) if m.provider_state else m
-                                                 for m in request.messages])
+                req = replace(request, messages=flatten_tool_turns(request.messages))
             try:
                 return self._generate_one(req, name)
             except (QuotaExceeded, ProviderUnavailable, ProviderTimeout) as exc:
