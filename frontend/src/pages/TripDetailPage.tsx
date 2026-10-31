@@ -91,8 +91,8 @@ export default function TripDetailPage() {
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
             <Button variant="secondary" onClick={askAssistant} className="shrink-0" icon={<MessageCircle className="h-4 w-4" />}>Ask about this trip</Button>
-            <LinkButton to={`/discover?trip=${t.id}`} className="shrink-0" icon={<Compass className="h-4 w-4" />}>Find activities</LinkButton>
             <LinkButton href={`/api/v1/calendar/trips/${t.id}.ics`} className="shrink-0" icon={<CalendarPlus className="h-4 w-4" />}>Add to Calendar</LinkButton>
+            <LinkButton to={`/discover?trip=${t.id}`} className="shrink-0" icon={<Compass className="h-4 w-4" />}>Find activities</LinkButton>
             <Menu.Root>
               <Menu.Trigger className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 hover:bg-sand-50 active:scale-90 pointer-coarse:h-11 pointer-coarse:w-11" aria-label="More trip actions"><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
               <Menu.Portal>
