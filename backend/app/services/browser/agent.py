@@ -309,8 +309,8 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
         payload=payload, cost=Decimal(str(offer["total"])), currency=offer["currency"], external=True,
         created_by="assistant", expires_at=utcnow() + timedelta(minutes=30),
         consequences=[f"The browser agent types these names on {site.name}: {', '.join(names)}.",
-                      f"Pays €{offer['total']:.2f} on {site.name} — simulated site, no money moves.",
-                      "Reads the confirmation page back and adds the booking to your trip."],
+                      f"Then it stops on the payment page and asks you again before paying €{offer['total']:.2f}.",
+                      "Simulated site: no money moves."],
         cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
     task.action_id = action.id
     task.state = "awaiting_approval"
@@ -320,8 +320,83 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
            dedupe_key=f"approval:{action.id}")
 
 
+def _fill_details(task: BrowserTask, engine: Engine, travellers: list[str], total: float) -> Snapshot:
+    """From the passenger page to the payment page: the approved names only, and the approved price."""
+    snap = engine.goto(task.state_url)
+    summary_total = _total_on_page(engine)
+    if summary_total is not None and abs(summary_total - float(total)) > 0.001:
+        raise _Mismatch(f"Price on the site is now €{summary_total:.2f}, not the approved €{float(total):.2f}")
+    for i, name in enumerate(travellers, start=1):
+        first, _, last = name.rpartition(" ")
+        first, last = (first or name), (last if first else "-")
+        for field_name, value in ((f"first_name_{i}", first), (f"last_name_{i}", last)):
+            el = snap.find(name=field_name)
+            if el is None or not is_personal_field(el):
+                raise RuntimeError(f"Expected traveller field {field_name}")
+            engine.fill(el["id"], value)
+    snap = engine.click(snap.find(tag="button")["id"])
+    if detect_payment_page(snap.elements):
+        raise PolicyViolation("Unexpected card fields on a simulated site", "payment_fields")
+    pay_button = snap.find(name="pay")
+    if pay_button is None or abs(float(pay_button["data"].get("total", "nan")) - float(total)) > 0.001:
+        raise _Mismatch("The payment amount differs from what you approved")
+    return snap
+
+
 def complete_checkout(user: User, action: AgentAction) -> None:
-    """Runs after the user approved the exact checkout payload (called from approvals.execute_action)."""
+    """First approval: enter the travellers' names, then stop on the payment page and ask again before paying."""
+    p = action.payload
+    task = db.session.get(BrowserTask, uuid.UUID(p["task_id"]))
+    site = get_site(p["site"])
+    if task is None or site is None or not site.simulated:
+        action.status, action.error = "failed", "Only Tandem's simulated sites can be checked out by the agent"
+        return
+    from app.services.agent.approvals import _new_action
+
+    engine = HttpEngine(site)
+    loc = locale_of(user)
+    try:
+        task.state = "submitting"
+        _log(task, "resume", T("Approval received; returned to the passenger details page"), url=task.state_url)
+        snap = _fill_details(task, engine, p["travellers"], p["total"])
+        _log(task, "details", T("Entered the approved traveller names ({n})", n=len(p["travellers"])), snap=snap, engine=engine)
+        payment = _new_action(
+            user, trip_id=task.trip_id, conversation_id=task.conversation_id, action_type="browser_payment",
+            provider=site.key, status="awaiting_approval",
+            title=tr("Pay €{total} on {site}", loc, total=f"{float(p['total']):.2f}", site=site.name),
+            description=tr("Final step for {title}. The agent is on the payment page and waits for you.", loc, title=action.title),
+            payload={**p, "stage": "payment", "details_action_id": str(action.id)},
+            cost=action.cost, currency=action.currency, external=True, created_by="assistant",
+            expires_at=utcnow() + timedelta(minutes=30),
+            consequences=[f"Presses Pay for €{float(p['total']):.2f} on {site.name} — simulated site, no money moves.",
+                          "Reads the confirmation page back and adds the booking to your trip."],
+            cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
+        task.action_id = payment.id
+        task.state = "awaiting_approval"
+        task.stop_reason = tr("On the payment page: waiting for your OK to pay", loc)
+        _log(task, "awaiting_payment", T("Stopped before paying €{total}. Approve the payment to finish.", total=f"{float(p['total']):.2f}"))
+        action.status = "completed"
+        action.executed_at = utcnow()
+        action.result = {"stage": "details_entered", "payment_action_id": str(payment.id), "simulated": True,
+                         "browser_task_id": str(task.id)}
+        notify(user.id, "approval_required", T("Approval needed: {title}", title=payment.title), payment.description,
+               link="/assistant", dedupe_key=f"approval:{payment.id}")
+    except _Mismatch as exc:
+        task.state, task.stop_reason = "failed", str(exc)
+        action.status, action.error = "failed", f"{exc}. Nothing was paid; start a new search to get a fresh quote."
+        _log(task, "stopped", str(exc))
+    except PolicyViolation as exc:
+        task.state, task.stop_reason = "blocked", str(exc)
+        action.status, action.error = "requires_manual", str(exc)
+        _log(task, "stopped", str(exc))
+    finally:
+        engine.close()
+    audit(user.id, "browser.details", actor="system", resource_type="browser_task", resource_id=task.id,
+          status=action.status, simulated=True)
+
+
+def complete_payment(user: User, action: AgentAction) -> None:
+    """Second approval: press Pay for exactly the approved amount, read the confirmation back, add it to the trip."""
     p = action.payload
     task = db.session.get(BrowserTask, uuid.UUID(p["task_id"]))
     site = get_site(p["site"])
@@ -330,30 +405,11 @@ def complete_checkout(user: User, action: AgentAction) -> None:
         return
     engine = HttpEngine(site)
     try:
-        task.state = "submitting"
-        snap = engine.goto(task.state_url)
-        _log(task, "resume", T("Approval received; returned to the passenger details page"), snap=snap, engine=engine)
-        summary_total = _total_on_page(engine)
-        if summary_total is not None and abs(summary_total - float(p["total"])) > 0.001:
-            raise _Mismatch(f"Price on the site is now €{summary_total:.2f}, not the approved €{p['total']:.2f}")
-        for i, name in enumerate(p["travellers"], start=1):
-            first, _, last = name.rpartition(" ")
-            first, last = (first or name), (last if first else "-")
-            for field_name, value in ((f"first_name_{i}", first), (f"last_name_{i}", last)):
-                el = snap.find(name=field_name)
-                if el is None or not is_personal_field(el):
-                    raise RuntimeError(f"Expected traveller field {field_name}")
-                engine.fill(el["id"], value)
-        snap = engine.click(snap.find(tag="button")["id"])
-        _log(task, "details", T("Entered the approved traveller names ({n})", n=len(p["travellers"])), snap=snap, engine=engine)
-        pay_button = snap.find(name="pay")
-        if pay_button is None or abs(float(pay_button["data"].get("total", "nan")) - float(p["total"])) > 0.001:
-            raise _Mismatch("The payment amount differs from what you approved")
-        if detect_payment_page(snap.elements):
-            raise PolicyViolation("Unexpected card fields on a simulated site", "payment_fields")
         task.state = "verifying"
-        snap = engine.click(pay_button["id"])
-        _log(task, "pay", T("Confirmed the simulated payment of €{total}", total=f"{p['total']:.2f}"), snap=snap, engine=engine)
+        snap = _fill_details(task, engine, p["travellers"], p["total"])  # the simulated site keeps no session
+        _log(task, "resume", T("Payment approved; back on the payment page"), snap=snap, engine=engine)
+        snap = engine.click(snap.find(name="pay")["id"])
+        _log(task, "pay", T("Confirmed the simulated payment of €{total}", total=f"{float(p['total']):.2f}"), snap=snap, engine=engine)
         record = _read_confirmation(engine)
         _verify_confirmation(record, p)
         reservation = _import_reservation(user, task, site, record)
@@ -367,7 +423,7 @@ def complete_checkout(user: User, action: AgentAction) -> None:
                          "verified_at": utcnow().isoformat(), "browser_task_id": str(task.id)}
         notify(user.id, "booking_result", T("Booked (simulated): {title}", title=action.title),
                T("Confirmation {ref} read back from {site}.", ref=record["ref"], site=site.name),
-               link=f"/trips/{task.trip_id}" if task.trip_id else "/explore?tab=tickets", severity="success",
+               link=f"/trips/{task.trip_id}" if task.trip_id else "/assistant", severity="success",
                dedupe_key=f"browser_ok:{task.id}")
     except _Mismatch as exc:
         task.state, task.stop_reason = "failed", str(exc)

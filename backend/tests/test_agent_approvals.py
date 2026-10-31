@@ -477,7 +477,7 @@ def test_agent_checks_weather_then_adds_what_was_asked(app, scripted, monkeypatc
     """The AI path: live context tools run inside the one agent, and a requested event lands in the plan."""
     from app.services.context import weather
 
-    app.config["WEATHER_ENABLED"] = True
+    monkeypatch.setitem(app.config, "WEATHER_ENABLED", True)
     monkeypatch.setattr(weather, "forecast", lambda *a, **k: {"available": True, "source": "Open-Meteo", "days": [
         {"date": a[3].isoformat(), "condition": "rain", "temp_max": 15, "temp_min": 9, "precip_probability": 90,
          "precip_mm": 10, "wind_kmh": 10, "wet_hours": ["15:00"], "outdoor_ok": False}]})

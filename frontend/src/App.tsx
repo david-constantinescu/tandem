@@ -24,9 +24,9 @@ function Moved({ to, extra }: { to: string; extra?: Record<string, string> }) {
   return <Navigate to={`${to}${q ? `?${q}` : ""}`} replace />;
 }
 
-/** Inbox, documents and settings are lists that can grow without limit: they scroll inside the fixed screen, not the page. */
+/** Pages that are plain reading (inbox, documents, settings) get comfortable bottom room; the shell does the scrolling. */
 function Pane({ children }: { children: ReactNode }) {
-  return <div className="h-full overflow-y-auto overscroll-contain pb-4">{children}</div>;
+  return <div className="pb-10">{children}</div>;
 }
 
 function Protected() {

@@ -92,11 +92,11 @@ export default function TripDetailPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2.5">
+    <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-3 pb-8">
       <header className="shrink-0">
         <div className="flex items-center gap-1">
           <Link to="/trips" aria-label={t("trip.backToTrips")} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lagoon-600 active:bg-sand-100"><ChevronLeft className="h-6 w-6" /></Link>
-          <h1 className="display min-w-0 flex-1 truncate text-[24px] leading-tight tracking-[-0.01em] sm:text-[30px]">{tr.name}</h1>
+          <h1 className="display line-clamp-2 min-w-0 flex-1 text-[23px] leading-[1.12] tracking-[-0.01em] sm:text-[30px]">{tr.name}</h1>
           <button onClick={askAssistant} aria-label={t("trip.ask")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lagoon-900 text-white active:scale-90"><MessageCircle className="h-[18px] w-[18px]" /></button>
           <Menu.Root>
             <Menu.Trigger className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 active:scale-90" aria-label={t("trip.more")}><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
@@ -116,7 +116,7 @@ export default function TripDetailPage() {
             </Menu.Portal>
           </Menu.Root>
         </div>
-        <p className="truncate pl-0.5 text-[13.5px] text-ink-500">
+        <p className="mt-1 pl-0.5 text-[13.5px] leading-snug text-ink-500">
           {fmtRange(tr.start_date, tr.end_date)} · {tr.destinations.map((d) => d.name).join(" → ") || tr.primary_destination || t("trip.noDestination")}
           {tr.travellers.length > 0 && <span className="text-ink-400"> · <Users className="-mt-0.5 inline h-3 w-3" /> {tr.travellers.map((x) => x.full_name.split(" ")[0]).join(", ")}</span>}
         </p>
@@ -131,7 +131,7 @@ export default function TripDetailPage() {
         ]} />
 
       {tab === "plan" && (
-        <section className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <section className="flex flex-col gap-2.5">
           {days.length > 0 && (
             <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label={t("trip.days")}>
               {days.map((d) => {
@@ -159,11 +159,11 @@ export default function TripDetailPage() {
             </button>
             <button onClick={() => setEditing("new")} aria-label={t("trip.addEvent")} className="flex h-8 w-8 items-center justify-center rounded-full bg-sand-100 text-ink-700 active:scale-90"><Plus className="h-4 w-4" /></button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl"
+          <div className="rounded-2xl"
             onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => { if (touch.current !== null) { const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); touch.current = null; } }}>
             {itinerary.isLoading ? <PageLoader /> : dayEvents.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-sand-300 text-center">
+              <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-sand-300 py-8 text-center">
                 <p className="px-6 text-[14px] text-ink-500">{events.length === 0 ? t("trip.emptyPlanBody") : t("trip.emptyDay")}</p>
                 <Button size="sm" variant="secondary" onClick={() => (events.length === 0 ? openAdd() : setEditing("new"))} icon={<Plus className="h-3.5 w-3.5" />}>{events.length === 0 ? t("trip.addBooking") : t("trip.addEvent")}</Button>
               </div>
@@ -177,13 +177,13 @@ export default function TripDetailPage() {
       )}
 
       {tab === "bookings" && (
-        <section className="flex min-h-0 flex-1 flex-col gap-2">
+        <section className="flex flex-col gap-2">
           <div className="flex shrink-0 justify-end gap-2">
             <Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button>
             <Button size="sm" variant="secondary" onClick={() => setEditingRes("new")} icon={<Plus className="h-3.5 w-3.5" />}>{t("trip.addManually")}</Button>
           </div>
           {(reservations.data?.length ?? 0) === 0 ? <EmptyState title={t("trip.noReservations")} body={t("trip.noReservationsBody")} /> : (
-            <ul className="card min-h-0 flex-1 divide-y divide-sand-100 overflow-y-auto overscroll-contain">
+            <ul className="card divide-y divide-sand-100">
               {reservations.data!.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => setEditingRes(r)} className="flex min-h-[58px] w-full items-center gap-3 px-3.5 py-2 text-left active:bg-sand-50">
@@ -201,13 +201,13 @@ export default function TripDetailPage() {
         </section>
       )}
 
-      {tab === "map" && <section className="min-h-0 flex-1 overflow-hidden rounded-2xl"><TripMap events={events} /></section>}
+      {tab === "map" && <section className="h-[60dvh] min-h-[320px] overflow-hidden rounded-2xl"><TripMap events={events} /></section>}
 
       {tab === "docs" && (
-        <section className="flex min-h-0 flex-1 flex-col gap-2">
+        <section className="flex flex-col gap-2">
           <div className="flex shrink-0 justify-end"><Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button></div>
           {(documents.data?.length ?? 0) === 0 ? <EmptyState icon={<FileText className="h-7 w-7" />} title={t("trip.noDocuments")} body={t("trip.noDocumentsBody")} /> : (
-            <ul className="card min-h-0 flex-1 divide-y divide-sand-100 overflow-y-auto overscroll-contain">
+            <ul className="card divide-y divide-sand-100">
               {documents.data!.map((d) => (
                 <li key={d.id}>
                   <Link to={`/inbox/${d.id}`} className="flex min-h-[54px] items-center justify-between gap-3 px-3.5 py-2.5 active:bg-sand-50">

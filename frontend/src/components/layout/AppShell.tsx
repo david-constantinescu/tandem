@@ -1,19 +1,18 @@
 /**
- * Navigation. Home (what's next), Trips (each trip is the hub for everything about it), Assistant (the one place to
- * explore, plan and ask: it can do everything the rest of the app can), Inbox (documents and approvals, with a badge
- * when something waits for you) and Add, in the middle, for anything new.
- *
- * The shell is exactly the height of the screen and never scrolls; each page fits inside it, and only lists that can
- * grow without limit (the chat, the inbox) scroll inside their own box.
+ * Navigation. The assistant is the centre of the app: the middle tab, and where everything added ends up. Around it:
+ * Home (what's next), Trips (each trip's plan, bookings, map and documents) and Inbox (things that wait for you).
+ * A new trip starts from the top bar. Pages scroll normally; the chat keeps its bar pinned at the bottom.
  */
 import * as Popover from "@radix-ui/react-popover";
 import { clsx } from "clsx";
-import { Bell, CheckCheck, Home, Inbox, LogOut, Map, MessageCircle, Plus, Settings, Sparkles } from "lucide-react";
+import { Bell, CheckCheck, Home, Inbox, LogOut, Map, MessageCircle, Plus, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { AddProvider, useAdd } from "@/components/AddSheet";
+import { AddProvider } from "@/components/AddSheet";
+import { NewTripDialog } from "@/components/trips/NewTripDialog";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { spring } from "@/components/motion";
 import { OfflineBanner } from "@/components/pwa";
@@ -23,7 +22,7 @@ import { relativeTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { keys, useApprovals, useInbox, useNotifications } from "@/lib/queries";
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({ className, compact }: { className?: string; compact?: boolean }) {
   const { t } = useT();
   return (
     <Link to="/" className={clsx("flex items-center gap-2.5", className)} aria-label={t("nav.homeLabel")}>
@@ -32,7 +31,7 @@ export function Logo({ className }: { className?: string }) {
         <circle cx="25" cy="32" r="11" fill="none" stroke="#f3e9dc" strokeWidth="5" />
         <circle cx="39" cy="32" r="11" fill="none" stroke="#e08a5b" strokeWidth="5" />
       </svg>
-      <span className="display text-[21px] font-semibold tracking-tight text-ink-900">Tandem</span>
+      <span className={clsx("display text-[21px] font-semibold tracking-tight text-ink-900", compact && "hidden min-[400px]:inline")}>Tandem</span>
     </Link>
   );
 }
@@ -131,17 +130,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   return <AddProvider><Shell>{children}</Shell></AddProvider>;
 }
 
+/** Once per visit, let Tandem look for news about coming trips (it writes in the chat if something needs you). */
+function useCheckIn(enabled: boolean) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    let done = false;
+    try { done = sessionStorage.getItem("tandem.checkin") === "1"; } catch { /* private mode */ }
+    if (done) return;
+    api.post<{ posted: number }>("/assistant/check-in").then((r) => {
+      try { sessionStorage.setItem("tandem.checkin", "1"); } catch { /* ignore */ }
+      if (r.posted) {
+        qc.invalidateQueries({ queryKey: keys.conversations });
+        qc.invalidateQueries({ queryKey: keys.notifications });
+      }
+    }).catch(() => {});
+  }, [enabled, qc]);
+}
+
 function Shell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const { openAdd } = useAdd();
   const { t } = useT();
   const navigate = useNavigate();
   const waiting = useWaitingCount();
+  const [newTrip, setNewTrip] = useState(false);
+  useCheckIn(!!user);
   const tabs = [
     { to: "/", icon: <Home />, label: t("nav.home"), end: true },
     { to: "/trips", icon: <Map />, label: t("nav.trips") },
-    null, // the Add button
-    { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant") },
+    { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant"), center: true },
     { to: "/inbox", icon: <Inbox />, label: t("nav.inbox"), count: waiting },
   ];
 
@@ -149,13 +166,13 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="flex h-dvh flex-col overflow-hidden bg-paper lg:flex-row">
       <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sand-200/70 bg-sand-50/80 px-4 py-6 lg:flex">
         <Logo className="px-2" />
-        <button onClick={openAdd} className="mt-7 flex h-11 items-center justify-center gap-2 rounded-xl bg-lagoon-900 text-[14px] font-medium text-white shadow-sm transition hover:bg-ink-800 active:scale-[0.98]">
-          <Plus className="h-4 w-4" /> {t("nav.add")}
+        <button onClick={() => setNewTrip(true)} className="mt-7 flex h-11 items-center justify-center gap-2 rounded-xl bg-lagoon-900 text-[14px] font-medium text-white shadow-sm transition hover:bg-ink-800 active:scale-[0.98]">
+          <Plus className="h-4 w-4" /> {t("trips.new")}
         </button>
         <nav className="mt-6 flex flex-col gap-1" aria-label={t("nav.main")}>
+          <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} />
           <NavItem to="/" end icon={<Home />} label={t("nav.home")} />
           <NavItem to="/trips" icon={<Map />} label={t("nav.trips")} />
-          <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} />
           <NavItem to="/inbox" icon={<Inbox />} label={t("nav.inbox")} count={waiting} />
         </nav>
         <div className="mt-auto flex flex-col gap-1">
@@ -180,39 +197,34 @@ function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="safe-top z-30 shrink-0 bg-paper">
-          {user?.is_demo && (
-            <div className="flex items-center justify-center gap-1.5 bg-lagoon-900 px-4 py-1 text-center text-[11.5px] text-lagoon-50">
-              <Sparkles className="h-3 w-3 shrink-0 text-apricot" />
-              <span className="sm:hidden">{t("demo.bannerShort")}</span>
-              <span className="hidden sm:inline">{t("demo.banner")}</span>
-            </div>
-          )}
+        <header className="safe-top z-30 shrink-0 border-b border-sand-200/60 bg-paper/90 backdrop-blur-xl lg:border-none lg:bg-transparent">
           <OfflineBanner />
-          <div className="flex h-[48px] items-center justify-between px-3 lg:h-14 lg:justify-end lg:px-8">
-            <Logo className="pl-1 lg:hidden" />
-            <div className="flex items-center gap-0.5">
-              <LanguageSwitch size="sm" className="mr-1 lg:hidden" />
-              <Notifications />
-              <HeaderLink to="/settings" label={t("nav.settings")}><Settings /></HeaderLink>
-            </div>
+          <div className="flex h-[52px] items-center gap-1 px-3 lg:h-14 lg:justify-end lg:px-8">
+            <Logo compact className="mr-auto pl-1 lg:hidden" />
+            <button onClick={() => setNewTrip(true)} aria-label={t("trips.new")}
+              className="flex h-9 items-center gap-1.5 rounded-full bg-ink-900 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-sm transition active:scale-95 lg:hidden">
+              <Plus className="h-4 w-4" strokeWidth={2.5} /><span>{t("nav.trip")}</span>
+            </button>
+            <Notifications />
+            <HeaderLink to="/settings" label={t("nav.settings")}><Settings /></HeaderLink>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-hidden">
-          <div className="mx-auto h-full w-full max-w-[1100px] px-4 pb-2 pt-1 sm:px-6 lg:px-10 lg:pb-6">{children}</div>
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="mx-auto h-full w-full max-w-[1100px] px-4 pt-3 sm:px-6 lg:px-10">{children}</div>
         </main>
-        <nav aria-label={t("nav.main")} className="shrink-0 border-t border-sand-200/70 bg-white/90 px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 backdrop-blur lg:hidden">
-          <div className="mx-auto grid max-w-md grid-cols-5 items-center">
-            {tabs.map((item) => item === null ? (
-              <motion.button key="add" onClick={openAdd} whileTap={{ scale: 0.9 }} aria-label={t("nav.addLabel")}
-                className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-clay-500 text-white shadow-[0_6px_16px_-4px_rgba(200,98,58,0.55)]">
-                <Plus className="h-5 w-5" strokeWidth={2.4} />
-              </motion.button>
-            ) : (
-              <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-11 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold">
-                {({ isActive }) => (
+        <nav aria-label={t("nav.main")} className="shrink-0 border-t border-sand-200/60 bg-white/85 px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1 backdrop-blur-xl lg:hidden">
+          <div className="mx-auto grid max-w-md grid-cols-4 items-end">
+            {tabs.map((item) => (
+              <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-[50px] flex-col items-center justify-end gap-0.5 pb-1 text-[10.5px] font-semibold">
+                {({ isActive }) => item.center ? (
+                  <motion.span whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-0.5">
+                    <span className={clsx("-mt-5 flex h-12 w-12 items-center justify-center rounded-full shadow-[0_8px_20px_-6px_rgba(200,98,58,0.6)] ring-4 ring-paper transition-colors [&>svg]:h-[22px] [&>svg]:w-[22px]",
+                      isActive ? "bg-clay-600 text-white" : "bg-clay-500 text-white")}>{item.icon}</span>
+                    <span className={isActive ? "text-clay-600" : "text-ink-500"}>{item.label}</span>
+                  </motion.span>
+                ) : (
                   <motion.span whileTap={{ scale: 0.86 }} className={clsx("relative flex flex-col items-center gap-0.5", isActive ? "text-clay-600" : "text-ink-400")}>
-                    <span className="relative [&>svg]:h-5 [&>svg]:w-5">
+                    <span className="relative [&>svg]:h-[22px] [&>svg]:w-[22px]">
                       {item.icon}
                       {!!item.count && <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-clay-500 px-1 text-[10px] font-bold leading-none text-white">{item.count > 9 ? "9+" : item.count}</span>}
                     </span>
@@ -224,6 +236,7 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </nav>
       </div>
+      <NewTripDialog open={newTrip} onOpenChange={setNewTrip} />
     </div>
   );
 }

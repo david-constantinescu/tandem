@@ -437,7 +437,8 @@ def list_booking_websites(ctx: ToolContext, args: WebsitesArgs):
 
 
 class WebsiteTaskArgs(BaseModel):
-    site: str
+    site: str = Field(description="Site key or name, e.g. 'wizzair', 'trenitalia', or a simulated practice site: "
+                                  "'demo_air' (airline), 'demo_rail', 'demo_coach', 'demo_museum'")
     origin: str | None = None
     destination: str | None = None
     venue: str | None = Field(default=None, description="Museum/gallery name for museum sites")
@@ -470,6 +471,8 @@ def start_website_task(ctx: ToolContext, args: WebsiteTaskArgs):
         ctx.action_ids.append(str(task.action_id))
     d = task_dict(task)
     ctx.references.append({"type": "browser_task", "id": d["id"], "label": f"{d['site_name']} task"})
+    if d["handoff_url"] and d["state"] in ("requires_manual", "blocked"):
+        ctx.references.append({"type": "link", "id": d["handoff_url"], "label": d["site_name"], "url": d["handoff_url"]})
     return {"task_id": d["id"], "state": d["state"], "selected": d["result"].get("selected"),
             "offers": d["result"].get("offers", [])[:5], "handoff_url": d["handoff_url"], "note": d["stop_reason"]}
 

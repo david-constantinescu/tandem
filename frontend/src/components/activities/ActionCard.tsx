@@ -1,8 +1,9 @@
 import { clsx } from "clsx";
 import { AlertTriangle, CheckCircle2, Clock, ExternalLink, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
-import { errorMessage } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { fmtDate, money } from "@/lib/format";
 import { intlLocale, useT } from "@/lib/i18n";
 import { useApprove, useReject } from "@/lib/queries";
@@ -16,13 +17,16 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
   const { t } = useT();
   const p = action.payload;
   const awaiting = action.status === "awaiting_approval";
-  const isWebsite = action.action_type === "browser_checkout";
+  const isWebsite = action.action_type === "browser_checkout" || action.action_type === "browser_payment";
+  const isPayment = action.action_type === "browser_payment";
+  const nextId: string | undefined = action.status === "completed" ? action.result?.payment_action_id : undefined;
   const isBooking = action.action_type === "book_activity" || isWebsite;
 
   const doApprove = async () => {
     try {
       const res = await approve.mutateAsync(action);
-      if (res.status === "completed") toast(res.result?.simulated ? t("action.simDone") : t("action.done"), "success");
+      if (res.status === "completed" && res.result?.stage === "details_entered") toast(t("action.detailsDone"), "info");
+      else if (res.status === "completed") toast(res.result?.simulated ? t("action.simDone") : t("action.done"), "success");
       else if (res.status === "awaiting_approval") toast(t("action.priceChanged"), "info");
       else if (res.status === "in_progress") toast(t("action.submitting"), "info");
       else toast(res.error ?? t("action.status", { status: res.status }), "error");
@@ -71,6 +75,9 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
       {action.result?.requote && awaiting && (
         <p className="mt-3 flex items-center gap-2 rounded-lg bg-amber-soft px-3 py-2 text-[13px] text-amber-ink"><AlertTriangle className="h-4 w-4" /> {action.result.requote}. {t("action.requote")}</p>
       )}
+      {nextId && (
+        <p className="mt-3 rounded-lg bg-lagoon-50 px-3 py-2 text-[13px] text-lagoon-700">{t("action.detailsEntered")}</p>
+      )}
       {action.status === "completed" && action.result?.provider_booking_id && (
         <p className="mt-3 rounded-lg bg-lagoon-50 px-3 py-2 text-[13px] text-lagoon-700">
           {t("action.confirmation")} <span className="font-mono font-medium">{action.result.provider_booking_id}</span>, {isWebsite ? t("action.readBack") : t("action.verified")}
@@ -89,12 +96,22 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
       {awaiting && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button onClick={doApprove} loading={approve.isPending} variant={isBooking ? "accent" : "primary"}>
-            {isBooking ? t("action.approveBook", { price: money(action.cost, action.currency) }) : t("action.apply")}
+            {isPayment ? t("action.approvePay", { price: money(action.cost, action.currency) })
+              : isWebsite ? t("action.approveDetails")
+                : isBooking ? t("action.approveBook", { price: money(action.cost, action.currency) }) : t("action.apply")}
           </Button>
           <Button variant="ghost" onClick={() => reject.mutate(action)} loading={reject.isPending}>{t("action.decline")}</Button>
           {action.expires_at && <span className="ml-auto flex items-center gap-1 text-[12px] text-ink-400"><Clock className="h-3.5 w-3.5" /> {t("action.validUntil", { time: new Date(action.expires_at).toLocaleTimeString(intlLocale(), { hour: "2-digit", minute: "2-digit" }) })}</span>}
         </div>
       )}
+      {nextId && <NextStep id={nextId} />}
     </article>
   );
+}
+
+/** The step a website purchase moves on to after an approval (details → payment), shown right under it. */
+function NextStep({ id }: { id: string }) {
+  const next = useQuery({ queryKey: ["approvals", "one", id], queryFn: () => api.get<Action>(`/approvals/${id}`) });
+  if (!next.data) return null;
+  return <div className="mt-3"><ActionCard action={next.data} /></div>;
 }

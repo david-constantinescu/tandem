@@ -131,8 +131,8 @@ def action_dict(a: AgentAction) -> dict:
 
 
 def conversation_dict(c: Conversation) -> dict:
-    return {"id": str(c.id), "trip_id": _id(c.trip_id), "title": c.title, "created_at": iso(c.created_at),
-            "updated_at": iso(c.updated_at)}
+    return {"id": str(c.id), "trip_id": _id(c.trip_id), "title": c.title, "kind": c.kind or "chat",
+            "created_at": iso(c.created_at), "updated_at": iso(c.updated_at)}
 
 
 def message_dict(m: Message) -> dict:

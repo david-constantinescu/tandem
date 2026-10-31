@@ -78,12 +78,20 @@ def test_full_simulated_purchase_by_the_agent(api):
     assert action["payload"]["travellers"] == ["Andrei Popescu", "Ioana Marinescu"]
     # Nothing typed into the site yet: the approval comes first.
     assert not any(s["action"] == "details" for s in task["log"])
-    done = api.post(f"/api/v1/approvals/{action['id']}/approve", json={"payload_hash": action["payload_hash"]}).get_json()["data"]
+    first = api.post(f"/api/v1/approvals/{action['id']}/approve", json={"payload_hash": action["payload_hash"]}).get_json()["data"]
+    assert first["status"] == "completed" and first["result"]["stage"] == "details_entered", first
+    # Names are in, but it stopped on the payment page and asks again before paying.
+    task = api.get(f"/api/v1/browser/tasks/{task['id']}").get_json()["data"]
+    assert task["state"] == "awaiting_approval" and [s["action"] for s in task["log"]][-2:] == ["details", "awaiting_payment"]
+    assert not any(s["action"] == "pay" for s in task["log"])
+    pay = api.get(f"/api/v1/approvals/{task['action_id']}").get_json()["data"]
+    assert pay["action_type"] == "browser_payment" and float(pay["cost"]) == float(action["cost"])
+    done = api.post(f"/api/v1/approvals/{pay['id']}/approve", json={"payload_hash": pay["payload_hash"]}).get_json()["data"]
     assert done["status"] == "completed", done
     assert done["result"]["provider_booking_id"].startswith("FD-")
     task = api.get(f"/api/v1/browser/tasks/{task['id']}").get_json()["data"]
     assert task["state"] == "completed"
-    assert [s["action"] for s in task["log"]][-4:] == ["resume", "details", "pay", "done"]
+    assert [s["action"] for s in task["log"]][-3:] == ["resume", "pay", "done"]
     res = api.get(f"/api/v1/trips/{trip['id']}/reservations").get_json()["data"]
     booked = next(x for x in res if x["booking_reference"] == done["result"]["provider_booking_id"])
     assert booked["type"] == "train" and booked["verification"] == "verified" and booked["start_tz"] == "Europe/Rome"
@@ -178,3 +186,39 @@ def test_country_domain_matching_is_strict():
     assert not host_allowed(af, "https://airfrance.evil.com/")
     assert not host_allowed(af, "https://notairfrance.ro/")
     assert host_allowed(get_site("megabus"), "https://www.megabus.co.uk/")
+
+
+def test_buying_a_wizz_air_flight_hands_off_and_the_practice_airline_goes_to_payment(api):
+    api.demo()
+    trip = _trip(api)
+    day = trip["start_date"]
+    real = api.post("/api/v1/browser/tasks", json={"site": "Wizz Air", "origin": "Craiova", "destination": "Roma",
+                                                   "date": day, "adults": 2, "trip_id": trip["id"]}).get_json()["data"]
+    assert real["state"] == "requires_manual"
+    assert real["handoff_url"] == f"https://wizzair.com/en-gb/booking/select-flight/CRA/FCO/{day}/null/2/0/0/null"
+    assert not real.get("action_id")  # nothing to approve: a real site is never driven by the agent
+
+    task = api.post("/api/v1/browser/tasks", json={"site": "demo_air", "origin": "Craiova", "destination": "Roma",
+                                                   "date": day, "adults": 2, "trip_id": trip["id"]}).get_json()["data"]
+    assert task["state"] == "awaiting_approval", task
+    details = api.get(f"/api/v1/approvals/{task['action_id']}").get_json()["data"]
+    assert details["action_type"] == "browser_checkout"
+    first = api.post(f"/api/v1/approvals/{details['id']}/approve", json={"payload_hash": details["payload_hash"]}).get_json()["data"]
+    pay = api.get(f"/api/v1/approvals/{first['result']['payment_action_id']}").get_json()["data"]
+    assert pay["action_type"] == "browser_payment" and pay["status"] == "awaiting_approval"
+    # Declining the payment leaves nothing booked.
+    rejected = api.post(f"/api/v1/approvals/{pay['id']}/reject", json={}).get_json()["data"]
+    assert rejected["status"] in ("rejected", "declined", "cancelled")
+    bt = api.get(f"/api/v1/browser/tasks/{task['id']}").get_json()["data"]
+    assert not any(s["action"] == "pay" for s in bt["log"])
+
+    again = api.post("/api/v1/browser/tasks", json={"site": "demo_air", "origin": "Craiova", "destination": "Roma",
+                                                    "date": day, "adults": 2, "trip_id": trip["id"]}).get_json()["data"]
+    d = api.get(f"/api/v1/approvals/{again['action_id']}").get_json()["data"]
+    first = api.post(f"/api/v1/approvals/{d['id']}/approve", json={"payload_hash": d["payload_hash"]}).get_json()["data"]
+    pay = api.get(f"/api/v1/approvals/{first['result']['payment_action_id']}").get_json()["data"]
+    done = api.post(f"/api/v1/approvals/{pay['id']}/approve", json={"payload_hash": pay["payload_hash"]}).get_json()["data"]
+    assert done["status"] == "completed", done
+    res = api.get(f"/api/v1/trips/{trip['id']}/reservations").get_json()["data"]
+    booked = next(x for x in res if x["booking_reference"] == done["result"]["provider_booking_id"])
+    assert booked["type"] == "flight" and booked["travellers"] == ["Andrei Popescu", "Ioana Marinescu"]

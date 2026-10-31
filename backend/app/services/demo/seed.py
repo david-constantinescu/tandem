@@ -67,6 +67,9 @@ def create_demo_workspace(locale: str = "ro") -> User:
         demo_tenant_id=tenant.id, ai_mode=AI_MODE_FULL if cfg["DEMO_ALLOW_EXTERNAL_AI"] else AI_MODE_OFF, locale=locale)
     _profile(user)
     seed_rome_trip(user)
+    from app.services.agent import proactive
+
+    proactive.check_user(user, force=True)  # Tandem writes first: the demo opens with its own heads-up
     return user
 
 

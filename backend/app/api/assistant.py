@@ -23,6 +23,10 @@ class MessageBody(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
 
 
+class AttachmentBody(BaseModel):
+    document_ids: list[str] = Field(min_length=1, max_length=10)
+
+
 def _messages_payload(c: Conversation) -> dict:
     msgs = db.session.execute(db.select(Message).where(Message.conversation_id == c.id)
                               .order_by(Message.created_at)).scalars().all()
@@ -93,3 +97,37 @@ def post_message(conv_id):
     payload = _messages_payload(c)
     payload["reply"] = message_dict(reply)
     return ok(payload, 201)
+
+
+@bp.post("/conversations/<conv_id>/attachments")
+@login_required
+@doc("Put uploaded documents (files, photos, pasted emails, links) into the chat; Tandem says what it read",
+     body=AttachmentBody, tag="Assistant")
+def attach(conv_id):
+    from app.models import Document
+    from app.services.agent.attachments import describe
+
+    c = get_owned(Conversation, conv_id, "conversation")
+    u = current_user()
+    docs = []
+    for raw in parse_body(AttachmentBody).document_ids:
+        d = db.session.get(Document, parse_uuid(raw, "document"))
+        if d is None or d.user_id != u.id:
+            raise NotFound("Document not found")
+        docs.append(d)
+    describe(u, c, docs)
+    db.session.commit()
+    return ok(_messages_payload(c), 201)
+
+
+@bp.post("/check-in")
+@login_required
+@limiter.limit("30 per hour")
+@doc("Let Tandem look for news about your coming trips and write to you (at most every few hours)", tag="Assistant")
+def check_in():
+    from app.services.agent import proactive
+
+    u = current_user()
+    posted = proactive.check_user(u)
+    conv = db.session.execute(db.select(Conversation).where(Conversation.user_id == u.id, Conversation.kind == "updates")).scalars().first()
+    return ok({"posted": posted, "updates_conversation_id": str(conv.id) if conv else None})

@@ -177,9 +177,24 @@ def sync_candidates(user_id: uuid.UUID, *, full: bool = False) -> int:
     conn.last_sync_at = utcnow()
     db.session.commit()
     if added:
-        notify(user_id, "reservation_detected", T("Possible travel emails found in Gmail: {n}", n=added),
-               T("Choose which ones to import."), link="/inbox?tab=email", dedupe_key=f"gmail_sync:{conn.last_sync_at.isoformat()}")
-        db.session.commit()
+        # No separate review step: travel emails go straight through the reading pipeline, and the assistant says
+        # what it found in the chat (anything uncertain still waits for the user's check there).
+        pending = db.session.execute(db.select(EmailCandidate).where(
+            EmailCandidate.user_id == user_id, EmailCandidate.status == "candidate")).scalars().all()
+        imported = import_messages(user_id, [str(c.id) for c in pending])
+        if imported:
+            from app.services.agent import feed
+
+            user = db.session.get(User, user_id)
+            loc = locale_of(user)
+            docs = [c for c in pending if c.document_id]
+            lines = "\n".join(f"- {c.subject or c.sender}" for c in docs[:8])
+            feed.post(user, f"gmail:{conn.last_sync_at.isoformat()}",
+                      tr("I brought in {n} travel emails from Gmail:", loc, n=imported) + "\n" + lines + "\n\n"
+                      + tr("Bookings I could read are in your trips; anything I wasn't sure about is waiting for you in the Inbox.", loc),
+                      references=[{"type": "document", "id": str(c.document_id), "label": c.subject[:60]} for c in docs[:8]],
+                      notify_title=T("Imported from Gmail: {n}", n=imported))
+            db.session.commit()
     return added
 
 

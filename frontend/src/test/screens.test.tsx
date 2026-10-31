@@ -48,3 +48,18 @@ describe("translations", () => {
     expect(off).toEqual([]);
   });
 });
+
+describe("the chat bar", () => {
+  it("sends with Enter, not with an empty box, and clears nothing itself", async () => {
+    const { Composer } = await import("@/components/assistant/Composer");
+    const onSend = vi.fn();
+    const { rerender } = wrap(<Composer value="" onChange={() => {}} onSend={onSend} />);
+    const send = screen.getByRole("button", { name: /send|trimite/i }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    rerender(<I18nProvider><Composer value="Cum e vremea?" onChange={() => {}} onSend={onSend} /></I18nProvider>);
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+    expect(onSend).toHaveBeenCalledWith("Cum e vremea?");
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", shiftKey: true });
+    expect(onSend).toHaveBeenCalledTimes(1); // Shift+Enter is a new line
+  });
+});

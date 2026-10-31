@@ -1,13 +1,14 @@
 import { clsx } from "clsx";
-import { ArrowUp, Bookmark, CircleAlert, ExternalLink, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
+import { Bookmark, CircleAlert, FileText, ExternalLink, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, type KeyboardEvent, type SubmitEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionCard } from "@/components/activities/ActionCard";
 import { ActivityCard } from "@/components/activities/ActivityCard";
 import { Choices } from "@/components/assistant/Choices";
+import { Composer } from "@/components/assistant/Composer";
 import { spring } from "@/components/motion";
 import { Badge, Button, PageLoader } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
@@ -92,7 +93,16 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
   const asked = useRef(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [conv.data?.messages.length, sending]);
+  const firstScroll = useRef(true);
+  const loaded = !!conv.data;
+  useEffect(() => {
+    const el = bottom.current;
+    if (!el || !loaded) return;
+    // Open at the newest message; after that, glide to each new one.
+    const behavior = firstScroll.current ? "auto" : "smooth";
+    firstScroll.current = false;
+    requestAnimationFrame(() => el.scrollIntoView({ behavior, block: "end" }));
+  }, [loaded, conv.data?.messages.length, sending]);
 
   const send = async (content: string) => {
     if (!content.trim() || sending) return;
@@ -111,7 +121,6 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
       setSending(null);
     }
   };
-  const submit = (e: SubmitEvent<HTMLFormElement>) => { e.preventDefault(); send(text); };
   // A question typed on Home arrives with the navigation: send it once, then drop it so a reload doesn't resend.
   useEffect(() => {
     const prompt = (location.state as { prompt?: string } | null)?.prompt;
@@ -121,11 +130,11 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
       send(prompt);
     }
   }, [conv.data]); // eslint-disable-line react-hooks/exhaustive-deps
-  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } };
 
   if (conv.isLoading) return <PageLoader />;
   if (!conv.data) return null;
   const { conversation, messages, actions } = conv.data;
+  const lastUser = messages.map((m) => m.role).lastIndexOf("user");
   const trip = trips.data?.find((t) => t.id === conversation.trip_id);
 
   return (
@@ -165,8 +174,9 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
         <AnimatePresence initial={false}>
           {messages.map((m, i) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
+              {/* A question stays answerable until the user has said something after it. */}
               <Bubble m={m} actions={actions} tripId={conversation.trip_id ?? undefined}
-                onChoose={i === messages.length - 1 && !sending ? send : undefined} />
+                onChoose={i > lastUser && !sending ? send : undefined} />
             </motion.div>
           ))}
           {sending && (
@@ -181,14 +191,9 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
         <div ref={bottom} />
       </div>
 
-      <form onSubmit={submit} className="shrink-0 pt-2 lg:border-t lg:border-sand-100 lg:p-4">
-        <div className="flex items-end gap-2 rounded-[24px] border border-sand-200 bg-white/95 py-1.5 pl-4 pr-1.5 shadow-[var(--shadow-float)] backdrop-blur focus-within:border-lagoon-500 lg:bg-paper lg:shadow-none lg:focus-within:ring-4 lg:focus-within:ring-lagoon-100">
-          <textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder={t("assistant.placeholder")} aria-label={t("assistant.message")} enterKeyHint="send"
-            className="max-h-40 min-h-[40px] flex-1 resize-none bg-transparent py-2 text-[16px] outline-none placeholder:text-ink-300 lg:text-[15px]" />
-          <Button type="submit" size="sm" disabled={!text.trim()} loading={!!sending} aria-label={t("assistant.send")} className="!h-10 !w-10 shrink-0 !rounded-full !p-0"><ArrowUp className="h-[18px] w-[18px]" /></Button>
-        </div>
-        <p className="mt-2 hidden px-1 text-[11.5px] text-ink-400 lg:block">{t("assistant.footer")}</p>
-      </form>
+      <div className="shrink-0 pb-2 pt-2 lg:border-t lg:border-sand-100 lg:p-4">
+        <Composer value={text} onChange={setText} onSend={send} busy={!!sending} />
+      </div>
       <SavedSheet open={saved} onOpenChange={setSaved} />
     </section>
   );
@@ -220,25 +225,38 @@ function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: Convers
   const { t } = useT();
   const tool = (name: string) => { const k = `tool.${name}` as Key; const x = t(k); return x === k ? name : x; };
   if (m.role === "user") {
-    return <div className="flex justify-end"><div className="max-w-[85%] whitespace-pre-wrap rounded-[20px] rounded-br-md bg-lagoon-900 px-4 py-2.5 text-[15px] text-white">{m.content}</div></div>;
+    const files = m.references.filter((r) => r.type === "document");
+    if (files.length) {
+      return (
+        <div className="flex flex-col items-end gap-1.5">
+          {files.map((f) => (
+            <Link key={f.id} to={`/inbox/${f.id}`} className="flex max-w-[85%] items-center gap-2.5 rounded-[18px] rounded-br-md bg-lagoon-900 px-3.5 py-2.5 text-white active:opacity-90">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15"><FileText className="h-[18px] w-[18px]" /></span>
+              <span className="min-w-0 truncate text-[14.5px] font-medium">{f.label}</span>
+            </Link>
+          ))}
+        </div>
+      );
+    }
+    return <div className="flex justify-end"><div className="max-w-[85%] whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-lagoon-900 px-4 py-2.5 text-[15px] leading-snug text-white">{m.content}</div></div>;
   }
   const activities = m.references.filter((r) => r.type === "activity" && r.activity).slice(0, 3);
-  const links = m.references.filter((r) => r.type === "trip" || r.type === "reservation" || r.type === "browser_task");
+  const links = m.references.filter((r) => r.type === "trip" || r.type === "reservation" || r.type === "browser_task" || r.type === "document");
   const choices = m.references.find((r) => r.type === "choices")?.options ?? [];
   const sources = m.references.filter((r) => r.type === "link" && r.url?.startsWith("https://")).slice(0, 6);
   return (
-    <div className="max-w-[92%] space-y-3">
+    <div className="min-w-0 max-w-[92%] space-y-3">
       {m.tool_calls.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {m.tool_calls.map((c, i) => (
-            <span key={i} className={clsx("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px]", c.status === "ok" ? "bg-sand-100 text-ink-500" : "bg-rose-soft text-rose-ink")}>
+            <span key={i} className={clsx("inline-flex max-w-full items-center gap-1 truncate rounded-full px-2.5 py-1 text-[11.5px]", c.status === "ok" ? "bg-sand-100 text-ink-500" : "bg-rose-soft text-rose-ink")}>
               {c.status === "ok" ? <Wrench className="h-3 w-3" /> : <CircleAlert className="h-3 w-3" />}
               {tool(c.name)}{c.summary && c.summary !== "Done" ? ` · ${c.summary}` : ""}
             </span>
           ))}
         </div>
       )}
-      <div className="prose-chat rounded-[20px] rounded-bl-md bg-sand-100/70 px-4 py-3 text-[15px] text-ink-800"><ReactMarkdown>{m.content}</ReactMarkdown></div>
+      <div className="prose-chat min-w-0 rounded-[20px] rounded-bl-md bg-sand-100/80 px-4 py-3 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown>{m.content}</ReactMarkdown></div>
       {activities.length > 0 && (
         <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
           {activities.map((r) => <ActivityCard key={r.id} a={r.activity as ActivityResult & typeof r.activity} tripId={r.trip_id ?? tripId} date={r.date} />)}
@@ -257,9 +275,9 @@ function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: Convers
       <Choices options={choices} onChoose={onChoose} />
       {m.action_ids.map((aid) => actions[aid] && <ActionCard key={aid} action={actions[aid]} />)}
       <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-ink-400">
-        {m.provider === "local" ? <Badge tone="neutral">{t("assistant.offline")}</Badge> : m.provider && <span>{m.provider} · {m.model}</span>}
-        {links.slice(0, 4).map((r) => (
-          <Link key={r.id} to={r.type === "trip" ? `/trips/${r.id}` : r.type === "browser_task" ? `/explore?tab=tickets&task=${r.id}` : `/trips/${r.trip_id}`} className="text-lagoon-600 hover:underline">{r.label}</Link>
+        {m.provider === "local" ? <Badge tone="neutral">{t("assistant.offline")}</Badge> : m.provider === "tandem" ? <span>Tandem</span> : m.provider && <span>{m.provider} · {m.model}</span>}
+        {links.slice(0, 6).map((r) => (
+          <Link key={r.id} to={r.type === "trip" ? `/trips/${r.id}` : r.type === "browser_task" ? `/explore?task=${r.id}` : r.type === "document" ? `/inbox/${r.id}` : `/trips/${r.trip_id}`} className="text-lagoon-600 hover:underline">{r.label}</Link>
         ))}
       </div>
     </div>

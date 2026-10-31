@@ -195,6 +195,10 @@ def execute_action(action_id: str) -> None:
             from app.services.browser.agent import complete_checkout
 
             complete_checkout(user, action)
+        elif action.action_type == "browser_payment":
+            from app.services.browser.agent import complete_payment
+
+            complete_payment(user, action)
         elif action.action_type == "apply_reservation_change":
             change = db.session.get(ReservationChange, uuid.UUID(action.payload["change_id"]))
             trips.apply_change(user, change, actor="assistant")

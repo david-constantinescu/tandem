@@ -24,6 +24,9 @@ class Conversation(UUIDPk, Timestamps, db.Model):
         Uuid, ForeignKey("trips.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(200), default="New conversation")
+    # "chat" for the user's own conversations; "updates" for the one where Tandem writes first (weather, strikes,
+    # clashes, imported email). The user can answer there like anywhere else.
+    kind: Mapped[str] = mapped_column(String(20), default="chat", server_default="chat")
 
 
 class Message(UUIDPk, db.Model):

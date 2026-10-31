@@ -23,7 +23,8 @@ class _Resp:
 @pytest.fixture
 def live(app, monkeypatch):
     """Weather and news switched on, with the HTTP calls answered by fixed, realistic payloads."""
-    app.config.update(WEATHER_ENABLED=True, NEWS_ENABLED=True)
+    monkeypatch.setitem(app.config, "WEATHER_ENABLED", True)  # restored after the test
+    monkeypatch.setitem(app.config, "NEWS_ENABLED", True)
 
     def fake_get(url, params=None, **kw):
         if "open-meteo" in url:

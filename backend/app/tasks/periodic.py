@@ -23,6 +23,9 @@ def run_periodic() -> None:
     schedule_gmail_sync(now)
     cleanup_demo(now)
     db.session.commit()
+    from app.services.agent import proactive
+
+    proactive.run_all()
 
 
 def upcoming_events(now) -> None:

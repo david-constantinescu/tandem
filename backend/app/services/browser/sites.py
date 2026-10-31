@@ -78,7 +78,10 @@ REAL_SITES: tuple[Site, ...] = (
     # Flights
     _real("ryanair", "Ryanair", "flight", "https://www.ryanair.com/", ["ryanair.com"], "IE", automation_forbidden=True,
           terms_note="Ryanair's website terms prohibit automated access and screen scraping; link only."),
-    _real("wizzair", "Wizz Air", "flight", "https://wizzair.com/", ["wizzair.com"], "HU"),
+    _real("wizzair", "Wizz Air", "flight", "https://wizzair.com/", ["wizzair.com"], "HU",
+          deep_link="https://wizzair.com/en-gb/booking/select-flight/{origin_code}/{destination_code}/{date}/null/{adults}/0/0/null",
+          deep_link_params=("origin_code", "destination_code", "date"), deep_link_checked="2026-10-31",
+          notes=("Opens the flight list for your route and date; you choose, add passengers and pay on wizzair.com.",)),
     _real("easyjet", "easyJet", "flight", "https://www.easyjet.com/en", ["easyjet.com"], "GB"),
     _real("tarom", "TAROM", "flight", "https://www.tarom.ro/en", ["tarom.ro"], "RO"),
     _real("lufthansa", "Lufthansa", "flight", "https://www.lufthansa.com/", ["lufthansa.com"], "DE"),
@@ -155,7 +158,17 @@ def agent_capabilities(site: Site) -> dict:
 
 
 def get_site(key: str) -> Site | None:
-    return ALL_SITES.get(key)
+    """By key, or by the name people use ("Wizz Air", "wizzair.com", "AeroDemo")."""
+    if not key:
+        return None
+    if key in ALL_SITES:
+        return ALL_SITES[key]
+    norm = "".join(ch for ch in key.lower() if ch.isalnum())
+    for site in ALL_SITES.values():
+        names = {site.key, site.name.split(" (")[0], *site.domains}
+        if any("".join(ch for ch in n.lower() if ch.isalnum()).removesuffix("com") == norm.removesuffix("com") for n in names):
+            return site
+    return None
 
 
 def sites_for(user_is_demo: bool) -> list[Site]:
@@ -163,8 +176,32 @@ def sites_for(user_is_demo: bool) -> list[Site]:
     return list(SIMULATED_SITES) + list(REAL_SITES)
 
 
+# The airport each city's flights use, for links that need IATA codes. Low-cost carriers often fly to a secondary
+# airport (Wizz Air: London Luton, Milan Bergamo, Paris Beauvais), so these are the airports those links expect.
+AIRPORTS = {
+    "craiova": "CRA", "bucharest": "OTP", "bucuresti": "OTP", "bucurești": "OTP", "cluj-napoca": "CLJ", "cluj": "CLJ",
+    "timisoara": "TSR", "timișoara": "TSR", "iasi": "IAS", "iași": "IAS", "sibiu": "SBZ", "suceava": "SCV",
+    "constanta": "CND", "constanța": "CND", "targu mures": "TGM", "rome": "FCO", "roma": "FCO", "milan": "BGY",
+    "milano": "BGY", "bologna": "BLQ", "bari": "BRI", "naples": "NAP", "napoli": "NAP", "venice": "TSF",
+    "london": "LTN", "londra": "LTN", "paris": "BVA", "parigi": "BVA", "barcelona": "BCN", "madrid": "MAD",
+    "vienna": "VIE", "viena": "VIE", "budapest": "BUD", "dortmund": "DTM", "memmingen": "FMM", "brussels": "CRL",
+    "athens": "ATH", "atena": "ATH", "lisbon": "LIS", "lisabona": "LIS", "larnaca": "LCA", "dubai": "DXB",
+}
+
+
+def airport_code(place: str | None) -> str | None:
+    if not place:
+        return None
+    p = place.strip()
+    if len(p) == 3 and p.isalpha() and p.isupper():
+        return p
+    return AIRPORTS.get(p.lower())
+
+
 def handoff_url(site: Site, params: dict) -> str:
     """Verified deep link when available, otherwise the official homepage."""
+    params = {**params, "adults": params.get("adults") or 1,
+              "origin_code": airport_code(params.get("origin")), "destination_code": airport_code(params.get("destination"))}
     if site.deep_link and site.deep_link_checked and all(params.get(p) for p in site.deep_link_params):
         return site.deep_link.format(**{k: quote(str(v)) for k, v in params.items()})
     return site.homepage

@@ -43,20 +43,19 @@ export default function TripsPage() {
   if (trips.isError && !trips.data) return <LoadError title={t("load.trips")} onRetry={() => trips.refetch()} retrying={trips.isFetching} />;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="mx-auto flex max-w-2xl flex-col gap-3 pb-8">
       <div className="flex shrink-0 items-end justify-between gap-3">
         <div>
           <p className="kicker">{tp("trips.count", list.length)}</p>
           <h1 className="display text-[28px] leading-[1.05] tracking-[-0.02em] sm:text-[34px]">{t("trips.title")}</h1>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} icon={<Plus className="h-4 w-4" />}>{t("trips.new")}</Button>
       </div>
       {list.length === 0 ? (
         <EmptyState icon={<MapPin className="h-8 w-8" />} title={t("trips.emptyTitle")} body={t("trips.emptyBody")}
           action={<div className="flex flex-wrap justify-center gap-2"><Button onClick={openAdd}>{t("trips.addBooking")}</Button><Button variant="secondary" onClick={() => setOpen(true)}>{t("trips.new")}</Button></div>} />
       ) : (
         <>
-          <div ref={rail} className="-mx-4 flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] sm:mx-0 sm:rounded-3xl" role="list" aria-label={t("trips.title")}>
+          <div ref={rail} className="-mx-4 flex h-[min(58dvh,400px)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] sm:mx-0 sm:rounded-3xl" role="list" aria-label={t("trips.title")}>
             {list.map((x) => (
               <div key={x.id} role="listitem" className="flex w-full shrink-0 snap-center px-4 pb-1 sm:px-0"><TripCard trip={x} /></div>
             ))}

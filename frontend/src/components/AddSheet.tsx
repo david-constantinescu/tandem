@@ -1,15 +1,19 @@
 /**
- * The one place to add anything: a confirmation file, a photo of a ticket, pasted email text, a link, Gmail, or a
- * new trip. Opened from the tab bar's centre button, the desktop sidebar and empty states.
+ * The one way to add anything: a confirmation file, a photo of a ticket, a pasted email, or a link. Whatever it is
+ * lands in the chat, and Tandem answers with what it read. (Gmail needs no button: once connected in Settings, travel
+ * emails arrive in the chat on their own.) Opened from the + in the chat bar and from empty states.
  */
-import { Camera, ChevronRight, ClipboardPaste, FileUp, Link2, Loader2, Mail, MapPinPlus } from "lucide-react";
+import { Camera, ChevronRight, ClipboardPaste, FileUp, Link2, Loader2 } from "lucide-react";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { ACCEPT, PasteDialog, UrlDialog, useUpload } from "@/components/inbox/UploadZone";
-import { NewTripDialog } from "@/components/trips/NewTripDialog";
 import { Dialog } from "@/components/ui/Dialog";
+import { useToast } from "@/components/ui/Toast";
+import { api, errorMessage } from "@/lib/api";
 import { useT, type Key } from "@/lib/i18n";
-import type { DocumentItem } from "@/lib/types";
+import { keys, useTrips, type ConversationPayload } from "@/lib/queries";
+import type { Conversation, DocumentItem } from "@/lib/types";
 
 const Ctx = createContext<{ openAdd: () => void; busy: boolean }>({ openAdd: () => {}, busy: false });
 
@@ -19,18 +23,34 @@ type Option = { key: string; icon: typeof FileUp; title: Key; hint: Key; touchOn
 
 export function AddProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<"paste" | "url" | "trip" | null>(null);
+  const [dialog, setDialog] = useState<"paste" | "url" | null>(null);
   const files = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
   const { send, busy } = useUpload();
   const navigate = useNavigate();
+  const location = useLocation();
+  const trips = useTrips();
+  const qc = useQueryClient();
+  const toast = useToast();
   const { t } = useT();
 
-  // Show the new document right away so its progress (and anything to review) is in front of the user.
-  const show = useCallback((docs: DocumentItem[]) => {
-    if (docs.length === 1) navigate(`/inbox/${docs[0].id}`);
-    else if (docs.length > 1) navigate("/inbox?tab=documents");
-  }, [navigate]);
+  // Everything added goes into the chat: the open conversation, or a new one about the next trip.
+  const show = useCallback(async (docs: DocumentItem[]) => {
+    if (!docs.length) return;
+    try {
+      let convId = location.pathname.match(/^\/assistant\/([\w-]+)/)?.[1];
+      if (!convId) {
+        const next = trips.data?.find((x) => x.stats.phase !== "past" && x.stats.phase !== "cancelled");
+        convId = (await api.post<Conversation>("/assistant/conversations", { trip_id: next?.id ?? null })).id;
+      }
+      const payload = await api.post<ConversationPayload>(`/assistant/conversations/${convId}/attachments`, { document_ids: docs.map((d) => d.id) });
+      qc.setQueryData(keys.conversation(convId), payload);
+      qc.invalidateQueries({ queryKey: keys.conversations });
+      navigate(`/assistant/${convId}`);
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  }, [location.pathname, trips.data, qc, navigate, toast]);
 
   const pick = (input: HTMLInputElement | null) => {
     // The picker must open inside the tap, before the sheet closes (iOS ignores it otherwise).
@@ -42,8 +62,6 @@ export function AddProvider({ children }: { children: ReactNode }) {
     { key: "camera", icon: Camera, title: "add.camera", hint: "add.cameraHint", touchOnly: true, run: () => pick(camera.current) },
     { key: "paste", icon: ClipboardPaste, title: "add.paste", hint: "add.pasteHint", run: () => { setOpen(false); setDialog("paste"); } },
     { key: "url", icon: Link2, title: "add.link", hint: "add.linkHint", run: () => { setOpen(false); setDialog("url"); } },
-    { key: "gmail", icon: Mail, title: "add.gmail", hint: "add.gmailHint", run: () => { setOpen(false); navigate("/inbox?tab=email"); } },
-    { key: "trip", icon: MapPinPlus, title: "add.trip", hint: "add.tripHint", run: () => { setOpen(false); setDialog("trip"); } },
   ];
 
   const onFiles = async (list: FileList | null) => {
@@ -82,7 +100,6 @@ export function AddProvider({ children }: { children: ReactNode }) {
       )}
       {dialog === "paste" && <PasteDialog onClose={() => setDialog(null)} onDone={(d) => show([d])} />}
       {dialog === "url" && <UrlDialog onClose={() => setDialog(null)} onDone={(d) => show([d])} />}
-      <NewTripDialog open={dialog === "trip"} onOpenChange={(o) => setDialog(o ? "trip" : null)} />
     </Ctx.Provider>
   );
 }

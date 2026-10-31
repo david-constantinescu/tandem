@@ -145,7 +145,7 @@ export const en = {
   "home.greeting.afternoon": "Good afternoon",
   "home.greeting.evening": "Good evening",
   "home.greeting.late": "Up late",
-  "home.askPlaceholder": "Ask anything about your trips…",
+  "home.askPlaceholder": "Ask Tandem…",
   "home.askLabel": "Ask the assistant",
   "home.short.add": "Add a booking",
   "home.short.addHint": "PDF, photo, email",
@@ -238,7 +238,7 @@ export const en = {
   "trip.tabPlan": "Plan",
   "trip.tabBookings": "Bookings",
   "trip.tabMap": "Map",
-  "trip.tabDocuments": "Documents",
+  "trip.tabDocuments": "Files",
   "trip.tabNotes": "Notes",
   "trip.emptyPlan": "No plans yet",
   "trip.emptyPlanBody": "Add a booking confirmation, or add events yourself.",
@@ -339,7 +339,7 @@ export const en = {
 
   // Add sheet and uploads
   "add.title": "Add",
-  "add.subtitle": "Tandem reads it and puts it in the right trip. You check before anything is saved.",
+  "add.subtitle": "It goes into the chat: Tandem reads it, tells you what it found and files it in the right trip.",
   "add.file": "Upload a confirmation",
   "add.fileHint": "PDF, screenshot, email (.eml), Word — up to 10 at once",
   "add.camera": "Photograph a ticket",
@@ -367,7 +367,7 @@ export const en = {
   "upload.pasteTitle": "Paste a confirmation",
   "upload.pasteHint": "Paste the text of an email or message. Instructions inside it are never followed — it's treated as data.",
   "upload.pastePlaceholder": "Booking reference: …",
-  "upload.pasteSubmit": "Add to inbox",
+  "upload.pasteSubmit": "Send to chat",
   "upload.urlTitle": "Import from a link",
   "upload.urlHint": "Tandem fetches public pages or files (PDF, image, HTML). Private network addresses are blocked.",
   "upload.urlLabel": "Link",
@@ -971,6 +971,14 @@ export const en = {
   "common.back": "Back",
   "common.next": "Next",
   "tool.ask_user": "Asked a question",
+  "action.approveDetails": "Allow entering the travellers' names",
+  "action.approvePay": "Pay {price} (simulated)",
+  "action.detailsDone": "Names entered. The agent is waiting on the payment page.",
+  "action.detailsEntered": "Travellers' names entered. The agent stopped on the payment page and needs your OK to pay:",
+  "sites.step.awaiting_payment": "Waiting to pay",
+  "chat.attach": "Add a file, photo, email or link",
+  "nav.trip": "Trip",
+  "home.openChat": "Open chat",
 };
 
 export type Key = keyof typeof en;

@@ -95,7 +95,14 @@ export function useConversation(id: string | undefined) {
     queryKey: keys.conversation(id ?? ""),
     queryFn: () => api.get<ConversationPayload>(`/assistant/conversations/${id}`),
     enabled: !!id,
-    refetchInterval: (q) => (Object.values(q.state.data?.actions ?? {}).some((a) => a.status === "in_progress") ? 1500 : false),
+    refetchInterval: (q) => {
+      const data = q.state.data;
+      if (Object.values(data?.actions ?? {}).some((a) => a.status === "in_progress")) return 1500;
+      // Just added a file that Tandem is still reading: look again shortly for its follow-up.
+      const last = data?.messages[data.messages.length - 1];
+      const fresh = last && last.model === "reader" && Date.now() - new Date(last.created_at).getTime() < 90_000;
+      return fresh ? 4000 : false;
+    },
   });
 }
 

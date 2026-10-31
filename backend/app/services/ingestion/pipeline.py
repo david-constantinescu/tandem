@@ -264,6 +264,9 @@ def persist_result(user: User, doc: Document, result: ExtractionResult, method: 
                                "Already up to date" if created else "Travel related, but no bookings recognised", locale_of(user))
         notify(user.id, "document_processed", T("Processed {name}", name=doc.filename), doc.status_detail,
                link=f"/inbox/{doc.id}", dedupe_key=f"doc_done:{doc.id}")
+    from app.services.agent.attachments import follow_up
+
+    follow_up(user, doc)  # if it was added in a chat and was still being read, say what it found there
     db.session.commit()
 
 
@@ -286,6 +289,11 @@ def _queue_attachments(user: User, parent: Document, attachments) -> None:
 def _fail(doc: Document, message: str) -> None:
     doc.status = "failed"
     doc.status_detail = message[:500]
+    from app.services.agent.attachments import follow_up
+
+    owner = db.session.get(User, doc.user_id)
+    if owner is not None:
+        follow_up(owner, doc)
     notify(doc.user_id, "document_failed", T("Couldn't process {name}", name=doc.filename), message, link=f"/inbox/{doc.id}",
            severity="warning", dedupe_key=f"doc_failed:{doc.id}")
     db.session.commit()

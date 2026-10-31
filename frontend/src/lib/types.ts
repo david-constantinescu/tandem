@@ -205,7 +205,7 @@ export type Message = {
   created_at: string;
 };
 
-export type Conversation = { id: string; trip_id: string | null; title: string; created_at: string; updated_at: string };
+export type Conversation = { id: string; trip_id: string | null; title: string; kind?: "chat" | "updates"; created_at: string; updated_at: string };
 
 export type Notification = { id: string; type: string; severity: "info" | "warning" | "critical" | "success"; title: string; body: string; link: string | null; read: boolean; created_at: string };
 

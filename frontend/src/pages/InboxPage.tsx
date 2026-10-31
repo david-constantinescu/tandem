@@ -8,7 +8,7 @@ import { ActionCard } from "@/components/activities/ActionCard";
 import { useAdd } from "@/components/AddSheet";
 import { UploadZone } from "@/components/inbox/UploadZone";
 import { Stagger, StaggerItem, spring } from "@/components/motion";
-import { Badge, Button, EmptyState, InfoNote, LoadError, PageHeader, PageLoader, StatusPill } from "@/components/ui";
+import { Button, EmptyState, LoadError, PageHeader, PageLoader, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -17,7 +17,7 @@ import { useT, type Key } from "@/lib/i18n";
 import { PROCESSING, useApprovals, useInbox, useInvalidateTripData } from "@/lib/queries";
 import type { Action, DocumentItem } from "@/lib/types";
 
-const TABS = ["todo", "documents", "approvals", "email"] as const;
+const TABS = ["todo", "documents", "approvals"] as const;
 type TabKey = (typeof TABS)[number];
 const OPEN_ACTIONS = ["awaiting_approval", "in_progress", "requires_manual"];
 
@@ -45,7 +45,6 @@ export default function InboxPage() {
     todo: <>{t("inbox.tab.todo")}{todoCount > 0 && <span className="rounded-full bg-clay-500 px-1.5 text-[11px] leading-[18px] text-white">{todoCount}</span>}</>,
     documents: t("inbox.tab.documents"),
     approvals: t("inbox.tab.approvals"),
-    email: t("inbox.tab.email"),
   };
 
   return (
@@ -64,7 +63,6 @@ export default function InboxPage() {
       {tab === "todo" && <Todo review={review} waiting={waiting} loading={inbox.isLoading || approvals.isLoading} onDocuments={() => setParams({ tab: "documents" })} />}
       {tab === "documents" && <Documents docs={docs} loading={inbox.isLoading} error={inbox.isError && !inbox.data} retry={() => inbox.refetch()} retrying={inbox.isFetching} />}
       {tab === "approvals" && <Approvals />}
-      {tab === "email" && <EmailCandidates />}
     </div>
   );
 }
@@ -231,65 +229,4 @@ function DemoSamples() {
   );
 }
 
-type Candidate = { id: string; subject: string; sender: string; received_at: string | null; snippet: string; has_attachments: boolean; status: string; document_id: string | null };
 
-function EmailCandidates() {
-  const integrations = useQuery({ queryKey: ["integrations"], queryFn: () => api.get<{ gmail: { available: boolean; status: string; reason: string | null; account_email: string | null; last_sync_at: string | null } }>("/integrations") });
-  const cands = useQuery({ queryKey: ["email-candidates"], queryFn: () => api.get<Candidate[]>("/inbox/email-candidates") });
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState(false);
-  const toast = useToast();
-  const invalidate = useInvalidateTripData();
-  const { t, tp } = useT();
-  const gmail = integrations.data?.gmail;
-  if (integrations.isLoading) return <PageLoader />;
-  if (!gmail || gmail.status !== "connected") {
-    return (
-      <EmptyState icon={<Mail className="h-8 w-8" />} title={t("email.title")}
-        body={gmail?.available ? t("email.connectHint") : (gmail?.reason ?? t("email.unavailable"))}
-        action={gmail?.available ? <Link to="/settings/connections" className="text-[14px] font-medium text-lagoon-600 hover:underline">{t("email.connect")}</Link> : undefined} />
-    );
-  }
-  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const importSel = async () => {
-    setBusy(true);
-    try {
-      await api.post("/inbox/email-candidates/import", { candidate_ids: [...selected] });
-      toast(tp("email.importing", selected.size), "success");
-      setSelected(new Set());
-      cands.refetch();
-      invalidate();
-    } catch (e) {
-      toast(errorMessage(e), "error");
-    } finally {
-      setBusy(false);
-    }
-  };
-  const sync = async () => { await api.post("/integrations/gmail/sync"); setTimeout(() => cands.refetch(), 1500); };
-  return (
-    <div className="max-w-3xl">
-      <InfoNote tone="lagoon">{t("email.connected", { email: gmail.account_email ?? "" })}</InfoNote>
-      <div className="my-4 flex flex-wrap gap-2">
-        <Button onClick={importSel} disabled={!selected.size} loading={busy}>{selected.size ? tp("email.importSelected", selected.size) : t("email.import")}</Button>
-        <Button variant="secondary" onClick={sync}>{t("email.check")}</Button>
-      </div>
-      {(cands.data?.length ?? 0) === 0 ? <EmptyState title={t("email.none")} /> : (
-        <ul className="card divide-y divide-sand-100">
-          {cands.data!.map((c) => (
-            <li key={c.id}>
-              <label className="flex cursor-pointer items-start gap-3 px-4 py-3 active:bg-sand-50">
-              <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-lagoon-600" disabled={c.status !== "candidate"} checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={t("email.select", { subject: c.subject })} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-medium">{c.subject || t("email.noSubject")}</p>
-                <p className="truncate text-[12.5px] text-ink-400">{c.sender} · {c.received_at ? relativeTime(c.received_at) : ""}</p>
-                <p className="mt-1 line-clamp-1 text-[13px] text-ink-500">{c.snippet}</p>
-              </div>
-              {c.status === "imported" ? (c.document_id ? <Link to={`/inbox/${c.document_id}`}><Badge tone="lagoon">{t("email.imported")}</Badge></Link> : <Badge tone="lagoon">{t("email.imported")}</Badge>) : c.has_attachments ? <Badge>{t("email.attachment")}</Badge> : null}
-              </label>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
