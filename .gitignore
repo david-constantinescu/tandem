@@ -20,3 +20,5 @@ backend/.env
 .env*
 !.env.example
 !backend/.env.example
+# Local tooling
+.claude/
