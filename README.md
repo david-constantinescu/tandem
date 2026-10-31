@@ -25,6 +25,8 @@ Tandem is the friend who reads all of it for you.
 - **It spots trouble.** Overlaps, impossible connections, missing hotels, unconfirmed bookings, cancellation
   deadlines.
 - **It fills the gaps.** Ask what to do on Saturday afternoon and it looks at the hours you actually have free.
+- **It lives in your calendar too.** One private link puts every trip in Apple, Google or Outlook calendar and keeps
+  it updated when plans change. Booking references and names stay in Tandem.
 - **It never spends your money on its own.** It can prepare a booking or drive a booking website, but nothing is
   bought until you approve that exact thing. If the price changes, it asks again.
 
@@ -107,8 +109,15 @@ Tandem's own simulated sites it completes the whole flow after approval, which i
 
 React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, Radix primitives, Leaflet and [Motion](https://motion.dev)
 for the springy bits (sliding tab pills, staggered lists, the route line that draws itself). On phones it follows
-Apple's conventions: safe-area insets, a floating tab bar, 44pt touch targets, 16px inputs so iOS doesn't zoom,
-bottom sheets instead of modals, and reduced-motion support.
+Apple's conventions: safe-area insets, a floating tab bar, 44pt touch targets, UISwitch-sized toggles, 16px inputs so
+iOS doesn't zoom, bottom sheets instead of modals, and reduced-motion support. It installs to the home screen
+(PNG touch icon + web manifest) and opens full screen like a native app.
+
+### Calendar sync
+
+`/api/v1/calendar` serves RFC 5545 files: times in UTC so any calendar shows them correctly, lines folded at 75 octets,
+stable UIDs so edits update events instead of duplicating them. The subscription link carries a random token that is
+stored encrypted (so Settings can show it again) and looked up by its HMAC; resetting it revokes the old link.
 
 ### Security & privacy, briefly
 
@@ -157,7 +166,7 @@ printing secrets), and `scripts/vercel-env-push.sh` copies keys to Vercel withou
 ### Tests
 
 ```bash
-cd backend && .venv/bin/python -m pytest      # 103 tests on a real PostgreSQL; providers are mocked
+cd backend && .venv/bin/python -m pytest      # 109 tests on a real PostgreSQL; providers are mocked
 cd frontend && npx vitest run && npx tsc -b --noEmit
 ```
 

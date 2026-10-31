@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.base import JSONType, Timestamps, UUIDPk, tz_dt, utcnow
+from app.security.encryption import EncryptedText
 
 # Modes for external AI processing, enforced by the AI router.
 AI_MODE_OFF = "off"  # local parsing only; nothing leaves Tandem
@@ -85,6 +86,11 @@ class UserPreference(db.Model):
     # When on, high-confidence records whose key fields were verified against the source are
     # added to the matching trip without a manual review step.
     auto_organize: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Private calendar subscription link. The token is kept encrypted so Settings can show the link again,
+    # and looked up by its keyed hash. Regenerating replaces both, which revokes the old link.
+    calendar_token: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    calendar_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    calendar_token_created_at: Mapped[datetime | None] = mapped_column(tz_dt(), nullable=True)
     user: Mapped[User] = relationship(back_populates="preferences")
 
 

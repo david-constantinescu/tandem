@@ -42,13 +42,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   );
 });
 
-export function LinkButton({ to, variant = "secondary", size = "md", icon, children, className }: { to: string; variant?: Variant; size?: Size; icon?: ReactNode; children: ReactNode; className?: string }) {
-  return (
-    <Link to={to} className={clsx("inline-flex select-none items-center justify-center font-medium transition-[background-color,transform] duration-150 active:scale-[0.97] whitespace-nowrap", variants[variant], sizes[size], className)}>
-      {icon}
-      {children}
-    </Link>
-  );
+/** A button-styled link: `to` for routes inside the app, `href` for files and URLs the browser should open itself. */
+export function LinkButton({ to, href, variant = "secondary", size = "md", icon, children, className }: { to?: string; href?: string; variant?: Variant; size?: Size; icon?: ReactNode; children: ReactNode; className?: string }) {
+  const cls = clsx("inline-flex select-none items-center justify-center font-medium transition-[background-color,transform] duration-150 active:scale-[0.97] whitespace-nowrap", variants[variant], sizes[size], className);
+  if (href) return <a href={href} className={cls}>{icon}{children}</a>;
+  return <Link to={to ?? "/"} className={cls}>{icon}{children}</Link>;
 }
 
 export function Card({ className, children, as: As = "div" }: { className?: string; children: ReactNode; as?: any }) {
@@ -172,7 +170,7 @@ export function Field({ label, hint, children, htmlFor }: { label: string; hint?
 
 export function Toggle({ checked, onChange, label, description, disabled, hideLabel }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: ReactNode; disabled?: boolean; hideLabel?: boolean }) {
   return (
-    <label className={clsx("flex items-start justify-between gap-4", hideLabel ? "py-0" : "py-3", disabled && "opacity-60")}>
+    <label className={clsx("flex justify-between gap-4", description ? "items-start" : "items-center", hideLabel ? "py-0" : "py-3", disabled && "opacity-60")}>
       <span className={clsx(hideLabel && "sr-only")}>
         <span className="block text-[14px] font-medium text-ink-800">{label}</span>
         {description && <span className="mt-0.5 block text-[13px] text-ink-500">{description}</span>}
@@ -184,9 +182,10 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={clsx("relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors", checked ? "bg-lagoon-600" : "bg-sand-300")}
+        // On touch screens the switch takes UISwitch's 51×31 size, and an invisible margin stretches the hit area past 44pt.
+        className={clsx("relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors after:absolute after:-inset-2 after:content-[''] pointer-coarse:h-[31px] pointer-coarse:w-[51px]", checked ? "bg-lagoon-600" : "bg-sand-300")}
       >
-        <span className={clsx("inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform", checked ? "translate-x-5" : "translate-x-0.5")} />
+        <span className={clsx("inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform pointer-coarse:h-[27px] pointer-coarse:w-[27px]", checked ? "translate-x-5 pointer-coarse:translate-x-[22px]" : "translate-x-0.5")} />
       </button>
     </label>
   );

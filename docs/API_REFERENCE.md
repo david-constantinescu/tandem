@@ -31,6 +31,7 @@ The machine-readable OpenAPI 3.1 document is served at `GET /api/v1/openapi.json
 | Integrations | `GET /integrations`, `POST /integrations/gmail/connect`, `GET /integrations/gmail/callback`, `POST /integrations/gmail/sync`, `POST /integrations/gmail/disconnect` |
 | Notifications | `GET /notifications`, `POST /notifications/{id}/read`, `POST /notifications/read-all` |
 | Settings | `GET /settings`, `PATCH /settings/profile`, `PATCH /settings/preferences`, `GET/PUT /settings/ai`, `GET /settings/usage`, `GET /settings/providers`, `GET /settings/sessions`, `DELETE /settings/sessions/{id}`, `POST /settings/password`, `GET /settings/export`, `POST /settings/delete-account` |
+| Calendar | `GET /calendar/trips/{id}.ics` (one trip, signed in), `GET/POST/DELETE /calendar/subscription` (private feed link: show, create or reset, turn off), `GET /calendar/feed/{token}.ics` (public; the token is the credential, rate limited) |
 | Demo | `GET /demo/samples`, `GET /demo/samples/{key}`, `POST /demo/samples/{key}/upload` (demo users only) |
 | Health | `GET /health` |
 

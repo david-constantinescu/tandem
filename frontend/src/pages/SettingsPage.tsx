@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { AlertTriangle, Bell, Check, ChevronLeft, ChevronRight, Database, ExternalLink, Gauge, HardDrive, Link2, Lock, LogOut, Mail, ShieldAlert, Sparkles, UserRound } from "lucide-react";
+import { AlertTriangle, Bell, CalendarDays, Check, Copy, ChevronLeft, ChevronRight, Database, ExternalLink, Gauge, HardDrive, Link2, Lock, LogOut, Mail, ShieldAlert, Sparkles, UserRound } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +12,8 @@ import type { ProviderCaps, User } from "@/lib/types";
 
 const SECTIONS = [
   ["profile", "Profile", UserRound, "bg-lagoon-600"], ["ai", "AI & privacy", Sparkles, "bg-violet-ink"], ["usage", "API usage", Gauge, "bg-clay-500"],
-  ["connections", "Connected accounts", Link2, "bg-lagoon-500"], ["notifications", "Notifications", Bell, "bg-rose-ink"],
+  ["connections", "Connected accounts", Link2, "bg-lagoon-500"], ["calendar", "Calendar", CalendarDays, "bg-clay-600"],
+  ["notifications", "Notifications", Bell, "bg-rose-ink"],
   ["storage", "File storage", HardDrive, "bg-ink-500"], ["security", "Account security", Lock, "bg-ink-800"], ["data", "Your data", Database, "bg-amber-ink"],
 ] as const;
 
@@ -76,6 +77,7 @@ export default function SettingsPage() {
           {section === "ai" && <AISection />}
           {section === "usage" && <Usage />}
           {section === "connections" && <Connections />}
+          {section === "calendar" && <CalendarSection />}
           {section === "notifications" && <NotificationPrefs s={s} />}
           {section === "storage" && <Storage s={s} />}
           {section === "security" && <Security />}
@@ -340,6 +342,79 @@ function Connections() {
           ))}
         </ul>
       </Panel>
+    </div>
+  );
+}
+
+type CalendarSub = { active: boolean; url: string | null; webcal_url: string | null; created_at: string | null };
+
+function CalendarSection() {
+  const sub = useQuery({ queryKey: ["calendar-subscription"], queryFn: () => api.get<CalendarSub>("/calendar/subscription") });
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  if (!sub.data) return <PageLoader />;
+  const s = sub.data;
+  const change = async (action: "create" | "reset" | "off") => {
+    if (action === "reset" && !confirm("Reset the link? Calendars using the current link stop updating until you add the new one.")) return;
+    if (action === "off" && !confirm("Turn off the link? Calendars using it stop updating.")) return;
+    setBusy(true);
+    try {
+      const next = action === "off" ? await api.del<CalendarSub>("/calendar/subscription") : await api.post<CalendarSub>("/calendar/subscription");
+      qc.setQueryData(["calendar-subscription"], next);
+      toast(action === "off" ? "Calendar link turned off" : action === "reset" ? "New link ready. Add it to your calendar again." : "Calendar link ready", "success");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(s.url!); toast("Link copied", "success"); } catch { toast("Couldn't copy. Press and hold the link to copy it.", "error"); }
+  };
+  return (
+    <div className="space-y-6">
+      <Panel title="Your trips in your calendar" description="One private link that keeps Apple Calendar, Google Calendar or Outlook in step with Tandem. New bookings, changed times and cancellations show up on their own.">
+        {!s.active ? (
+          <div className="space-y-4">
+            <ul className="space-y-2 text-[13.5px] text-ink-600">
+              <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-lagoon-600" />Every confirmed and planned event, at the right time wherever you are.</li>
+              <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-lagoon-600" />Title, place and a link back to the trip. Booking references, names, prices and notes stay in Tandem.</li>
+            </ul>
+            <Button onClick={() => change("create")} loading={busy} icon={<CalendarDays className="h-4 w-4" />}>Create calendar link</Button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <a href={s.webcal_url!} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-lagoon-900 px-4 text-[14.5px] font-medium text-white active:scale-[0.98]">
+                <CalendarDays className="h-4 w-4" />Apple Calendar
+              </a>
+              <a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(s.webcal_url!)}`} target="_blank" rel="noopener noreferrer"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-sand-200 bg-white px-4 text-[14.5px] font-medium text-ink-800 hover:bg-sand-50 active:scale-[0.98]">
+                Google Calendar <ExternalLink className="h-3.5 w-3.5 text-ink-400" />
+              </a>
+            </div>
+            <div>
+              <p className="eyebrow mb-2">Or copy the link</p>
+              <div className="flex gap-2">
+                <input readOnly value={s.url!} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar subscription link"
+                  className="h-11 min-w-0 flex-1 truncate rounded-xl border border-sand-200 bg-sand-50 px-3 text-[16px] text-ink-600 sm:text-[13.5px]" />
+                <Button variant="secondary" onClick={copy} icon={<Copy className="h-4 w-4" />} className="shrink-0">Copy</Button>
+              </div>
+              <p className="mt-2 text-[12.5px] text-ink-400">Outlook: Add calendar → Subscribe from web. Google refreshes subscribed calendars every few hours, Apple about once an hour.</p>
+            </div>
+            <InfoNote tone="amber" icon={<ShieldAlert className="h-4 w-4" />}>Anyone with this link can see when and where you'll be. If you shared it by mistake, reset it.</InfoNote>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-100 pt-4">
+              <p className="text-[12.5px] text-ink-400">Created {s.created_at ? relativeTime(s.created_at) : "recently"}</p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => change("reset")} disabled={busy}>Reset link</Button>
+                <Button variant="danger" size="sm" onClick={() => change("off")} disabled={busy}>Turn off</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Panel>
+      <p className="px-1 text-[13px] text-ink-500">Want a one-off copy of a single trip instead? Open the trip and tap <strong className="font-medium text-ink-700">Add to Calendar</strong>.</p>
     </div>
   );
 }

@@ -8,7 +8,7 @@ live third-party service · 📐 designed / scaffolded only · ⛔ not started.
 - **Live deployment:** https://tandem-travel-roan.vercel.app (Vercel, region fra1, Neon Postgres). The full demo
   workflow was run on the live URL: sample upload → inline processing → review → conflict → assistant →
   proposal → approval → verified simulated booking in the itinerary.
-- Backend: **103 pytest tests pass** on PostgreSQL 16 (`backend/tests`), no API keys required; external
+- Backend: **109 pytest tests pass** on PostgreSQL 16 (`backend/tests`), no API keys required; external
   providers mocked with fakes and `respx`.
 - Frontend: type-check (`tsc -b`) and production build pass; unit tests (vitest) pass.
 - Manual end-to-end run in a browser against the real stack (Flask API + separate worker + Vite):
