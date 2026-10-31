@@ -164,3 +164,42 @@ def register_cli(app: Flask) -> None:
             with open(path, "w") as fh:
                 fh.write(text)
             click.echo(f"wrote {path}")
+
+    @app.cli.command("env-status")
+    def env_status():
+        """Show which features this environment unlocks (never prints secret values)."""
+        cfg = app.config
+        has = lambda *keys: all(cfg.get(k) for k in keys)  # noqa: E731
+        rows = [
+            ("Core", [
+                ("SECRET_KEY", cfg.get("SECRET_KEY") not in (None, "", "dev-insecure-secret-change-me"), "sessions and CSRF (dev default in use)"),
+                ("ENCRYPTION_KEY", has("ENCRYPTION_KEY"), "encrypts stored files, tokens and extracted data"),
+                ("DATABASE_URL", has("SQLALCHEMY_DATABASE_URI"), "PostgreSQL"),
+                ("CRON_SECRET", has("CRON_SECRET"), "protects the scheduled-checks endpoint (needed on Vercel)"),
+            ]),
+            ("AI (all optional; without them Tandem uses its local parser and offline assistant)", [
+                ("GEMINI_API_KEY", has("GEMINI_API_KEY"), "PDF/image extraction and the main assistant"),
+                ("ZAI_API_KEY", has("ZAI_API_KEY"), "second provider for text and image reading"),
+                ("GROQ_API_KEY", has("GROQ_API_KEY"), "fast text-only tasks (never receives files)"),
+            ]),
+            ("Integrations", [
+                ("GOOGLE_CLIENT_ID + SECRET", has("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"), "read-only Gmail import"),
+                ("VIATOR_API_KEY", has("VIATOR_API_KEY"), "live activities with availability"),
+                ("GETYOURGUIDE_ACCESS_TOKEN", has("GETYOURGUIDE_ACCESS_TOKEN"), "live activities (partner API)"),
+                ("BOOKING_COM_*", has("BOOKING_COM_AFFILIATE_ID", "BOOKING_COM_API_TOKEN"), "Booking.com Demand API"),
+                ("EXPEDIA_*", has("EXPEDIA_API_KEY", "EXPEDIA_SHARED_SECRET"), "Expedia Rapid"),
+                ("OSM_CONTACT_EMAIL", has("OSM_CONTACT_EMAIL"), "required by OpenStreetMap's usage policy for geocoding"),
+                ("ROUTING_OSRM_URL", has("ROUTING_OSRM_URL"), "travel times between places"),
+            ]),
+            ("Infrastructure", [
+                ("STORAGE (s3)", cfg.get("STORAGE_TYPE") != "s3" or has("STORAGE_BUCKET", "STORAGE_ACCESS_KEY", "STORAGE_SECRET_KEY"),
+                 f"file storage: {cfg.get('STORAGE_TYPE')}"),
+                ("REDIS_URL", has("REDIS_URL"), "shared rate-limit storage across web workers"),
+                ("BROWSER_WORKER_ENABLED", bool(cfg.get("BROWSER_WORKER_ENABLED")), "Playwright worker for assisted search on real sites"),
+            ]),
+        ]
+        for title, items in rows:
+            click.echo(f"\n{title}")
+            for key, ok, what in items:
+                click.echo(f"  {'✓' if ok else '·'} {key:<28} {what}")
+        click.echo(f"\nAPP_ENV={cfg.get('APP_ENV')}  JOB_RUNNER={cfg.get('JOB_RUNNER')}  LOCATION_PROVIDER={cfg.get('LOCATION_PROVIDER')}")

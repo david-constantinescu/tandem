@@ -153,16 +153,8 @@ class Config:
         self.NOMINATIM_URL = _str("NOMINATIM_URL", "https://nominatim.openstreetmap.org")
         self.OSM_CONTACT_EMAIL = _str("OSM_CONTACT_EMAIL")
         self.ROUTING_OSRM_URL = _str("ROUTING_OSRM_URL")
-        self.MAPS_API_KEY = _str("MAPS_API_KEY")
         self.MIN_TRANSFER_BUFFER_MINUTES = _int("MIN_TRANSFER_BUFFER_MINUTES", 30)
         self.AIRPORT_EXIT_BUFFER_MINUTES = _int("AIRPORT_EXIT_BUFFER_MINUTES", 60)
-
-        # Outbound email (notifications only; never used on behalf of users)
-        self.EMAIL_PROVIDER = _str("EMAIL_PROVIDER")
-        self.SMTP_HOST = _str("SMTP_HOST")
-        self.SMTP_PORT = _int("SMTP_PORT", 587)
-        self.SMTP_USERNAME = _str("SMTP_USERNAME")
-        self.SMTP_PASSWORD = _str("SMTP_PASSWORD")
 
         # Demo
         self.DEMO_MODE = _bool("DEMO_MODE", False)

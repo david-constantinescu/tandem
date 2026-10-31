@@ -1,113 +1,183 @@
 # Tandem
 
-Tandem is a personal travel manager. You give it booking confirmations — PDFs, screenshots, photos,
-emails, pasted text or links — and it extracts the details with sources and confidence, groups them
-into trips, keeps a timezone-correct itinerary, detects conflicts, and runs an assistant that works
-from your real data. It can find activities that fit your free time and prepare bookings, which only
-execute after you approve the exact proposal and the provider's response is verified.
+**Your travel, in tandem.** Drop in every confirmation, ticket and screenshot. Tandem reads them, builds one calm
+itinerary, tells you what clashes, and only books things when you say yes.
 
-- **Backend:** Python 3.11, Flask, SQLAlchemy 2, Alembic, Pydantic, PostgreSQL 16
-- **Jobs:** PostgreSQL-backed queue (`SELECT … FOR UPDATE SKIP LOCKED`) with a separate worker process
-- **AI:** Gemini (primary, files/vision), Z.ai GLM (text + free vision model), Groq (text only — never files)
-- **Frontend:** React 19, TypeScript, Vite 7, Tailwind CSS 4, TanStack Query, React Router, Radix UI, Leaflet
+**Try it:** https://tandem-travel-roan.vercel.app → *Explore the demo* (works best on a phone).
 
-See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for what works today, what is
-tested, and which features wait on partner credentials.
+---
 
-## Quick start (local development)
+## The story
 
-Prerequisites: Python 3.11, Node 20+, Tesseract OCR (`brew install tesseract` / `apt install tesseract-ocr`).
-PostgreSQL is provided locally by the `pgserver` pip package's bundled binaries; any PostgreSQL 14+ works.
+Trips don't arrive in one piece. The flight is a PDF in one inbox, the hotel is an email in another, the museum
+ticket is a screenshot, and the dinner reservation lives in a group chat. Somewhere between them there's a
+problem you won't notice until you're standing at the wrong door: a walking tour that runs into dinner, a check-in
+that starts three hours after you land, a train that leaves before the museum closes.
 
-```bash
-# 1. Backend environment
-python3.11 -m venv backend/.venv
-backend/.venv/bin/pip install -r backend/requirements.txt pgserver
+Tandem is the friend who reads all of it for you.
 
-# 2. Local PostgreSQL on port 5433 (creates databases `tandem` and `tandem_test`)
-scripts/dev-db.sh start
+- **You throw things at it.** PDFs, photos of a printout, screenshots, forwarded emails, pasted text, a link, or
+  read-only access to Gmail.
+- **It reads them carefully.** Every detail it pulls out comes with the line it found it on, so you can check it in
+  a second. If it's not sure, it says so and asks you instead of guessing.
+- **It builds the trip.** Bookings land in the right trip, in the right order, in the right *local* time (a flight
+  from London to Rome shows both clocks).
+- **It spots trouble.** Overlaps, impossible connections, missing hotels, unconfirmed bookings, cancellation
+  deadlines.
+- **It fills the gaps.** Ask what to do on Saturday afternoon and it looks at the hours you actually have free.
+- **It never spends your money on its own.** It can prepare a booking or drive a booking website, but nothing is
+  bought until you approve that exact thing. If the price changes, it asks again.
 
-# 3. Configuration
-cp .env.example backend/.env      # then set SECRET_KEY and ENCRYPTION_KEY (commands are in the file)
+And a few things it deliberately won't do: pretend an integration is live when it isn't, solve CAPTCHAs or sneak past
+a website's rules, or send your files to an AI company unless you've said that's OK.
 
-# 4. Database schema and the shared demo account
-cd backend
-.venv/bin/flask --app app db upgrade
-.venv/bin/flask --app app seed-demo --password "choose-a-demo-password"
+### What to try in the demo
 
-# 5. Run the API, the worker and the frontend (three terminals)
-.venv/bin/flask --app app run --port 5050
-.venv/bin/flask --app app worker
-npm --prefix ../frontend install && npm --prefix ../frontend run dev
+The demo is a fictional long weekend in Rome. Each visitor gets their own private copy that expires after a day.
+
+1. **Home** shows the next trip as a boarding pass, plus the clash Tandem already found.
+2. **Inbox → Try a sample document** sends a fictional Colosseum ticket through the real reading pipeline. Accept it
+   and watch a new conflict appear.
+3. **Assistant** answers from your actual plans ("what's still unconfirmed?").
+4. **Book on websites → Ferrovia Demo** lets the browser agent search a (simulated) rail site, pick a train that fits,
+   and stop for your approval. Approve it and the confirmation is read back into your trip. No real money moves.
+
+---
+
+## The technical story
+
+### Shape of the system
+
+```
+React SPA (Vite) ──/api/v1──▶ Flask API ──▶ PostgreSQL ◀── worker (flask worker)
+                                 │            ▲  jobs table (FOR UPDATE SKIP LOCKED)
+                                 │            │  encrypted file blobs (on Vercel)
+                                 ▼            │
+                     AI router: Gemini · Z.ai · Groq      browser agent: HTTP engine · Playwright
 ```
 
-Open http://localhost:5173. The Vite dev server proxies `/api` to the Flask API on port 5050.
+One Flask app serves the API (and the built SPA in production). Long work runs in a worker that pulls jobs from a
+PostgreSQL table with `SELECT … FOR UPDATE SKIP LOCKED`, so there's no Redis or Celery to run. On Vercel the same
+jobs run inline and a cron hits a protected endpoint for scheduled checks.
 
-**Live:** https://tandem-travel-roan.vercel.app — click *Explore the demo*.
+### From a file to an itinerary
 
-## The demo
+1. **Upload** → the original is encrypted (Fernet) and stored (local disk, S3, or PostgreSQL on Vercel). Duplicates
+   are caught by content hash.
+2. **Extract text** → PDF text layer, Tesseract OCR for images and scans, MIME parsing for `.eml`, DOCX and HTML.
+3. **Understand** → depending on the user's AI setting (off / text only / files and text), the AI router sends the
+   original file to Gemini, images to Z.ai's free vision model, or text to whichever provider is up. With AI off,
+   a local rules-based parser does the job.
+4. **Verify** → every extracted value is searched for in the source text. Each field ends up as *found in document*,
+   *derived* (e.g. end time from a stated duration) or *not found*, and that's what the review screen shows.
+5. **Group** → records are matched to trips by dates, places and booking references, or a new trip is proposed.
+   Updates to an existing booking (new check-in time, cancellation) are detected and applied as changes.
+6. **Check** → deterministic conflict rules run over the timezone-aware itinerary: overlaps, impossible sequences,
+   arrival-to-check-in gaps, missing transport or accommodation, unconfirmed items, cancellation deadlines. No model
+   decides whether two events overlap.
 
-Click **Explore the demo** on the sign-in page. Each visitor gets an isolated, expiring workspace with
-a fictional Rome long weekend (flights, hotel with an applied update, museum ticket, walking tour,
-dinner, free time, a suggestion, one deliberate conflict, documents and an assistant conversation).
-Bookings use a simulated provider — nothing real is booked or charged. On **Websites**, the browser agent
-can complete a full (simulated) purchase on Tandem's demo rail, bus, airline and museum sites after you approve it;
-real booking sites (42 listed) are link-only by default — see [docs/BROWSER_AGENT.md](docs/BROWSER_AGENT.md). The shared account
-`demo@tandem.travel` is created by `flask seed-demo`. Details: [docs/DEMO_ENVIRONMENT.md](docs/DEMO_ENVIRONMENT.md).
+### The assistant
 
-## Configuring AI providers
+A tool-using agent with about twenty tools (read trips and itinerary, find free time, search activities, propose
+bookings, start a website task…). It works from database state, not from chat memory. Anything with side effects
+becomes an **action** that a person must approve. The approval is bound to a hash of the exact proposal, and the
+provider's response is verified before anything is marked booked. Without AI keys an offline assistant answers common
+questions straight from the data and says that it's offline.
 
-Everything works without API keys: documents are read by Tandem's on-server parser and OCR, and the
-assistant runs in a clearly labelled offline mode. Add keys to enable AI:
+### AI providers
 
-| Key | Unlocks |
-|---|---|
-| `GEMINI_API_KEY` | Extraction from original PDFs/images (Files API for large PDFs), the full assistant with tool calling, conflict explanations |
-| `ZAI_API_KEY` | Text extraction/reasoning (GLM-4.7-Flash), screenshots via the free GLM-4.6V-Flash vision model, assistant fallback |
-| `GROQ_API_KEY` | Fast text-only tasks (summaries, conflict explanations); never receives files |
-
-Users also choose, per account, whether external AI may see nothing, only extracted text, or files.
-After adding keys, run `flask --app app check-providers` to verify the configured model IDs, then
-`flask --app app smoke-ai` for a live end-to-end check (fictional demo PDF and screenshot through
-Gemini/Z.ai with the extraction schema, a Groq text task, and a multi-tool assistant turn).
-See [docs/AI_PROVIDER_CONFIGURATION.md](docs/AI_PROVIDER_CONFIGURATION.md) and [docs/AI_PRIVACY.md](docs/AI_PRIVACY.md).
-
-## Integrations
-
-| Integration | Needs | Status without it |
+| Provider | Used for | Rule |
 |---|---|---|
-| Gmail (read-only) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (OAuth app; restricted scope needs Google verification for production) | Hidden as "not configured" |
-| Booking.com Attractions | Affiliate ID + token, early-access pilot approval | `awaiting_partner_approval` |
-| Expedia Rapid Activities | Beta partner access | `awaiting_partner_approval` |
-| Viator | Affiliate API key | `awaiting_partner_approval` |
-| GetYourGuide | Partner token | `awaiting_partner_approval` |
-| OpenStreetMap places | none (`OSM_CONTACT_EMAIL` recommended) | Search-only discovery, no prices or availability |
+| Gemini | Reading PDFs and images, the main assistant | Primary |
+| Z.ai (GLM) | Text, a free vision model, fallback | Additional |
+| Groq | Fast text-only tasks | **Never receives files.** Enforced in the router *and* the provider client, with tests |
 
-See [docs/PROVIDER_INTEGRATIONS.md](docs/PROVIDER_INTEGRATIONS.md).
+Only free-tier models are used unless `AI_ALLOW_PAID_MODELS=true`. Everything degrades gracefully: no keys means the
+local parser plus the offline assistant, never a fake answer.
 
-## Tests
+### The browser agent
+
+42 real airline, rail, bus, museum and gallery sites are listed. By default they're **link-only**: Tandem doesn't
+automate sites whose terms haven't been reviewed (Ryanair, which forbids it, is permanently link-only). An operator
+can allow assisted *search* per site; the agent then checks robots.txt, stays on the site's own domain, refuses to
+type into password or payment fields, stops at CAPTCHAs and logins, and hands off before personal details. On
+Tandem's own simulated sites it completes the whole flow after approval, which is what the demo shows.
+
+### Frontend
+
+React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, Radix primitives, Leaflet and [Motion](https://motion.dev)
+for the springy bits (sliding tab pills, staggered lists, the route line that draws itself). On phones it follows
+Apple's conventions: safe-area insets, a floating tab bar, 44pt touch targets, 16px inputs so iOS doesn't zoom,
+bottom sheets instead of modals, and reduced-motion support.
+
+### Security & privacy, briefly
+
+Server-side sessions with CSRF headers, encrypted files/tokens/extractions at rest, per-user AI consent enforced on
+the server, rate limits on auth and demo creation, SSRF-safe link import, and prompt-injection-aware extraction
+(documents are data, never instructions). More in [docs/SECURITY.md](docs/SECURITY.md) and
+[docs/AI_PRIVACY.md](docs/AI_PRIVACY.md).
+
+---
+
+## Running it
+
+Prerequisites: Python 3.11, Node 20+, Tesseract (`brew install tesseract`). PostgreSQL comes from the `pgserver`
+package's bundled binaries, or bring any PostgreSQL 14+.
 
 ```bash
-cd backend && .venv/bin/python -m pytest          # 103 tests on PostgreSQL (tandem_test); no API keys needed
-# Playwright tests need: .venv/bin/pip install playwright && .venv/bin/python -m playwright install chromium
+python3.11 -m venv backend/.venv
+backend/.venv/bin/pip install -r backend/requirements.txt pgserver
+scripts/dev-db.sh start                           # PostgreSQL 16 on :5433
+cp .env.example backend/.env                      # set SECRET_KEY and ENCRYPTION_KEY (commands inside)
+
+cd backend
+.venv/bin/flask --app app db upgrade
+.venv/bin/flask --app app run --port 5050         # terminal 1: API
+.venv/bin/flask --app app worker                  # terminal 2: jobs + browser agent
+npm --prefix ../frontend install
+npm --prefix ../frontend run dev                  # terminal 3: http://localhost:5173
+```
+
+### Keys
+
+None are required. The short version:
+
+| Get this | To unlock |
+|---|---|
+| `GEMINI_API_KEY` ([AI Studio](https://aistudio.google.com/apikey), free) | Reading PDFs/photos with AI, the full assistant |
+| `ZAI_API_KEY` ([Z.ai](https://z.ai/manage-apikey/apikey-list), free models) | Second provider + free vision model |
+| `GROQ_API_KEY` ([GroqCloud](https://console.groq.com/keys), free) | Fast text tasks |
+| Google OAuth client | Read-only Gmail import |
+| Viator / GetYourGuide / Booking.com / Expedia partner credentials | Live activities and bookings |
+
+The full list, with where to get each key and what it switches on, is in
+[docs/ENVIRONMENT.md](docs/ENVIRONMENT.md). `flask --app app env-status` shows what your environment has (without
+printing secrets), and `scripts/vercel-env-push.sh` copies keys to Vercel without echoing them.
+
+### Tests
+
+```bash
+cd backend && .venv/bin/python -m pytest      # 103 tests on a real PostgreSQL; providers are mocked
 cd frontend && npx vitest run && npx tsc -b --noEmit
 ```
 
-`TEST_DATABASE_URL` overrides the test database. External providers are mocked (respx / fakes).
+### Deploying
 
-## Deployment
+- **Docker:** `docker compose up -d --build` runs PostgreSQL, Redis, migrations, the web app, the job worker and a
+  Playwright browser worker.
+- **Vercel:** `api/index.py` is the serverless entry, the SPA is served statically, jobs run inline, files are
+  stored encrypted in PostgreSQL (Neon), and a cron runs the scheduled checks.
 
-`docker compose up -d --build` runs PostgreSQL, Redis (rate limits), a one-shot migration, the web
-app (gunicorn serving API + built SPA on one origin) and the worker. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Details in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Documentation
+## Docs
 
 [Product overview](docs/PRODUCT_OVERVIEW.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Database schema](docs/DATABASE_SCHEMA.md) · [API reference](docs/API_REFERENCE.md) ·
-[AI providers](docs/AI_PROVIDER_CONFIGURATION.md) · [AI privacy](docs/AI_PRIVACY.md) ·
-[Document ingestion](docs/DOCUMENT_INGESTION.md) · [Agent](docs/AGENT_ARCHITECTURE.md) ·
-[Approvals](docs/APPROVAL_SYSTEM.md) · [Provider integrations](docs/PROVIDER_INTEGRATIONS.md) ·
+[Environment & keys](docs/ENVIRONMENT.md) · [Database schema](docs/DATABASE_SCHEMA.md) ·
+[API reference](docs/API_REFERENCE.md) · [AI providers](docs/AI_PROVIDER_CONFIGURATION.md) ·
+[AI privacy](docs/AI_PRIVACY.md) · [Document ingestion](docs/DOCUMENT_INGESTION.md) ·
+[Agent](docs/AGENT_ARCHITECTURE.md) · [Approvals](docs/APPROVAL_SYSTEM.md) ·
+[Browser agent](docs/BROWSER_AGENT.md) · [Provider integrations](docs/PROVIDER_INTEGRATIONS.md) ·
 [Booking.com](docs/BOOKING_COM_INTEGRATION.md) · [Expedia](docs/EXPEDIA_INTEGRATION.md) ·
-[Airlines](docs/AIRLINE_INTEGRATIONS.md) · [Demo](docs/DEMO_ENVIRONMENT.md) ·
-[Browser agent](docs/BROWSER_AGENT.md) · [Deployment](docs/DEPLOYMENT.md) · [Security](docs/SECURITY.md) ·
+[Airlines](docs/AIRLINE_INTEGRATIONS.md) · [Demo](docs/DEMO_ENVIRONMENT.md) · [Security](docs/SECURITY.md) ·
 [Status](docs/IMPLEMENTATION_STATUS.md)
