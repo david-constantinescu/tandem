@@ -72,6 +72,14 @@ No key needed: `OSM_PLACES_ENABLED=true` searches museums, galleries and sights 
 | `LOCATION_PROVIDER=nominatim` + `OSM_CONTACT_EMAIL` | Geocoding addresses so events appear on the map | No key. OSM's [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) asks for a contact email in the User-Agent and max 1 request/second (Tandem respects both). `offline` uses the built-in city list only. |
 | `ROUTING_OSRM_URL` | Real travel times between places in conflict checks | Run [OSRM](https://project-osrm.org/) yourself. Without it Tandem says travel time is unknown instead of guessing. |
 
+## 6b. Live trip context
+
+| Variable | Unlocks | Where to get it |
+|---|---|---|
+| `WEATHER_ENABLED` (default `true`) | Per-day forecast on trips, weather-aware activity ranking, the assistant's `get_weather` tool | No key: [Open-Meteo](https://open-meteo.com/en/docs), free for non-commercial use, 10,000 calls/day. Cached 3 hours. |
+| `NEWS_ENABLED` (default `true`) | Strikes, protests, closures and alerts for the destination, the assistant's `check_local_news` tool | No key: Google News RSS, with the [GDELT DOC API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) as fallback. Cached 1 hour. |
+| `TAVILY_API_KEY` | General web search for the assistant (`web_search`) | [app.tavily.com](https://app.tavily.com): 1,000 free searches/month. Without it, `web_search` searches Google News. |
+
 ## 7. Infrastructure (optional)
 
 | Variable(s) | When you need it |

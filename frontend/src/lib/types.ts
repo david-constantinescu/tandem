@@ -187,6 +187,7 @@ export type ActivityResult = {
   attribution: string | null;
   simulated: boolean;
   distance_km: number | null;
+  weather_note?: "outdoor_in_bad_weather" | "indoor_good_for_rain" | null;
   fits: { status?: "fits" | "no_fitting_slot" | "availability_unknown"; slots?: { date: string; time: string; end_time: string; remaining: number }[]; free_windows?: Record<string, { start: string; end: string; minutes: number }[]> };
 };
 
@@ -197,7 +198,7 @@ export type Message = {
   role: "user" | "assistant";
   content: string;
   tool_calls: { name: string; status: string; permission: string; summary: string }[];
-  references: { type: string; id: string; label: string; trip_id?: string; activity?: Partial<ActivityResult>; date?: string | null }[];
+  references: { type: string; id: string; label: string; url?: string; trip_id?: string; activity?: Partial<ActivityResult>; date?: string | null }[];
   action_ids: string[];
   provider: string | null;
   model: string | null;
@@ -241,3 +242,15 @@ export type BrowserTask = {
   trip_id: string | null;
   created_at: string;
 };
+
+export type DayWeather = {
+  date: string; condition: "clear" | "cloudy" | "fog" | "drizzle" | "rain" | "snow" | "storm" | "unknown";
+  temp_max: number | null; temp_min: number | null; precip_probability: number | null; precip_mm: number | null;
+  wind_kmh: number | null; wet_hours: string[]; outdoor_ok: boolean;
+};
+export type NewsItem = { title: string; url: string; source: string; published: string | null; kind: "strike" | "protest" | "weather" | "closure" | "news"; mentions_dates: string[] };
+export type TripContext = {
+  weather: { available: boolean; reason?: string; forecast_from?: string; source?: string; place?: string | null; days: DayWeather[] };
+  news: { available: boolean; reason?: string; source?: string; place?: string | null; items: NewsItem[] };
+};
+export type JourneyLink = { kind: "planner" | "operator"; name: string; url: string; covers: string; official?: boolean; automation_forbidden?: boolean };

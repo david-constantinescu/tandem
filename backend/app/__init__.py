@@ -5,20 +5,20 @@ import logging
 import os
 from pathlib import Path
 
-from app.i18n import tr
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
 from app.config import Config, load_dotenv, validate_config
 from app.extensions import db, limiter, migrate
+from app.i18n import tr
 from app.utils.errors import APIError
 
 BLUEPRINTS = (
     "app.api.health", "app.api.auth", "app.api.settings", "app.api.trips", "app.api.reservations",
     "app.api.itinerary", "app.api.inbox", "app.api.documents", "app.api.activities", "app.api.assistant",
     "app.api.approvals", "app.api.integrations", "app.api.notifications", "app.api.demo", "app.api.internal", "app.api.browser", "app.api.demo_sites",
-    "app.api.calendar", "app.api.openapi",
+    "app.api.calendar", "app.api.context", "app.api.openapi",
 )
 
 
@@ -57,10 +57,10 @@ def create_app(overrides: dict | None = None) -> Flask:
     limiter.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": [app.config["FRONTEND_URL"]]}}, supports_credentials=True)
 
+    from importlib import import_module
+
     from app import models as _models  # noqa: F401 - register models with SQLAlchemy metadata
     from app.tasks import handlers as _handlers  # noqa: F401 - register job handlers
-
-    from importlib import import_module
 
     for module_name in BLUEPRINTS:
         app.register_blueprint(import_module(module_name).bp)

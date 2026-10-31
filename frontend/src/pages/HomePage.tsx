@@ -6,6 +6,7 @@ import { useAdd } from "@/components/AddSheet";
 import { RouteDoodle, Stagger, StaggerItem, spring } from "@/components/motion";
 import { ConflictList } from "@/components/trips/ConflictList";
 import { EventIcon } from "@/components/trips/EventIcon";
+import { NewsList, WeatherChip } from "@/components/trips/TripContext";
 import { InstallCard } from "@/components/pwa";
 import { Button, LoadError, PageLoader } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
@@ -13,7 +14,7 @@ import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { daysUntil, fmtDateTime, fmtRange, fmtTime, fmtToday, money, whenLabel } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
-import { useApprovals, useConflicts, useInbox, useItinerary, useTrips } from "@/lib/queries";
+import { useApprovals, useConflicts, useInbox, useItinerary, useTripContext, useTrips } from "@/lib/queries";
 import type { Conversation, Trip } from "@/lib/types";
 
 function greetingKey(): Key {
@@ -215,11 +216,16 @@ function BoardingPass({ trip }: { trip: Trip }) {
   const { t, tp } = useT();
   const itinerary = useItinerary(trip.id);
   const conflicts = useConflicts(trip.id);
+  const context = useTripContext(trip.id);
   const now = Date.now();
   const upcoming = (itinerary.data ?? []).filter((e) => new Date(e.start_at).getTime() >= now && e.status !== "cancelled");
   const next = upcoming.filter((e) => e.status !== "suggested").slice(0, 4);
   const suggestions = (itinerary.data ?? []).filter((e) => e.status === "suggested").slice(0, 2);
   const alerts = (conflicts.data ?? []).filter((c) => c.severity !== "info");
+  // Only news that can change these plans: it names the trip's dates, or it is today's and the trip is under way.
+  const fresh = (n: { published: string | null }) => !!n.published && now - new Date(n.published).getTime() < 24 * 3600_000;
+  const news = (context.data?.news.items ?? []).filter((n) => n.kind !== "news" && (n.mentions_dates.length > 0 || (trip.stats.phase === "current" && fresh(n)))).slice(0, 2);
+  const forecast = (context.data?.weather.days ?? []).slice(0, 4);
   const dest = trip.destinations.map((d) => d.name).join(" · ") || trip.primary_destination || trip.name;
   const from = (user?.home_city || t("home.from")).toLocaleUpperCase();
   const to = (trip.destinations[0]?.name || trip.primary_destination || "").toLocaleUpperCase();
@@ -266,8 +272,15 @@ function BoardingPass({ trip }: { trip: Trip }) {
         <div className="space-y-5">
           <div>
             <p className="eyebrow mb-3">{t("home.headsUp")}</p>
-            {alerts.length ? <ConflictList conflicts={alerts} tripId={trip.id} compact /> : <p className="text-[14px] text-ink-400">{t("home.noClashes")}</p>}
+            {alerts.length ? <ConflictList conflicts={alerts} tripId={trip.id} compact /> : !news.length && <p className="text-[14px] text-ink-400">{t("home.noClashes")}</p>}
+            {news.length > 0 && <div className={alerts.length ? "mt-3" : ""}><NewsList items={news} /></div>}
           </div>
+          {forecast.length > 0 && (
+            <div>
+              <p className="eyebrow mb-2">{t("home.forecast")}</p>
+              <div className="flex flex-wrap gap-1.5">{forecast.map((d) => <WeatherChip key={d.date} day={d} withDay />)}</div>
+            </div>
+          )}
           {suggestions.length > 0 && (
             <div>
               <p className="eyebrow mb-2 flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-violet-ink" /> {t("home.worthALook")}</p>

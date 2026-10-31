@@ -11,13 +11,14 @@ import { ConflictList } from "@/components/trips/ConflictList";
 import { EventDialog, ReservationDialog } from "@/components/trips/EditDialogs";
 import { ReservationCard } from "@/components/trips/ReservationCard";
 import { Timeline, TimelineLegend } from "@/components/trips/Timeline";
+import { TripContextCard } from "@/components/trips/TripContext";
 import { TripMap } from "@/components/trips/TripMap";
 import { Badge, Button, EmptyState, LoadError, PageLoader, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { fmtRange, relativeTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
-import { useConflicts, useInvalidateTripData, useItinerary, useReservations, useTrip, useTripDocuments } from "@/lib/queries";
+import { useConflicts, useInvalidateTripData, useItinerary, useReservations, useTrip, useTripContext, useTripDocuments } from "@/lib/queries";
 import type { Conversation, ItineraryEvent, Reservation } from "@/lib/types";
 
 function Tab({ value, current, children }: { value: string; current: string; children: ReactNode }) {
@@ -45,6 +46,7 @@ export default function TripDetailPage() {
   const reservations = useReservations(id);
   const conflicts = useConflicts(id);
   const documents = useTripDocuments(id);
+  const context = useTripContext(id);
   const invalidate = useInvalidateTripData();
   const toast = useToast();
   const navigate = useNavigate();
@@ -152,7 +154,7 @@ export default function TripDetailPage() {
                 <EmptyState title={t("trip.emptyPlan")} body={t("trip.emptyPlanBody")}
                   action={<Button onClick={openAdd} icon={<FilePlus className="h-4 w-4" />}>{t("trip.addBooking")}</Button>} />
               ) : (
-                <Timeline events={itinerary.data!} conflicts={allConflicts} tripTz={tz} onEdit={(e) => setEditing(e)} onDelete={remove} onStatus={setStatus} />
+                <Timeline events={itinerary.data!} conflicts={allConflicts} tripTz={tz} weather={context.data?.weather.days} onEdit={(e) => setEditing(e)} onDelete={remove} onStatus={setStatus} />
               )}
             </div>
             <aside className="order-first space-y-3 xl:order-none xl:sticky xl:top-20 xl:self-start">
@@ -166,6 +168,7 @@ export default function TripDetailPage() {
                   </details>
                 )}
               </div>
+              <TripContextCard tripId={tr.id} />
               {tz && <p className="px-1 text-[12.5px] text-ink-400">{t("trip.timesNote", { tz: tz.replace(/_/g, " ") })}</p>}
             </aside>
           </div>

@@ -143,6 +143,13 @@ class Config:
         self.OSM_PLACES_ENABLED = _bool("OSM_PLACES_ENABLED", True)
         self.OVERPASS_URL = _str("OVERPASS_URL", "https://overpass-api.de/api/interpreter")
 
+        # Live trip context: weather (Open-Meteo) and local news (Google News RSS, GDELT) need no keys.
+        # TAVILY_API_KEY adds general web search for the assistant (free tier: 1,000 searches a month).
+        self.WEATHER_ENABLED = _bool("WEATHER_ENABLED", True)
+        self.OPEN_METEO_URL = _str("OPEN_METEO_URL", "https://api.open-meteo.com/v1/forecast")
+        self.NEWS_ENABLED = _bool("NEWS_ENABLED", True)
+        self.TAVILY_API_KEY = _str("TAVILY_API_KEY")
+
         # Browser agent (see docs/BROWSER_AGENT.md)
         self.BROWSER_ASSIST_SITES = _str("BROWSER_ASSIST_SITES")  # comma-separated site keys, after terms review
         self.BROWSER_WORKER_ENABLED = _bool("BROWSER_WORKER_ENABLED", False)  # Playwright installed in the worker

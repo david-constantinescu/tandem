@@ -98,7 +98,7 @@ def test_full_booking_workflow_in_demo(api):
     r = api.post("/api/v1/activities/search", json={"trip_id": trip["id"], "date_from": sunday, "date_to": sunday,
                                                     "categories": ["workshops"]})
     data = r.get_json()["data"]
-    assert data["providers"][0]["provider"] == "simulator"
+    assert "simulator" in [p["provider"] for p in data["providers"]]
     workshop = data["results"][0]
     assert workshop["simulated"] is True and workshop["availability_checked"] is True
     fitting = workshop["fits"]["slots"]

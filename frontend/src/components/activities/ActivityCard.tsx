@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Accessibility, Bookmark, CalendarCheck, CalendarX, Clock, ExternalLink, MapPin, Star } from "lucide-react";
+import { Accessibility, Bookmark, CalendarCheck, CalendarX, Clock, CloudRain, ExternalLink, MapPin, Star, Umbrella } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Badge, Button, ErrorNote } from "@/components/ui";
@@ -56,6 +56,8 @@ export function ActivityCard({ a, tripId, date }: { a: ActivityResult; tripId?: 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {fit === "fits" && <Badge tone="lagoon" icon={<CalendarCheck className="h-3 w-3" />}>{t("activity.fits", { times: a.fits.slots?.slice(0, 3).map((s) => s.time).join(", ") ?? "" })}</Badge>}
         {fit === "no_fitting_slot" && <Badge tone="amber" icon={<CalendarX className="h-3 w-3" />}>{t("activity.noFit")}</Badge>}
+        {a.weather_note === "outdoor_in_bad_weather" && <Badge tone="amber" icon={<CloudRain className="h-3 w-3" />}>{t("activity.outdoorRain")}</Badge>}
+        {a.weather_note === "indoor_good_for_rain" && <Badge tone="lagoon" icon={<Umbrella className="h-3 w-3" />}>{t("activity.indoorRain")}</Badge>}
         {!a.availability_checked && <Badge tone="neutral">{t("activity.notChecked")}</Badge>}
         {a.simulated && <Badge tone="violet">{t("activity.simulated")}</Badge>}
       </div>

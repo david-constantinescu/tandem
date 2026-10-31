@@ -7,7 +7,12 @@ import pytest
 
 from app.extensions import db
 from app.models import AgentAction, BrowserTask
-from app.services.browser.policy import detect_challenge, detect_payment_page, host_allowed, is_sensitive_field
+from app.services.browser.policy import (
+    detect_challenge,
+    detect_payment_page,
+    host_allowed,
+    is_sensitive_field,
+)
 from app.services.browser.sites import ALL_SITES, get_site, policy_for
 
 
@@ -140,12 +145,24 @@ def test_sites_endpoint_and_cancel(api):
     assert api.get(f"/api/v1/approvals/{t['action_id']}").get_json()["data"]["status"] == "cancelled"
 
 
+def test_offline_assistant_plans_real_journeys(api):
+    api.demo()
+    trip = _trip(api)
+    conv = api.post("/api/v1/assistant/conversations", json={"trip_id": trip["id"]}).get_json()["data"]
+    reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages",
+                     json={"content": "Book a train from Rome to Florence on Sunday"}).get_json()["data"]
+    msg = reply["reply"]
+    # Real websites, route filled in where possible; nothing is bought and no simulated task starts.
+    assert "google.com/maps/dir" in msg["content"] and "trenitalia.com" in msg["content"]
+    assert not msg["action_ids"]
+
+
 def test_offline_assistant_books_via_simulated_site(api):
     api.demo()
     trip = _trip(api)
     conv = api.post("/api/v1/assistant/conversations", json={"trip_id": trip["id"]}).get_json()["data"]
     reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages",
-                     json={"content": "Book a train from Rome to Florence on Sunday for 2 people"}).get_json()["data"]
+                     json={"content": "Practice run: book a train from Rome to Florence on Sunday for 2 people"}).get_json()["data"]
     msg = reply["reply"]
     assert msg["provider"] == "local" and "approve" in msg["content"].lower()
     assert msg["action_ids"], msg

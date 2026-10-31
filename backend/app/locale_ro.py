@@ -352,4 +352,46 @@ RO: dict[str, str] = {
     "Unknown website": "Site necunoscut",
     "Too Many Requests": "Prea multe cereri. Încearcă din nou puțin mai târziu.",
     "Not Found": "Nu a fost găsit",
+
+    # Live context (weather, news, journeys)
+    "Book there, then forward the confirmation to Tandem and I'll add it to your trip.":
+        "Rezervă acolo, apoi trimite confirmarea în Tandem și o adaug în călătorie.",
+    "Heads up — recent news about strikes:": "Atenție — știri recente despre greve:",
+    "Here's where to book {mode} {origin} → {destination}{when} on the real websites, with the route filled in where "
+    "the site allows it:":
+        "Uite unde poți rezerva {mode} {origin} → {destination}{when} pe site-urile reale, cu traseul completat acolo "
+        "unde site-ul permite:",
+    "I couldn't check the local news right now.": "Nu am putut verifica știrile locale acum.",
+    "I couldn't get the weather right now.": "Nu am putut afla vremea acum.",
+    "I found no recent news about strikes, protests or closures in {place}.":
+        "Nu am găsit știri recente despre greve, proteste sau închideri în {place}.",
+    "Indoor ideas: {names}.": "Idei de interior: {names}.",
+    "On {day} keep outdoor plans short.": "Pe {day} ține planurile de afară scurte.",
+    "Recent local news for {place} ({source}):": "Știri locale recente pentru {place} ({source}):",
+    "The forecast only reaches 16 days ahead. Ask me again from {day}.":
+        "Prognoza acoperă doar 16 zile înainte. Întreabă-mă din nou de {day}.",
+    "These are news reports, not confirmed timetables: check the operator's site on the day.":
+        "Sunt știri, nu orare confirmate: verifică site-ul operatorului în ziua respectivă.",
+    "Weather in {place} (Open-Meteo):": "Vremea în {place} (Open-Meteo):",
+    "better indoors": "mai bine în interior",
+    "good for outdoors": "bună pentru afară",
+    "mentions your trip dates": "menționează datele călătoriei tale",
+    "on {day}": "pe {day}",
+    "{p}% chance of rain": "{p}% șanse de ploaie",
+    "train": "trenul",
+    "bus": "autobuzul",
+    "flight": "zborul",
+    "clear": "senin",
+    "cloudy": "înnorat",
+    "fog": "ceață",
+    "drizzle": "burniță",
+    "rain": "ploaie",
+    "snow": "ninsoare",
+    "storms": "furtuni",
+    "unknown": "necunoscut",
+    "Strike": "Grevă",
+    "Protest or march": "Protest sau marș",
+    "Weather alert": "Avertizare meteo",
+    "Closure": "Închidere",
+    "News": "Știre",
 }

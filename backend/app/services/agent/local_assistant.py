@@ -35,6 +35,10 @@ CATEGORY_FOR = {"demo_rail": "train", "demo_coach": "bus", "demo_air": "flight",
 STATUS = {"confirmed": "confirmed", "pending": "pending", "unknown": "unconfirmed", "suggested": "suggestion",
           "unbooked": "not booked", "cancelled": "cancelled", "completed": "completed"}
 SEVERITY = {"critical": "critical", "warning": "warning", "info": "info"}
+CONDITIONS = {"clear": "clear", "cloudy": "cloudy", "fog": "fog", "drizzle": "drizzle", "rain": "rain", "snow": "snow",
+              "storm": "storms", "unknown": "unknown"}
+NEWS_KINDS = {"strike": "Strike", "protest": "Protest or march", "weather": "Weather alert", "closure": "Closure",
+              "news": "News"}
 
 
 def _plain(text: str) -> str:
@@ -119,6 +123,74 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
 
     booking = re.search(r"\b(book|buy|get|rezerva|cumpara|ia-mi|ia)\b.*\b(train|tren|rail|bus|autobuz|coach|autocar|flight|zbor"
                         r"|plane|avion|museum|muzeu|gallery|galerie)\b", lower)
+    practice = re.search(r"practice|simulat|exersa|test", lower)
+    if booking and SITE_FOR[booking.group(2)] != "demo_museum" and not practice:
+        route = re.search(r"(?:from|de la) ([a-z .'-]+?) (?:to|la|spre|catre) ([a-z .'-]+?)"
+                          r"(?: on| for| at| this| next| pe| pentru| in| duminica| luni| marti| miercuri| joi| vineri| sambata|,|\.|$)", lower)
+        if not route:
+            return header + tr("Tell me where from and to, e.g. *book a train from Rome to Florence on Sunday*.", loc)
+        day = _resolve_day(text, user, t_start, t_end)
+        mode = {"demo_rail": "train", "demo_coach": "bus", "demo_air": "flight"}[SITE_FOR[booking.group(2)]]
+        origin, destination = route.group(1).strip().title(), route.group(2).strip().title()
+        result = call("plan_journey", origin=origin, destination=destination, mode=mode,
+                      date=day.isoformat() if day else None) or {"links": []}
+        lines = [f"- [{link['name']}]({link['url']})" for link in result["links"][:6]]
+        news = call("check_local_news", trip_id=tid, date=day.isoformat() if day else None) or {"items": []}
+        strikes = [i for i in news.get("items", []) if i["kind"] == "strike"][:2]
+        warn = ""
+        if strikes:
+            warn = "\n\n" + tr("Heads up — recent news about strikes:", loc) + "\n" + "\n".join(
+                f"- [{i['title']}]({i['url']}) · {i['source']}" for i in strikes)
+        when = " " + tr("on {day}", loc, day=long_date(day, loc)) if day else ""
+        return header + tr("Here's where to book {mode} {origin} → {destination}{when} on the real websites, with the route "
+                           "filled in where the site allows it:", loc, mode=tr(mode, loc), origin=origin,
+                           destination=destination, when=when) + "\n" + "\n".join(lines) + warn + "\n\n" + \
+            tr("Book there, then forward the confirmation to Tandem and I'll add it to your trip.", loc)
+
+    # Word boundaries matter: "rain" is inside "train" and "hot" inside "hotel".
+    if re.search(r"weather|\brain|forecast|umbrella|\bcold\b|\bhot\b|vreme|ploua|ploaie|prognoz|umbrel|\bfrig|\bcald|temperatur", lower):
+        day = _resolve_day(text, user, t_start, t_end)
+        w = call("get_weather", trip_id=tid, date=day.isoformat() if day else None) or {}
+        if not w.get("available"):
+            if w.get("reason") == "too_far_ahead":
+                return header + tr("The forecast only reaches 16 days ahead. Ask me again from {day}.", loc,
+                                   day=long_date(date.fromisoformat(w["forecast_from"]), loc))
+            return header + tr("I couldn't get the weather right now.", loc)
+        lines, wet = [], []
+        for d in w["days"]:
+            dd = date.fromisoformat(d["date"])
+            temps = f"{round(d['temp_min'])}–{round(d['temp_max'])}°C" if d["temp_max"] is not None else ""
+            rain = tr("{p}% chance of rain", loc, p=d["precip_probability"]) if d["precip_probability"] is not None else ""
+            verdict = tr("good for outdoors", loc) if d["outdoor_ok"] else tr("better indoors", loc)
+            lines.append(f"- **{long_date(dd, loc)}**: {tr(CONDITIONS.get(d['condition'], d['condition']), loc)}, "
+                         f"{temps}, {rain} — {verdict}")
+            if not d["outdoor_ok"]:
+                wet.append(dd)
+        out = header + tr("Weather in {place} (Open-Meteo):", loc, place=w.get("place") or "") + "\n" + "\n".join(lines)
+        if wet:
+            pick = call("search_activities", trip_id=tid, date=wet[0].isoformat(), categories=["museums"]) or {"results": []}
+            indoor = [r["title"] for r in pick.get("results", []) if r.get("weather_note") != "outdoor_in_bad_weather"][:3]
+            out += "\n\n" + tr("On {day} keep outdoor plans short.", loc, day=long_date(wet[0], loc))
+            if indoor:
+                out += " " + tr("Indoor ideas: {names}.", loc, names=", ".join(indoor))
+        return out
+
+    if re.search(r"strike|protest|\bmarch\b|\bnews\b|closure|closed|disruption|\bbus\b|metro|greva|manifest|corteo|"
+                 r"stiri|inchis|trafic|autobuz|transport", lower):
+        day = _resolve_day(text, user, t_start, t_end)
+        news = call("check_local_news", trip_id=tid, date=day.isoformat() if day else None) or {"items": []}
+        items = news.get("items", [])
+        if not news.get("available"):
+            return header + tr("I couldn't check the local news right now.", loc)
+        if not items:
+            return header + tr("I found no recent news about strikes, protests or closures in {place}.", loc,
+                               place=news.get("place") or "")
+        lines = [f"- **{tr(NEWS_KINDS.get(i['kind'], 'News'), loc)}**: [{i['title']}]({i['url']}) · {i['source']}"
+                 + (" — " + tr("mentions your trip dates", loc) if i["mentions_dates"] else "") for i in items[:6]]
+        return header + tr("Recent local news for {place} ({source}):", loc, place=news.get("place") or "",
+                           source=news.get("source") or "") + "\n" + "\n".join(lines) + "\n\n" + \
+            tr("These are news reports, not confirmed timetables: check the operator's site on the day.", loc)
+
     if booking:
         site = SITE_FOR[booking.group(2)]
         if not user.is_demo:

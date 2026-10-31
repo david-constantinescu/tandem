@@ -7,7 +7,12 @@ from datetime import date, datetime, time, timedelta
 from app.extensions import db
 from app.models import ItineraryEvent, Reservation, Trip, User
 from app.services import geo
-from app.services.providers.base import ActivityResult, ActivitySearchRequest, ProviderCapabilityError, ProviderRequestError
+from app.services.providers.base import (
+    ActivityResult,
+    ActivitySearchRequest,
+    ProviderCapabilityError,
+    ProviderRequestError,
+)
 from app.services.providers.registry import adapters_for
 from app.utils.timeutil import localize, to_local
 
@@ -132,8 +137,31 @@ def search(user: User, req: ActivitySearchRequest, *, trip: Trip | None = None,
     if req.start_after or req.end_before:
         results = [r for r in results if _within_time(r, req)]
     rank = {"fits": 0, "availability_unknown": 1, "no_fitting_slot": 2}
-    results.sort(key=lambda r: (rank.get(r.fits.get("status"), 1), r.distance_km if r.distance_km is not None else 999))
-    return {"results": [r.to_dict() for r in results[: req.limit]], "providers": statuses}
+    # On a wet day outdoor options go last, and both the app and the assistant see why.
+    forecast = _day_weather(trip, req.date_from) if trip and req.date_from else None
+    notes = {id(r): weather_note(r.title, r.categories, forecast) for r in results}
+    results.sort(key=lambda r: (notes[id(r)] == "outdoor_in_bad_weather", rank.get(r.fits.get("status"), 1),
+                                r.distance_km if r.distance_km is not None else 999))
+    return {"results": [{**r.to_dict(), "weather_note": notes[id(r)]} for r in results[: req.limit]],
+            "providers": statuses, "weather": forecast}
+
+
+OUTDOOR_WORDS = ("outdoor", "park", "garden", "walk", "tour", "day trip", "viewpoint", "beach", "hike", "bike", "boat")
+
+
+def _day_weather(trip: Trip, day) -> dict | None:
+    from app.services.context import weather
+
+    result = weather.for_trip(trip, day)
+    return result["days"][0] if result.get("days") else None
+
+
+def weather_note(title: str, categories: list[str] | None, forecast: dict | None) -> str | None:
+    """"outdoor_in_bad_weather" or "indoor_good_for_rain" on a wet day; nothing otherwise."""
+    if not forecast or forecast.get("outdoor_ok", True):
+        return None
+    text = " ".join([title or "", *(categories or [])]).lower()
+    return "outdoor_in_bad_weather" if any(w in text for w in OUTDOOR_WORDS) else "indoor_good_for_rain"
 
 
 def _within_time(r: ActivityResult, req: ActivitySearchRequest) -> bool:

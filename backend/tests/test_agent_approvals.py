@@ -315,7 +315,11 @@ def test_verification_mismatch_is_not_completed(api, monkeypatch):
 def test_redirect_only_provider_creates_link_out(app, monkeypatch):
     from app.services.agent.approvals import propose_booking
     from app.services.providers import registry
-    from app.services.providers.base import REDIRECT_ONLY, ActivityResult, TravelProviderAdapter
+    from app.services.providers.base import (
+        REDIRECT_ONLY,
+        ActivityResult,
+        TravelProviderAdapter,
+    )
 
     class LinkOnly(TravelProviderAdapter):
         key = "viator"
@@ -346,7 +350,8 @@ def test_redirect_only_provider_creates_link_out(app, monkeypatch):
 def test_demo_isolation(api, other_api):
     api.demo()
     providers = api.get("/api/v1/activities/providers").get_json()["data"]
-    assert [p["key"] for p in providers] == ["simulator"]
+    # Real, read-only places (OpenStreetMap) and the simulator: the only provider a demo can "book" with.
+    assert [p["key"] for p in providers] == ["osm", "simulator"]
     r = api.post("/api/v1/activities/search", json={"location": "Rome", "providers": ["booking_com"]})
     assert r.get_json()["data"]["results"] == []
     assert api.post("/api/v1/integrations/gmail/connect").status_code == 403

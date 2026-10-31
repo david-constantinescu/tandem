@@ -43,7 +43,11 @@ The demo is a fictional long weekend in Rome. Each visitor gets their own privat
 2. **Inbox → Try a sample document** sends a fictional Colosseum ticket through the real reading pipeline. Accept it
    and watch a new conflict appear.
 3. **Assistant** answers from your actual plans ("what's still unconfirmed?").
-4. **Book on websites → Ferrovia Demo** lets the browser agent search a (simulated) rail site, pick a train that fits,
+4. **The trip page** shows the real Open-Meteo forecast for each day and real local headlines about strikes, protests
+   and closures (from Google News, in Italian). Wet days are marked, and outdoor activities sink to the bottom.
+5. **Explore → Tickets → Get there** opens the real planners (Google Maps, Google Flights) and the official operators
+   (Trenitalia, Italo, ITA Airways…) with the route already filled in.
+6. **Explore → Tickets → Practice runs** lets the browser agent search a simulated rail site, pick a train that fits,
    and stop for your approval. Approve it and the confirmation is read back into your trip. No real money moves.
 
 ---
@@ -87,6 +91,24 @@ bookings, start a website task…). It works from database state, not from chat 
 becomes an **action** that a person must approve. The approval is bound to a hash of the exact proposal, and the
 provider's response is verified before anything is marked booked. Without AI keys an offline assistant answers common
 questions straight from the data and says that it's offline.
+
+It is one assistant, not several: the activity search, the browser agent, live context and the planner are all its
+tools. When you ask for something ("add dinner at 8"), it goes straight into the plan. When the idea is the
+assistant's own, it goes in as a suggestion you can accept. Bookings and payments always wait for your approval.
+
+### Live context
+
+| What | Source | Key |
+|---|---|---|
+| Forecast per trip day (16 days ahead): rain chance, wet hours, "better indoors" | [Open-Meteo](https://open-meteo.com) | none |
+| Strikes, protests, closures, weather alerts, searched in the local language | [Google News RSS](https://news.google.com), [GDELT](https://www.gdeltproject.org) as fallback | none |
+| General web search for the assistant | [Tavily](https://tavily.com) (1,000 free searches/month), else Google News | `TAVILY_API_KEY`, optional |
+| Ways to get from A to B | Google Maps, Google Flights, and official operators' sites | none |
+
+The assistant gets these as tools (`get_weather`, `check_local_news`, `web_search`, `plan_journey`) with the whole trip
+in view, so "what should we do Saturday?" accounts for Saturday's rain, and "can we take the bus?" checks for a
+transport strike. Headlines are links, not verified fact. The assistant says where it read them, and Tandem drops
+headlines about dates that have passed.
 
 ### AI providers
 
@@ -168,9 +190,11 @@ None are required. The short version:
 | `GEMINI_API_KEY` ([AI Studio](https://aistudio.google.com/apikey), free) | Reading PDFs/photos with AI, the full assistant |
 | `ZAI_API_KEY` ([Z.ai](https://z.ai/manage-apikey/apikey-list), free models) | Second provider + free vision model |
 | `GROQ_API_KEY` ([GroqCloud](https://console.groq.com/keys), free) | Fast text tasks |
+| `TAVILY_API_KEY` ([Tavily](https://app.tavily.com), 1,000 free searches/month) | General web search for the assistant |
 | Google OAuth client | Read-only Gmail import |
 | Viator / GetYourGuide / Booking.com / Expedia partner credentials | Live activities and bookings |
 
+Weather (Open-Meteo), local news (Google News, GDELT), places (OpenStreetMap) and journey links need no keys.
 The full list, with where to get each key and what it switches on, is in
 [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md). `flask --app app env-status` shows what your environment has (without
 printing secrets), and `scripts/vercel-env-push.sh` copies keys to Vercel without echoing them.

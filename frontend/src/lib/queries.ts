@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
-  Action, Conflict, Conversation, DocumentItem, ItineraryEvent, Message, Notification, ProviderCaps, Reservation, Trip,
+  Action, Conflict, Conversation, DocumentItem, ItineraryEvent, Message, Notification, ProviderCaps, Reservation, Trip, TripContext,
 } from "./types";
 
 const PROCESSING = new Set(["uploaded", "validating", "queued", "processing", "analysing"]);
@@ -36,6 +36,11 @@ export function useItinerary(id: string) {
 
 export function useReservations(id: string) {
   return useQuery({ queryKey: keys.reservations(id), queryFn: () => api.get<Reservation[]>(`/trips/${id}/reservations`), enabled: !!id });
+}
+
+/** Weather for the trip's days and local disruption news; changes slowly, so it's cached for half an hour. */
+export function useTripContext(id: string) {
+  return useQuery({ queryKey: ["trip", id, "context"], queryFn: () => api.get<TripContext>(`/trips/${id}/context`), enabled: !!id, staleTime: 30 * 60_000 });
 }
 
 export function useConflicts(id: string) {

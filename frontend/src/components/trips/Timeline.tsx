@@ -3,7 +3,8 @@ import { AlertTriangle, ArrowRight, Check, MoreHorizontal, Pencil, Trash2, X } f
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { Badge, StatusPill } from "@/components/ui";
 import { dayKey, fmtDayHeading, fmtTime, offsetLabel, tzCity } from "@/lib/format";
-import type { Conflict, ItineraryEvent } from "@/lib/types";
+import type { Conflict, DayWeather, ItineraryEvent } from "@/lib/types";
+import { WeatherChip } from "./TripContext";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { useT } from "@/lib/i18n";
 import { EventIcon } from "./EventIcon";
@@ -12,12 +13,13 @@ type Props = {
   events: ItineraryEvent[];
   conflicts: Conflict[];
   tripTz?: string | null;
+  weather?: DayWeather[];
   onEdit?: (e: ItineraryEvent) => void;
   onDelete?: (e: ItineraryEvent) => void;
   onStatus?: (e: ItineraryEvent, status: string) => void;
 };
 
-export function Timeline({ events, conflicts, tripTz, onEdit, onDelete, onStatus }: Props) {
+export function Timeline({ events, conflicts, tripTz, weather, onEdit, onDelete, onStatus }: Props) {
   const byDay = new Map<string, ItineraryEvent[]>();
   for (const e of events) {
     const k = dayKey(e.start_local);
@@ -35,6 +37,7 @@ export function Timeline({ events, conflicts, tripTz, onEdit, onDelete, onStatus
             <div className="sticky top-[var(--hdr,52px)] z-10 -mx-4 mb-3 flex items-baseline gap-2.5 bg-paper/85 px-4 py-2 backdrop-blur-md sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none lg:top-0">
               <h3 className="display text-[21px] text-ink-900">{h.weekday}</h3>
               <span className="text-[14px] text-ink-400">{h.date}</span>
+              {weather?.find((w) => w.date === day) && <span className="ml-auto self-center"><WeatherChip day={weather.find((w) => w.date === day)!} /></span>}
             </div>
             <Stagger as="ol" className="relative space-y-2.5 border-l border-dashed border-sand-300 pl-5 sm:pl-6">
               {list.map((e) => <EventRow key={e.id} e={e} flags={flagged.get(e.id) ?? []} tripTz={tripTz}
@@ -47,7 +50,7 @@ export function Timeline({ events, conflicts, tripTz, onEdit, onDelete, onStatus
   );
 }
 
-function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: ItineraryEvent; flags: Conflict[]; tripTz?: string | null } & Omit<Props, "events" | "conflicts" | "tripTz">) {
+function EventRow({ e, flags, tripTz, onEdit, onDelete, onStatus }: { e: ItineraryEvent; flags: Conflict[]; tripTz?: string | null } & Omit<Props, "events" | "conflicts" | "tripTz" | "weather">) {
   const suggested = e.status === "suggested";
   const free = e.type === "free_time";
   const cancelled = e.status === "cancelled";

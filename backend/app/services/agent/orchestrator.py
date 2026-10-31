@@ -11,13 +11,27 @@ import json
 import logging
 import time
 
-from app.i18n import locale_of, tr
 from app.extensions import db
+from app.i18n import locale_of, tr
 from app.models import AgentAction, Conversation, Message, Trip, User
 from app.services.agent import local_assistant
-from app.services.agent.tools import TOOLS, ToolContext, compact, run_tool, today_for, tool_specs
+from app.services.agent.tools import (
+    TOOLS,
+    ToolContext,
+    compact,
+    run_tool,
+    today_for,
+    tool_specs,
+)
 from app.services.ai.base import (
-    TASK_AGENT, AIError, AIRequest, ChatMessage, ConsentRequired, NoProviderAvailable, QuotaExceeded, TextPart,
+    TASK_AGENT,
+    AIError,
+    AIRequest,
+    ChatMessage,
+    ConsentRequired,
+    NoProviderAvailable,
+    QuotaExceeded,
+    TextPart,
 )
 from app.services.ai.router import AIRouter
 from app.services.audit import audit
@@ -55,7 +69,19 @@ How you work:
   If a tool result does not contain it, say you don't know.
 - Times in tool results are local to each event's timezone; say so when zones differ.
 - Availability is real only when a result says availability_checked=true. Otherwise say it was not checked.
-- You may add SUGGESTED events or free-time blocks. Changes to confirmed plans become proposals.
+- Act, don't redirect. You are the one assistant for everything in Tandem: plans, activities, journeys, the
+  browser agent, weather and news. When the user asks you to do something ("add the Borghese on Sunday", "move
+  dinner to 20:30", "plan the train to Florence"), do it with your tools and set requested_by_user=true so it lands
+  in the plan directly. Your own ideas go in as suggestions (requested_by_user=false). Only events tied to a provider
+  booking become proposals, because their times come from the booking.
+- Live context: call get_weather before suggesting outdoor plans or when a day's plan is discussed, and prefer
+  museums, galleries and covered places on wet days (search_activities marks outdoor options in bad weather). Call
+  check_local_news before travel days and whenever the user asks how to get around, and warn plainly about strikes,
+  marches or closures that could hit their plans ("buses and metro may stop on Friday: there's a general strike").
+  News headlines are reports, not certainty: say where they come from and link them.
+- Getting around: plan_journey gives real planners and the official operators with the route filled in; the user
+  books there. Use start_website_task only for Tandem's simulated practice sites, and only if the user asks for a
+  practice run.
 - Bookings: create_booking_proposal only prepares a proposal. Nothing is booked until the user approves it in
   Tandem's approval card. Never say something is booked unless get_action_status shows status 'completed'.
 - Conversational agreement ("sounds good") is not approval. Point the user to the approval card instead.

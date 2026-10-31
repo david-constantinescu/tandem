@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Bot, Bus, ExternalLink, Image as ImageIcon, Landmark, Loader2, Palette, Plane, ShieldCheck, TrainFront, Ticket, XCircle } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bot, Bus, ExternalLink, FlaskConical, Image as ImageIcon, Landmark, Loader2, Map as MapIcon, Palette, Plane, ShieldCheck, TrainFront, Ticket, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -11,8 +11,9 @@ import { Dialog } from "@/components/ui/Dialog";
 import { api, errorMessage } from "@/lib/api";
 import { fmtDate, money, relativeTime } from "@/lib/format";
 import { translate, translatePlural, useT, type Key } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { useTrips } from "@/lib/queries";
-import type { Action, BookingSite, BrowserTask, Trip } from "@/lib/types";
+import type { Action, BookingSite, BrowserTask, JourneyLink, Trip } from "@/lib/types";
 
 const CATS: { key: string; label: Key; icon: typeof Ticket }[] = [
   { key: "all", label: "sites.cat.all", icon: Ticket },
@@ -59,7 +60,9 @@ export function TicketsPanel({ trip }: { trip?: Trip }) {
         </details>
       </InfoNote>
 
-      <div className="-mx-4 mt-6 flex gap-1.5 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label={t("sites.categories")}>
+      <JourneyPlanner trip={trip} />
+
+      <div className="-mx-4 mt-8 flex gap-1.5 overflow-x-auto scroll-px-4 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" role="tablist" aria-label={t("sites.categories")}>
         {CATS.map((c) => (
           <button key={c.key} role="tab" aria-selected={cat === c.key} onClick={() => setCat(c.key)}
             className={clsx("relative inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-colors active:scale-95 pointer-coarse:h-10",
@@ -70,15 +73,6 @@ export function TicketsPanel({ trip }: { trip?: Trip }) {
         ))}
       </div>
 
-      {simulated.length > 0 && (
-        <section className="mt-6">
-          <h2 className="display mb-1 text-[21px]">{t("sites.endToEnd")}</h2>
-          <p className="mb-3 text-[13.5px] text-ink-500">{t("sites.endToEndHint")}</p>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4">
-            {simulated.map((s) => <div key={s.key} className="flex w-[80%] shrink-0 snap-start sm:w-auto"><SiteCard s={s} onRun={() => setRunSite(s)} featured /></div>)}
-          </div>
-        </section>
-      )}
 
       <section className="mt-8">
         <h2 className="display mb-1 text-[21px] sm:mb-3">{t("sites.official")} <span className="text-ink-300">{real.length}</span></h2>
@@ -90,6 +84,20 @@ export function TicketsPanel({ trip }: { trip?: Trip }) {
           {real.map((s) => <SiteCard key={s.key} s={s} onRun={s.policy === "assisted" && workerAvailable ? () => setRunSite(s) : undefined} />)}
         </div>
       </section>
+
+      {simulated.length > 0 && (
+        <details className="group mt-8">
+          <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <FlaskConical className="h-4 w-4 text-violet-ink" />
+            <span className="display text-[19px]">{t("sites.endToEnd")}</span>
+            <span className="text-[13px] text-ink-400 group-open:hidden">· {t("common.more")}</span>
+          </summary>
+          <p className="mb-3 mt-1 text-[13.5px] text-ink-500">{t("sites.endToEndHint")}</p>
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4">
+            {simulated.map((s) => <div key={s.key} className="flex w-[80%] shrink-0 snap-start sm:w-auto"><SiteCard s={s} onRun={() => setRunSite(s)} featured /></div>)}
+          </div>
+        </details>
+      )}
 
       <section className="mt-10">
         <h2 className="display mb-3 text-[21px]">{t("sites.runs")}</h2>
@@ -112,6 +120,61 @@ export function TicketsPanel({ trip }: { trip?: Trip }) {
 
       {runSite && <RunDialog site={runSite} trip={trip} onClose={() => setRunSite(null)} onStarted={(id) => { setRunSite(null); setTask(id); }} />}
     </div>
+  );
+}
+
+const MODES = [{ key: "", label: "journey.any" }, { key: "train", label: "sites.cat.train" }, { key: "bus", label: "sites.cat.bus" }, { key: "flight", label: "sites.cat.flight" }] as const;
+
+/** Real journey planners and the official operators for the route, opened with the route filled in. */
+function JourneyPlanner({ trip }: { trip?: Trip }) {
+  const { t } = useT();
+  const { user } = useAuth();
+  const [form, setForm] = useState({ origin: user?.home_city ?? "", destination: trip?.destinations[0]?.name ?? trip?.primary_destination ?? "", date: trip?.start_date ?? "", mode: "" });
+  const [query, setQuery] = useState<typeof form | null>(null);
+  const result = useQuery({
+    queryKey: ["journeys", query], enabled: !!query,
+    queryFn: () => api.get<{ links: JourneyLink[]; note: string }>(`/journeys?${new URLSearchParams(Object.entries(query!).filter(([, v]) => v) as [string, string][])}`),
+  });
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const submit = (e: FormEvent) => { e.preventDefault(); setQuery({ ...form }); };
+  return (
+    <section className="card mt-6 rounded-[22px] p-4 sm:p-5">
+      <h2 className="display flex items-center gap-2 text-[21px]"><MapIcon className="h-5 w-5 text-lagoon-600" />{t("journey.title")}</h2>
+      <p className="mt-1 text-[13.5px] text-ink-500">{t("journey.hint")}</p>
+      <form onSubmit={submit} className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto_auto_auto] sm:items-end">
+        <div><label className="label" htmlFor="jo">{t("review.from")}</label><input id="jo" required minLength={2} className="field" value={form.origin} onChange={set("origin")} placeholder={t("sites.fromPlaceholder")} /></div>
+        <div><label className="label" htmlFor="jd">{t("review.to")}</label><input id="jd" required minLength={2} className="field" value={form.destination} onChange={set("destination")} placeholder={t("sites.toPlaceholder")} /></div>
+        <div><label className="label" htmlFor="jt">{t("action.date")}</label><input id="jt" type="date" className="field" value={form.date} onChange={set("date")} /></div>
+        <div><label className="label" htmlFor="jm">{t("journey.mode")}</label>
+          <select id="jm" className="field" value={form.mode} onChange={set("mode")}>{MODES.map((m) => <option key={m.key} value={m.key}>{t(m.label)}</option>)}</select>
+        </div>
+        <Button type="submit" className="col-span-2 sm:col-span-1" icon={<ArrowRight className="h-4 w-4" />} loading={result.isFetching}>{t("journey.find")}</Button>
+      </form>
+      {result.error && <div className="mt-3"><ErrorNote>{errorMessage(result.error)}</ErrorNote></div>}
+      {result.data && (
+        <>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {result.data.links.map((l) => {
+              const Icon = l.kind === "planner" ? MapIcon : ICON[l.covers] ?? Ticket;
+              return (
+                <li key={l.url}>
+                  <a href={l.url} target="_blank" rel="noopener noreferrer nofollow"
+                    className="flex min-h-[56px] items-center gap-3 rounded-xl border border-sand-200 bg-white px-3 py-2.5 transition hover:shadow-[var(--shadow-card)] active:scale-[0.99]">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sand-100 text-ink-600"><Icon className="h-4 w-4" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1 text-[14px] font-medium text-ink-900">{l.name}{l.official && <BadgeCheck className="h-3.5 w-3.5 text-lagoon-600" aria-label={t("journey.official")} />}</span>
+                      <span className="block truncate text-[12px] text-ink-400">{l.kind === "planner" ? t(l.covers.startsWith("flights") ? "journey.flights" : "journey.planner") : l.official ? t("journey.official") : t("journey.reseller")}</span>
+                    </span>
+                    <ExternalLink className="h-4 w-4 shrink-0 text-ink-300" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-3 text-[12px] text-ink-400">{t("journey.note")}</p>
+        </>
+      )}
+    </section>
   );
 }
 

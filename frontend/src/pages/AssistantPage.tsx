@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { ArrowUp, CircleAlert, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
+import { ArrowUp, CircleAlert, ExternalLink, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type KeyboardEvent, type SubmitEvent } from "react";
 import ReactMarkdown from "react-markdown";
@@ -197,6 +197,7 @@ function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPaylo
   }
   const activities = m.references.filter((r) => r.type === "activity" && r.activity).slice(0, 3);
   const links = m.references.filter((r) => r.type === "trip" || r.type === "reservation" || r.type === "browser_task");
+  const sources = m.references.filter((r) => r.type === "link" && r.url?.startsWith("https://")).slice(0, 6);
   return (
     <div className="max-w-[92%] space-y-3">
       {m.tool_calls.length > 0 && (
@@ -213,6 +214,16 @@ function Bubble({ m, actions, tripId }: { m: Message; actions: ConversationPaylo
       {activities.length > 0 && (
         <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
           {activities.map((r) => <ActivityCard key={r.id} a={r.activity as ActivityResult & typeof r.activity} tripId={r.trip_id ?? tripId} date={r.date} />)}
+        </div>
+      )}
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {sources.map((r) => (
+            <a key={r.id} href={r.url} target="_blank" rel="noopener noreferrer nofollow"
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-sand-200 bg-white px-2.5 py-1 text-[12px] text-lagoon-700 hover:bg-sand-50">
+              <span className="truncate">{r.label}</span><ExternalLink className="h-3 w-3 shrink-0" />
+            </a>
+          ))}
         </div>
       )}
       {m.action_ids.map((aid) => actions[aid] && <ActionCard key={aid} action={actions[aid]} />)}
