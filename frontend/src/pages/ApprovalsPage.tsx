@@ -2,13 +2,14 @@ import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { ActionCard } from "@/components/activities/ActionCard";
 import { Segmented, Stagger, StaggerItem } from "@/components/motion";
-import { EmptyState, PageHeader, PageLoader } from "@/components/ui";
+import { EmptyState, LoadError, PageHeader, PageLoader } from "@/components/ui";
 import { useApprovals } from "@/lib/queries";
 
 export default function ApprovalsPage() {
   const [tab, setTab] = useState<"waiting" | "history">("waiting");
   const all = useApprovals();
   if (all.isLoading) return <PageLoader />;
+  if (all.isError && !all.data) return <LoadError what="approvals" onRetry={() => all.refetch()} retrying={all.isFetching} />;
   const list = all.data ?? [];
   const waiting = list.filter((a) => ["awaiting_approval", "in_progress", "requires_manual"].includes(a.status));
   const history = list.filter((a) => !["awaiting_approval", "in_progress", "requires_manual"].includes(a.status));

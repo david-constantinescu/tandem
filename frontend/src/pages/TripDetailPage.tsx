@@ -11,9 +11,9 @@ import { EventDialog, ReservationDialog } from "@/components/trips/EditDialogs";
 import { ReservationCard } from "@/components/trips/ReservationCard";
 import { Timeline, TimelineLegend } from "@/components/trips/Timeline";
 import { TripMap } from "@/components/trips/TripMap";
-import { Badge, Button, EmptyState, LinkButton, PageLoader, StatusPill } from "@/components/ui";
+import { Badge, Button, EmptyState, LinkButton, LoadError, PageLoader, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
-import { api, errorMessage } from "@/lib/api";
+import { ApiError, api, errorMessage } from "@/lib/api";
 import { fmtRange, relativeTime } from "@/lib/format";
 import { useConflicts, useInvalidateTripData, useItinerary, useReservations, useTrip, useTripDocuments } from "@/lib/queries";
 import type { Conversation, ItineraryEvent, Reservation } from "@/lib/types";
@@ -46,6 +46,8 @@ export default function TripDetailPage() {
   useEffect(() => { if (trip.data && notes === null) setNotes(trip.data.notes); }, [trip.data, notes]);
 
   if (trip.isLoading) return <PageLoader />;
+  if (trip.isError && !trip.data && !(trip.error instanceof ApiError && trip.error.status === 404))
+    return <LoadError what="trip" onRetry={() => trip.refetch()} retrying={trip.isFetching} />;
   if (!trip.data) return <EmptyState title="Trip not found" action={<Link to="/trips" className="text-lagoon-600">Back to trips</Link>} />;
   const t = trip.data;
   const tz = t.destinations.find((d) => d.timezone)?.timezone ?? null;

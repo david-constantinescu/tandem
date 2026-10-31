@@ -5,7 +5,8 @@ import { ActionCard } from "@/components/activities/ActionCard";
 import { RouteDoodle, Stagger, StaggerItem, spring } from "@/components/motion";
 import { ConflictList } from "@/components/trips/ConflictList";
 import { EventIcon } from "@/components/trips/EventIcon";
-import { EmptyState, LinkButton, PageLoader, StatusPill } from "@/components/ui";
+import { InstallCard } from "@/components/pwa";
+import { EmptyState, LinkButton, LoadError, PageLoader, StatusPill } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { daysUntil, fmtDateTime, fmtRange, fmtTime, relativeTime } from "@/lib/format";
 import { useApprovals, useConflicts, useInbox, useItinerary, useTrips } from "@/lib/queries";
@@ -30,6 +31,7 @@ export default function HomePage() {
   const approvals = useApprovals("awaiting_approval");
 
   if (trips.isLoading) return <PageLoader />;
+  if (trips.isError && !trips.data) return <LoadError what="trips" onRetry={() => trips.refetch()} retrying={trips.isFetching} />;
   const list = trips.data ?? [];
   const featured = list.find((t) => t.stats.phase === "current") ?? list.find((t) => t.stats.phase === "upcoming") ?? null;
   const others = list.filter((t) => t.id !== featured?.id && (t.stats.phase === "upcoming" || t.stats.phase === "planning")).slice(0, 3);
@@ -45,7 +47,7 @@ export default function HomePage() {
         <p className="mt-2 text-[15px] text-ink-500">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p>
       </header>
 
-      <div className="-mx-4 mb-7 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
+      <div className="-mx-4 mb-7 flex snap-x scroll-px-4 gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
         {QUICK.map((q, i) => (
           <motion.div key={q.to} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.05 * i }} className="shrink-0 snap-start">
             <Link to={q.to} className="group flex min-w-[150px] items-center gap-3 rounded-2xl border border-sand-200/80 bg-white px-3.5 py-3 shadow-[var(--shadow-card)] transition active:scale-[0.97] sm:min-w-0">
@@ -119,6 +121,7 @@ export default function HomePage() {
           </Stagger>
         </div>
       )}
+      <InstallCard className="mt-6" />
     </div>
   );
 }

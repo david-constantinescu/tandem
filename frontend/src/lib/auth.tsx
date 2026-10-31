@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { api, setCsrf } from "./api";
+import { api, isNetworkError, setCsrf } from "./api";
 import { setLocale } from "./i18n";
+import { clearOffline, offlineUser, persistOffline, restoreOffline } from "./offline";
 import type { User } from "./types";
 
 type Session = { user: User | null; csrf_token: string | null };
@@ -31,37 +32,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      apply(await api.get<Session>("/auth/me"));
+      const s = await api.get<Session>("/auth/me");
+      if (s.user) restoreOffline(qc, s.user.id);
+      else clearOffline();
+      apply(s);
+    } catch (err) {
+      // Offline: open with the trips saved on this device. Any other failure means signed out.
+      const saved = isNetworkError(err) ? offlineUser() : null;
+      if (saved) {
+        restoreOffline(qc, saved.id);
+        apply({ user: saved, csrf_token: null });
+      } else if (!isNetworkError(err)) {
+        clearOffline();
+      }
     } finally {
       setLoading(false);
     }
-  }, [apply]);
+  }, [apply, qc]);
 
   useEffect(() => {
     refresh();
+    // Back online: re-check the session (an offline start has no CSRF token yet).
+    window.addEventListener("online", refresh);
+    return () => window.removeEventListener("online", refresh);
   }, [refresh]);
+
+  useEffect(() => (user ? persistOffline(qc, user) : undefined), [qc, user]);
+
+  // A new session never sees the previous one's cached or saved data.
+  const reset = () => {
+    qc.clear();
+    clearOffline();
+  };
 
   const value: AuthState = {
     user,
     loading,
     refresh,
     login: async (email, password) => {
-      qc.clear();
+      reset();
       apply(await api.post<Session>("/auth/login", { email, password }));
     },
     register: async (email, password, display_name) => {
-      qc.clear();
+      reset();
       apply(await api.post<Session>("/auth/register", { email, password, display_name }));
     },
     startDemo: async () => {
-      qc.clear();
+      reset();
       apply(await api.post<Session>("/auth/demo"));
     },
     logout: async () => {
       try {
         await api.post("/auth/logout");
       } finally {
-        qc.clear();
+        reset();
         apply({ user: null, csrf_token: null });
       }
     },

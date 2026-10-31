@@ -30,7 +30,14 @@ export async function request<T = unknown>(path: string, opts: Options = {}): Pr
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(opts.body);
   }
-  const res = await fetch(`/api/v1${path}`, { method, headers, body, credentials: "same-origin", signal: opts.signal });
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1${path}`, { method, headers, body, credentials: "same-origin", signal: opts.signal });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    // fetch only rejects when the request never got a response: offline, DNS, a dropped connection.
+    throw new ApiError(0, "network", navigator.onLine ? "Couldn't reach Tandem. Check your connection and try again." : "You're offline.");
+  }
   const isJson = res.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await res.json() : null;
   if (!res.ok && !(res.status === 422 && payload?.data)) {
@@ -49,6 +56,8 @@ export const api = {
   del: <T,>(path: string) => request<T>(path, { method: "DELETE" }).then((r) => r.data),
   upload: <T,>(path: string, form: FormData) => request<T>(path, { method: "POST", form }).then((r) => r.data),
 };
+
+export const isNetworkError = (err: unknown) => err instanceof ApiError && err.status === 0;
 
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiError) {

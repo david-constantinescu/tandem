@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { EventIcon } from "@/components/trips/EventIcon";
-import { Button, EmptyState, ErrorNote, Field, PageHeader, PageLoader } from "@/components/ui";
+import { Button, EmptyState, ErrorNote, Field, LoadError, PageHeader, PageLoader } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
 import { api, errorMessage } from "@/lib/api";
 import { daysUntil, fmtRange } from "@/lib/format";
@@ -21,6 +21,7 @@ export default function TripsPage() {
   const trips = useTrips();
   const [open, setOpen] = useState(false);
   if (trips.isLoading) return <PageLoader />;
+  if (trips.isError && !trips.data) return <LoadError what="trips" onRetry={() => trips.refetch()} retrying={trips.isFetching} />;
   const list = trips.data ?? [];
   return (
     <div>

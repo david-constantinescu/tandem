@@ -8,6 +8,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { spring } from "@/components/motion";
+import { OfflineBanner } from "@/components/pwa";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -170,6 +171,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="hidden sm:inline">{t("demo.banner")}</span>
             </div>
           )}
+          <OfflineBanner />
           <div className="flex h-[52px] items-center justify-between px-3 lg:h-auto lg:justify-end lg:px-8 lg:pt-5">
             <Logo className="pl-1 lg:hidden" />
             <div className="flex items-center">

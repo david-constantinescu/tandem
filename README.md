@@ -27,6 +27,8 @@ Tandem is the friend who reads all of it for you.
 - **It fills the gaps.** Ask what to do on Saturday afternoon and it looks at the hours you actually have free.
 - **It lives in your calendar too.** One private link puts every trip in Apple, Google or Outlook calendar and keeps
   it updated when plans change. Booking references and names stay in Tandem.
+- **It works without signal.** Add it to your home screen and it behaves like an app: your trips and itinerary open
+  in airplane mode, and it says plainly when something needs a connection.
 - **It never spends your money on its own.** It can prepare a booking or drive a booking website, but nothing is
   bought until you approve that exact thing. If the price changes, it asks again.
 
@@ -110,8 +112,18 @@ Tandem's own simulated sites it completes the whole flow after approval, which i
 React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, Radix primitives, Leaflet and [Motion](https://motion.dev)
 for the springy bits (sliding tab pills, staggered lists, the route line that draws itself). On phones it follows
 Apple's conventions: safe-area insets, a floating tab bar, 44pt touch targets, UISwitch-sized toggles, 16px inputs so
-iOS doesn't zoom, bottom sheets instead of modals, and reduced-motion support. It installs to the home screen
-(PNG touch icon + web manifest) and opens full screen like a native app.
+iOS doesn't zoom, bottom sheets instead of modals, and reduced-motion support.
+
+### Installable app (PWA)
+
+Tandem is a Progressive Web App: a web manifest with PNG and maskable icons, and a Workbox service worker
+(`vite-plugin-pwa`) that precaches the app shell and every page, so it starts with no connection. API responses are
+never cached by the service worker. Instead, trips, itineraries, reservations and conflicts are kept on the device
+for up to a week through TanStack Query's `dehydrate`/`hydrate` (`frontend/src/lib/offline.ts`). That copy belongs to
+one user and is wiped on sign-out or when someone else signs in. Without a connection the app opens with that copy and
+an offline strip; pages that need the server say so with a retry button instead of looking empty. New versions are
+offered with a "Reload" prompt rather than swapped in mid-task. Chrome and Android get a native Install button; iPhone
+users get the Share → Add to Home Screen steps.
 
 ### Calendar sync
 

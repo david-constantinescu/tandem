@@ -7,7 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { UploadZone } from "@/components/inbox/UploadZone";
 import { Stagger, StaggerItem, spring } from "@/components/motion";
-import { Badge, Button, EmptyState, InfoNote, PageHeader, PageLoader, StatusPill } from "@/components/ui";
+import { Badge, Button, EmptyState, InfoNote, LoadError, PageHeader, PageLoader, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -66,7 +66,9 @@ export default function InboxPage() {
                     );
                   })}
                 </div>
-                {inbox.isLoading ? <PageLoader /> : shown.length === 0 ? (
+                {inbox.isLoading ? <PageLoader /> : inbox.isError && !inbox.data ? (
+                  <LoadError what="inbox" onRetry={() => inbox.refetch()} retrying={inbox.isFetching} />
+                ) : shown.length === 0 ? (
                   <EmptyState title={items.length ? "Nothing in this view" : "Your inbox is empty"} body={items.length ? undefined : "Upload a confirmation above to get started."} />
                 ) : (
                   <Stagger key={filter} as="ul" className="card divide-y divide-sand-100 overflow-hidden">{shown.map((d) => <InboxRow key={d.id} d={d} />)}</Stagger>

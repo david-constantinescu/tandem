@@ -13,7 +13,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client", "vitest/globals", "node"],
+    "types": ["vite/client", "vite-plugin-pwa/client", "vitest/globals", "node"],
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] }
   },

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Loader2 } from "lucide-react";
+import { CloudOff, Loader2, RotateCw } from "lucide-react";
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
@@ -146,6 +146,16 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
+  );
+}
+
+/** A list that failed to load must not look like an empty account: say so and offer a retry. */
+export function LoadError({ what, onRetry, retrying }: { what: string; onRetry: () => void; retrying?: boolean }) {
+  const offline = typeof navigator !== "undefined" && !navigator.onLine;
+  return (
+    <EmptyState icon={<CloudOff />} title={`Couldn't load your ${what}`}
+      body={offline ? "You're offline. Tandem will catch up when you're back online." : "Something went wrong on the way. Check your connection and try again."}
+      action={<Button variant="secondary" onClick={onRetry} loading={retrying} icon={<RotateCw className="h-4 w-4" />}>Try again</Button>} />
   );
 }
 
