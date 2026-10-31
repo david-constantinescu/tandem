@@ -375,6 +375,11 @@ RO: dict[str, str] = {
     "None of these mention your trip dates, so they look like they're about other days.":
         "Niciuna nu menționează datele călătoriei, deci par să fie despre alte zile.",
     "tickets": "bilete",
+    "The browser agent types these names on {site}: {names}.": "Agentul scrie aceste nume pe {site}: {names}.",
+    "Then it stops on the payment page and asks you again before paying €{total}.": "Apoi se oprește pe pagina de plată și te întreabă din nou înainte să plătească €{total}.",
+    "Simulated site: no money moves.": "Site simulat: nu se mișcă bani.",
+    "Presses Pay for €{total} on {site} — simulated site, no money moves.": "Apasă Plătește pentru €{total} pe {site} — site simulat, nu se mișcă bani.",
+    "Reads the confirmation page back and adds the booking to your trip.": "Citește pagina de confirmare și adaugă rezervarea în călătorie.",
     "Document not found": "Documentul nu a fost găsit",
     "Updates from Tandem": "Noutăți de la Tandem",
     "Tandem has an update for you": "Tandem are o noutate pentru tine",

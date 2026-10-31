@@ -308,9 +308,9 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
                        price=f"{offer['unit_price']:.2f}", why=task.result.get("selection_reason")),
         payload=payload, cost=Decimal(str(offer["total"])), currency=offer["currency"], external=True,
         created_by="assistant", expires_at=utcnow() + timedelta(minutes=30),
-        consequences=[f"The browser agent types these names on {site.name}: {', '.join(names)}.",
-                      f"Then it stops on the payment page and asks you again before paying €{offer['total']:.2f}.",
-                      "Simulated site: no money moves."],
+        consequences=[tr("The browser agent types these names on {site}: {names}.", loc, site=site.name, names=", ".join(names)),
+                      tr("Then it stops on the payment page and asks you again before paying €{total}.", loc, total=f"{offer['total']:.2f}"),
+                      tr("Simulated site: no money moves.", loc)],
         cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
     task.action_id = action.id
     task.state = "awaiting_approval"
@@ -368,8 +368,8 @@ def complete_checkout(user: User, action: AgentAction) -> None:
             payload={**p, "stage": "payment", "details_action_id": str(action.id)},
             cost=action.cost, currency=action.currency, external=True, created_by="assistant",
             expires_at=utcnow() + timedelta(minutes=30),
-            consequences=[f"Presses Pay for €{float(p['total']):.2f} on {site.name} — simulated site, no money moves.",
-                          "Reads the confirmation page back and adds the booking to your trip."],
+            consequences=[tr("Presses Pay for €{total} on {site} — simulated site, no money moves.", loc, total=f"{float(p['total']):.2f}", site=site.name),
+                          tr("Reads the confirmation page back and adds the booking to your trip.", loc)],
             cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
         task.action_id = payment.id
         task.state = "awaiting_approval"
