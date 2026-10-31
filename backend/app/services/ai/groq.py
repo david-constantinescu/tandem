@@ -72,7 +72,8 @@ class GroqProvider(AIProvider):
             body["tools"] = tools
             body["tool_choice"] = "auto"
         payload, _ = post_chat(self.name, f"{self.cfg['GROQ_BASE_URL'].rstrip('/')}/chat/completions",
-                               self.cfg.get("GROQ_API_KEY", ""), body, float(self.cfg["AI_REQUEST_TIMEOUT"]))
+                               self.cfg.get("GROQ_API_KEY", ""), body,
+                               max(3.0, min(float(self.cfg["AI_REQUEST_TIMEOUT"]), request.remaining if request.remaining is not None else 1e9)))
         return parse_chat_response(self.name, model, payload)
 
     def health_check(self) -> dict:

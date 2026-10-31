@@ -56,6 +56,16 @@ for _mid, _note in (
         structured_with_tools=False, context_tokens=1_048_576, source=GEMINI_MODELS_URL,
         notes=(_note, "Free-tier prompts and responses may be used by Google to improve its products."),
     ))
+for _mid, _note in (
+    ("gemini-2.5-flash", "Stable Flash with a free tier; the default for the assistant because the 3.x previews are "
+                         "often at capacity (HTTP 503). Verified with a live key on 2026-10-31."),
+    ("gemini-2.5-flash-lite", "Stable Flash-Lite with a free tier, for quick classification."),
+):
+    _add(ModelInfo(
+        provider="gemini", id=_mid, free_tier=True, inputs=_ALL_MEDIA, structured="response_schema", tools=True,
+        structured_with_tools=False, context_tokens=1_048_576, source=GEMINI_PRICING_URL,
+        notes=(_note, "Free-tier prompts and responses may be used by Google to improve its products."),
+    ))
 _add(ModelInfo(
     provider="gemini", id="gemini-3.1-flash-lite", free_tier=True, inputs=_ALL_MEDIA, structured="response_schema",
     tools=True, structured_with_tools=False, context_tokens=None, source=GEMINI_PRICING_URL,

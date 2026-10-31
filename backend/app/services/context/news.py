@@ -43,7 +43,7 @@ CITY_COUNTRY = {"rome": "IT", "roma": "IT", "milan": "IT", "florence": "IT", "ve
                 "firenze": "IT", "florenta": "IT", "milano": "IT", "venezia": "IT", "napoli": "IT", "veneția": "IT",
                 "florența": "IT", "paris": "FR", "parigi": "FR", "lyon": "FR", "madrid": "ES", "barcelona": "ES", "seville": "ES", "berlin": "DE",
                 "munich": "DE", "vienna": "AT", "lisbon": "PT", "porto": "PT", "bucharest": "RO", "bucurești": "RO",
-                "cluj-napoca": "RO", "amsterdam": "NL", "athens": "GR", "london": "GB", "londra": "GB", "dublin": "IE", "bucuresti": "RO", "lisabona": "PT", "viena": "AT"}
+                "cluj-napoca": "RO", "craiova": "RO", "brasov": "RO", "brașov": "RO", "sibiu": "RO", "timisoara": "RO", "timișoara": "RO", "iasi": "RO", "iași": "RO", "constanta": "RO", "constanța": "RO", "amsterdam": "NL", "athens": "GR", "london": "GB", "londra": "GB", "dublin": "IE", "bucuresti": "RO", "lisabona": "PT", "viena": "AT"}
 # Local spellings, so local outlets are found ("Roma", not "Rome").
 LOCAL_NAMES = {"rome": "Roma", "florence": "Firenze", "milan": "Milano", "venice": "Venezia", "naples": "Napoli",
                "turin": "Torino", "munich": "München", "cologne": "Köln", "vienna": "Wien", "lisbon": "Lisboa",

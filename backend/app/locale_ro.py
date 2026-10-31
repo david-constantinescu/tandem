@@ -172,16 +172,16 @@ RO: dict[str, str] = {
 
     # Demo
     "Rome long weekend": "Weekend prelungit la Roma",
-    "Demo trip with fictional bookings. Try the sample documents in the Inbox and ask the assistant about Saturday.":
-        "Călătorie demo cu rezervări fictive. Încearcă documentele de test din Inbox și întreabă asistentul despre sâmbătă.",
+    "Demo trip: real places, airports and operators, but sample bookings with made-up references. Try the sample documents in the Inbox and ask the assistant about Saturday.":
+        "Călătorie demo: locuri, aeroporturi și operatori reali, dar rezervări de test cu referințe inventate. Încearcă documentele de test din Inbox și întreabă asistentul despre sâmbătă.",
     "Flight {number} {route}": "Zbor {number} {route}",
     "Free cancellation until 2 days before arrival, 23:59.": "Anulare gratuită până cu 2 zile înainte de sosire, ora 23:59.",
     "Vatican Museums & Sistine Chapel": "Muzeele Vaticanului și Capela Sixtină",
     "Non-refundable.": "Nerambursabil.",
     "Trastevere Twilight Walking Tour": "Tur pe jos prin Trastevere, la apus",
     "Free cancellation up to 24 hours before the tour": "Anulare gratuită cu până la 24 de ore înainte de tur",
-    "Dinner at Trattoria Da Demo": "Cină la Trattoria Da Demo",
-    "Albergo Vicolo Demo: early check-in from 13:00 (was 15:00)": "Albergo Vicolo Demo: check-in mai devreme, de la 13:00 (era 15:00)",
+    "Dinner at {place}": "Cină la {place}",
+    "{hotel}: early check-in from 13:00 (was 15:00)": "{hotel}: check-in mai devreme, de la 13:00 (era 15:00)",
     "Free afternoon": "După-amiază liberă",
     "Borghese Gallery Timed Entry": "Galeria Borghese, intrare cu oră fixă",
     "Suggested by Tandem: fits your free Sunday morning.": "Sugerat de Tandem: se potrivește cu dimineața liberă de duminică.",

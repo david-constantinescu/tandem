@@ -138,7 +138,7 @@ def test_agent_uses_tools_and_reports_from_data(app, scripted):
     msg = orchestrator.respond(user, conv, "What's on Saturday?")
     assert msg.provider == "gemini" and msg.tool_calls[0]["name"] == "get_itinerary"
     tool_result = p.seen[1].messages[-1].parts[0].text
-    assert "Trastevere Twilight Walking Tour" in tool_result and "Dinner at Trattoria Da Demo" in tool_result
+    assert "Trastevere Twilight Walking Tour" in tool_result and "Dinner at Da Enzo al 29" in tool_result
     assert any(r["type"] == "trip" for r in msg.references)
 
 
@@ -413,7 +413,7 @@ def test_ai_failure_falls_back_to_local_parser(user_api, scripted):
     doc = upload(user_api, "hotel.pdf", D.hotel_confirmation(demo_start_date()), "application/pdf").get_json()["data"]["documents"][0]
     item = user_api.get(f"/api/v1/inbox/{doc['id']}").get_json()["data"]
     assert item["extraction_method"]["path"] == "local_parser"
-    assert item["records"][0]["data"]["booking_reference"] == "HV-58213"
+    assert item["records"][0]["data"]["booking_reference"] == "HSM-58213"
     assert any(a.get("reason") for a in item["extraction_method"]["attempts"])
 
 

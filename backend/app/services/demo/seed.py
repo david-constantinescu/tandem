@@ -26,7 +26,7 @@ from app.services.trips import service as trips
 from app.utils.timeutil import iso, localize, utcnow
 
 ROME_TZ = "Europe/Rome"
-LONDON_TZ = "Europe/London"
+HOME_TZ = "Europe/Bucharest"  # Craiova
 
 
 def demo_start_date(today: date | None = None) -> date:
@@ -63,7 +63,7 @@ def create_demo_workspace(locale: str = "ro") -> User:
     db.session.add(tenant)
     db.session.flush()
     user = user_service.create_user(
-        f"demo+{secrets.token_hex(4)}@demo.tandem.travel", secrets.token_urlsafe(24), "Alex Demo", is_demo=True,
+        f"demo+{secrets.token_hex(4)}@demo.tandem.travel", secrets.token_urlsafe(24), demo_docs.TRAVELLERS[0], is_demo=True,
         demo_tenant_id=tenant.id, ai_mode=AI_MODE_FULL if cfg["DEMO_ALLOW_EXTERNAL_AI"] else AI_MODE_OFF, locale=locale)
     _profile(user)
     seed_rome_trip(user)
@@ -89,7 +89,7 @@ def seed_demo_account(password: str | None = None) -> tuple[User, str | None]:
     tenant = DemoTenant(label="shared demo account", expires_at=None)
     db.session.add(tenant)
     db.session.flush()
-    user = user_service.create_user(email, password, "Alex Demo", is_demo=True, demo_tenant_id=tenant.id,
+    user = user_service.create_user(email, password, demo_docs.TRAVELLERS[0], is_demo=True, demo_tenant_id=tenant.id,
                                     ai_mode=AI_MODE_FULL if cfg["DEMO_ALLOW_EXTERNAL_AI"] else AI_MODE_OFF)
     _profile(user)
     seed_rome_trip(user)
@@ -98,9 +98,9 @@ def seed_demo_account(password: str | None = None) -> tuple[User, str | None]:
 
 
 def _profile(user: User) -> None:
-    user.home_city = "London"
-    user.home_airport = "LHR"
-    user.timezone = LONDON_TZ
+    user.home_city = "Craiova"
+    user.home_airport = "CRA"
+    user.timezone = HOME_TZ
     user.preferences.interests = ["history", "food", "architecture", "walking"]
     user.preferences.pace = "balanced"
 
@@ -113,61 +113,61 @@ def seed_rome_trip(user: User) -> None:
     d1, d2, d3 = (start + timedelta(days=i) for i in range(1, 4))
     trip = trips.create_trip(user, tr("Rome long weekend", loc), start_date=start, end_date=end, destination="Rome",  # place names are data: they must match the bookings' cities
                              created_via="demo", lat=41.9028, lon=12.4964)
-    trip.notes = tr("Demo trip with fictional bookings. Try the sample documents in the Inbox and ask the assistant about Saturday.", loc)
+    trip.notes = tr("Demo trip: real places, airports and operators, but sample bookings with made-up references. Try the sample documents in the Inbox and ask the assistant about Saturday.", loc)
     from app.models import Traveller
 
-    db.session.add(Traveller(trip_id=trip.id, full_name="Sam Demo"))
+    db.session.add(Traveller(trip_id=trip.id, full_name=demo_docs.TRAVELLERS[1]))
 
-    flight_doc = _store_doc(user, trip.id, "Aurelia Air e-ticket TDQ7RM.pdf", "application/pdf",
+    flight_doc = _store_doc(user, trip.id, "Wizz Air sample e-ticket WZ7QRM.pdf", "application/pdf",
                             demo_docs.flight_confirmation(start))
-    hotel_doc = _store_doc(user, trip.id, "Albergo Vicolo Demo confirmation.pdf", "application/pdf",
+    hotel_doc = _store_doc(user, trip.id, "Hotel Santa Maria sample confirmation.pdf", "application/pdf",
                            demo_docs.hotel_confirmation(start))
-    hotel_update_doc = _store_doc(user, trip.id, "Albergo Vicolo Demo - updated booking.pdf", "application/pdf",
+    hotel_update_doc = _store_doc(user, trip.id, "Hotel Santa Maria sample - updated booking.pdf", "application/pdf",
                                   demo_docs.hotel_update(start))
     museum_doc = _store_doc(user, trip.id, "Vatican Museums ticket VM-20931.pdf", "application/pdf",
                             demo_docs.museum_ticket(start))
-    tour_doc = _store_doc(user, trip.id, "Passo Lento booking screenshot.png", "image/png",
+    tour_doc = _store_doc(user, trip.id, "Trastevere walking tour sample screenshot.png", "image/png",
                           demo_docs.walking_tour_screenshot(start))
-    dinner_doc = _store_doc(user, trip.id, "Trattoria Da Demo confirmation.eml", "message/rfc822",
+    dinner_doc = _store_doc(user, trip.id, "Da Enzo al 29 sample confirmation.eml", "message/rfc822",
                             demo_docs.restaurant_email(start, user.email))
 
-    travellers = ["Alex Demo", "Sam Demo"]
+    travellers = list(demo_docs.TRAVELLERS)
     common = {"status": "confirmed", "travellers": travellers}
     seeds = [
-        (flight_doc, {"type": "flight", "title": tr("Flight {number} {route}", loc, number="TD 412", route="LHR → FCO"), "provider_name": "Aurelia Air (demo)",
-                      "booking_reference": "TDQ7RM", "origin": "London Heathrow (LHR)", "destination": "Rome Fiumicino (FCO)",
-                      "start_at": _at(start, "08:05", LONDON_TZ), "start_tz": LONDON_TZ,
-                      "end_at": _at(start, "11:40", ROME_TZ), "end_tz": ROME_TZ, "city": "London",
-                      "lat": 51.4706, "lon": -0.4619, "end_city": "Rome", "end_lat": 41.8003, "end_lon": 12.2389,
-                      "details": {"flight_number": "TD 412", "airline": "Aurelia Air (demo)", "seat": "14A, 14B",
-                                  "terminal": "5", "origin_code": "LHR", "destination_code": "FCO",
-                                  "baggage": "1 x 23kg checked bag per passenger", "arrival_city": "Rome",
+        (flight_doc, {"type": "flight", "title": tr("Flight {number} {route}", loc, number="W6 3501", route="CRA → FCO"), "provider_name": "Wizz Air",
+                      "booking_reference": "WZ7QRM", "origin": "Craiova International Airport (CRA)", "destination": "Rome Fiumicino (FCO)",
+                      "start_at": _at(start, "06:30", HOME_TZ), "start_tz": HOME_TZ,
+                      "end_at": _at(start, "07:35", ROME_TZ), "end_tz": ROME_TZ, "city": "Craiova",
+                      "lat": 44.3181, "lon": 23.8886, "end_city": "Rome", "end_lat": 41.8003, "end_lon": 12.2389,
+                      "details": {"flight_number": "W6 3501", "airline": "Wizz Air", "seat": "14A, 14B",
+                                  "terminal": "3", "origin_code": "CRA", "destination_code": "FCO",
+                                  "baggage": "1 x 10kg cabin bag per passenger", "arrival_city": "Rome",
                                   "arrival_lat": 41.8003, "arrival_lon": 12.2389},
-                      "price": 386.40, "currency": "EUR"}),
-        (flight_doc, {"type": "flight", "title": tr("Flight {number} {route}", loc, number="TD 419", route="FCO → LHR"), "provider_name": "Aurelia Air (demo)",
-                      "booking_reference": "TDQ7RM", "origin": "Rome Fiumicino (FCO)", "destination": "London Heathrow (LHR)",
+                      "price": 214.80, "currency": "EUR"}),
+        (flight_doc, {"type": "flight", "title": tr("Flight {number} {route}", loc, number="W6 3502", route="FCO → CRA"), "provider_name": "Wizz Air",
+                      "booking_reference": "WZ7QRM", "origin": "Rome Fiumicino (FCO)", "destination": "Craiova International Airport (CRA)",
                       "start_at": _at(end, "17:20", ROME_TZ), "start_tz": ROME_TZ,
-                      "end_at": _at(end, "19:05", LONDON_TZ), "end_tz": LONDON_TZ, "city": "Rome",
+                      "end_at": _at(end, "20:25", HOME_TZ), "end_tz": HOME_TZ, "city": "Rome",
                       "lat": 41.8003, "lon": 12.2389,
-                      "details": {"flight_number": "TD 419", "airline": "Aurelia Air (demo)", "seat": "21C, 21D",
-                                  "terminal": "1", "origin_code": "FCO", "destination_code": "LHR",
-                                  "arrival_city": "London", "arrival_lat": 51.4706, "arrival_lon": -0.4619}}),
-        (hotel_doc, {"type": "hotel", "title": "Albergo Vicolo Demo", "provider_name": "Albergo Vicolo Demo",
-                     "booking_reference": "HV-58213", "start_at": _at(start, "15:00", ROME_TZ), "start_tz": ROME_TZ,
-                     "end_at": _at(end, "11:00", ROME_TZ), "end_tz": ROME_TZ, "location_name": "Albergo Vicolo Demo",
-                     "address": "Via della Lungaretta 92, 00153 Rome, Italy", "city": "Rome", "lat": 41.8890, "lon": 12.4700,
+                      "details": {"flight_number": "W6 3502", "airline": "Wizz Air", "seat": "21C, 21D",
+                                  "terminal": "3", "origin_code": "FCO", "destination_code": "CRA",
+                                  "arrival_city": "Craiova", "arrival_lat": 44.3181, "arrival_lon": 23.8886}}),
+        (hotel_doc, {"type": "hotel", "title": demo_docs.HOTEL, "provider_name": demo_docs.HOTEL,
+                     "booking_reference": "HSM-58213", "start_at": _at(start, "15:00", ROME_TZ), "start_tz": ROME_TZ,
+                     "end_at": _at(end, "11:00", ROME_TZ), "end_tz": ROME_TZ, "location_name": demo_docs.HOTEL,
+                     "address": demo_docs.HOTEL_ADDRESS, "city": "Rome", "lat": 41.8896, "lon": 12.4690,
                      "price": 612.00, "currency": "EUR",
                      "cancellation_deadline": _at(start - timedelta(days=2), "23:59", ROME_TZ),
                      "cancellation_policy": tr("Free cancellation until 2 days before arrival, 23:59.", loc),
                      "details": {"room_type": "Superior Double, courtyard view", "guests": 2, "nights": 4,
                                  "check_in_from": "15:00", "check_out_until": "11:00"}}),
-        (museum_doc, {"type": "museum", "title": tr("Vatican Museums & Sistine Chapel", loc), "provider_name": "Vatican Museums (demo ticket)",
+        (museum_doc, {"type": "museum", "title": tr("Vatican Museums & Sistine Chapel", loc), "provider_name": "Vatican Museums",
                       "booking_reference": "VM-20931", "start_at": _at(d1, "09:30", ROME_TZ), "start_tz": ROME_TZ,
                       "end_at": _at(d1, "12:30", ROME_TZ), "end_tz": ROME_TZ, "location_name": "Vatican Museums",
                       "address": "Viale Vaticano, 00165 Rome", "city": "Rome", "lat": 41.9065, "lon": 12.4536,
                       "price": 54.00, "currency": "EUR", "cancellation_policy": tr("Non-refundable.", loc),
                       "details": {"party_size": 2}}),
-        (tour_doc, {"type": "tour", "title": tr("Trastevere Twilight Walking Tour", loc), "provider_name": "Passo Lento Tours (demo)",
+        (tour_doc, {"type": "tour", "title": tr("Trastevere Twilight Walking Tour", loc), "provider_name": "Local guide",
                     "booking_reference": "PLT-4471", "start_at": _at(d2, "17:30", ROME_TZ), "start_tz": ROME_TZ,
                     "end_at": _at(d2, "19:30", ROME_TZ), "end_tz": ROME_TZ, "location_name": "Piazza di Santa Maria in Trastevere",
                     "address": "Piazza di Santa Maria in Trastevere, Rome", "city": "Rome", "lat": 41.8896, "lon": 12.4695,
@@ -175,10 +175,10 @@ def seed_rome_trip(user: User) -> None:
                     "cancellation_policy": tr("Free cancellation up to 24 hours before the tour", loc),
                     "cancellation_deadline": _at(d2 - timedelta(days=1), "17:30", ROME_TZ),
                     "details": {"party_size": 2, "meeting_point": "Piazza di Santa Maria in Trastevere"}}),
-        (dinner_doc, {"type": "restaurant", "title": tr("Dinner at Trattoria Da Demo", loc), "provider_name": "Trattoria Da Demo",
-                      "booking_reference": "TDD-1906", "start_at": _at(d2, "19:00", ROME_TZ), "start_tz": ROME_TZ,
-                      "end_at": _at(d2, "21:00", ROME_TZ), "end_tz": ROME_TZ, "location_name": "Trattoria Da Demo",
-                      "address": "Vicolo del Cinque 21, 00153 Rome", "city": "Rome", "lat": 41.8905, "lon": 12.4688,
+        (dinner_doc, {"type": "restaurant", "title": tr("Dinner at {place}", loc, place=demo_docs.RESTAURANT), "provider_name": demo_docs.RESTAURANT,
+                      "booking_reference": "DE-1906", "start_at": _at(d2, "19:00", ROME_TZ), "start_tz": ROME_TZ,
+                      "end_at": _at(d2, "21:00", ROME_TZ), "end_tz": ROME_TZ, "location_name": demo_docs.RESTAURANT,
+                      "address": demo_docs.RESTAURANT_ADDRESS, "city": "Rome", "lat": 41.8879, "lon": 12.4748,
                       "details": {"party_size": 2}}),
     ]
     reservations = {}
@@ -194,7 +194,7 @@ def seed_rome_trip(user: User) -> None:
     from app.models import ExtractedRecord, ReservationChange
 
     rec = ExtractedRecord(document_id=hotel_update_doc.id, user_id=user.id, index=0, record_type="hotel",
-                          data={"type": "hotel", "booking_reference": "HV-58213"}, confidence=0.9, status="accepted",
+                          data={"type": "hotel", "booking_reference": "HSM-58213"}, confidence=0.9, status="accepted",
                           extractor={"provider": "demo", "path": "demo_seed"}, reservation_id=hotel.id,
                           matched_reservation_id=hotel.id, reviewed_at=utcnow())
     db.session.add(rec)
@@ -204,7 +204,7 @@ def seed_rome_trip(user: User) -> None:
         reservation_id=hotel.id, user_id=user.id, source_document_id=hotel_update_doc.id, extracted_record_id=rec.id,
         changes={"start_at": {"old": hotel.start_at.isoformat(), "new": new_checkin},
                  "details.check_in_from": {"old": "15:00", "new": "13:00"}},
-        summary=tr("Albergo Vicolo Demo: early check-in from 13:00 (was 15:00)", loc), status="pending")
+        summary=tr("{hotel}: early check-in from 13:00 (was 15:00)", loc, hotel=demo_docs.HOTEL), status="pending")
     db.session.add(change)
     db.session.flush()
     trips.apply_change(user, change, actor="user")

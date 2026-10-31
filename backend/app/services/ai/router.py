@@ -188,6 +188,9 @@ class AIRouter:
 
         errors: list[str] = []
         for cand in plan.candidates:
+            if request.remaining is not None and request.remaining < 4:
+                errors.append(f"{cand.provider.name}: out_of_time")
+                break
             try:
                 response = self._attempt(cand, request, user)
             except AIError as exc:
@@ -233,7 +236,8 @@ class AIRouter:
                 raise
             except AIError as exc:
                 self._record(user, provider.name, model, request.task, "error", 0, 0, _ms(started), exc.code)
-                if exc.retryable and attempt < retries:
+                # A reply someone is waiting for can't sleep and retry: the next provider is the retry.
+                if exc.retryable and attempt < retries and request.deadline is None:
                     attempt += 1
                     time.sleep(min(2 ** attempt, 8) if not current_app.config.get("TESTING") else 0)
                     continue

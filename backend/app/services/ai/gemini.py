@@ -61,6 +61,35 @@ class GeminiProvider(AIProvider):
 
     # ------------------------------------------------------------------------------------
     def generate(self, request: AIRequest, model: str) -> AIResponse:
+        """Try `model`, then the cheaper fallbacks when it is out of quota, at capacity or too slow.
+
+        Free-tier limits are per model, and the 3.x previews are often at capacity (HTTP 503), so a chain of
+        models keeps the assistant answering. Only text requests fall back: files stay on the requested model.
+        """
+        chain = [model]
+        if not request.has_files and not request.has_images:
+            chain += [m for m in str(self.cfg.get("GEMINI_FALLBACK_MODELS") or "").split(",")
+                      if m.strip() and m.strip() != model]
+        last: Exception | None = None
+        for i, name in enumerate(chain):
+            name = name.strip()
+            if i and (request.remaining is not None and request.remaining < 6):
+                break
+            req = request
+            if i:  # reasoning state from another model can't be replayed to this one
+                from dataclasses import replace
+
+                req = replace(request, messages=[replace(m, provider_state=None) if m.provider_state else m
+                                                 for m in request.messages])
+            try:
+                return self._generate_one(req, name)
+            except (QuotaExceeded, ProviderUnavailable, ProviderTimeout) as exc:
+                last = exc
+                log.info("gemini %s unavailable (%s)%s", name, exc.code, "; trying the next model" if i + 1 < len(chain) else "")
+        assert last is not None
+        raise last
+
+    def _generate_one(self, request: AIRequest, model: str) -> AIResponse:
         from google.genai import errors, types
 
         uploaded: list[str] = []
@@ -72,6 +101,9 @@ class GeminiProvider(AIProvider):
                 "max_output_tokens": request.max_output_tokens,
                 "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
             }
+            if request.remaining is not None:  # never wait past the turn's deadline
+                config_kwargs["http_options"] = types.HttpOptions(
+                    timeout=int(max(3.0, min(float(self.cfg["AI_REQUEST_TIMEOUT"]), request.remaining)) * 1000))
             if model.startswith("gemini-3"):
                 # Gemini 3.x: 'minimal' thinking is rejected by 3.8-flash, so use 'low' for latency.
                 config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="low")

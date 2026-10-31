@@ -90,6 +90,13 @@ class AIRequest:
     user_id: uuid.UUID | None = None
     document_id: uuid.UUID | None = None
     cacheable: bool = False
+    deadline: float | None = None  # time.monotonic() by which the whole turn must be done (serverless time limit)
+
+    @property
+    def remaining(self) -> float | None:
+        import time
+
+        return None if self.deadline is None else self.deadline - time.monotonic()
 
     @property
     def has_images(self) -> bool:

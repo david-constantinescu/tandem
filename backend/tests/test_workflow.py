@@ -10,7 +10,7 @@ from tests.conftest import upload
 def test_full_workflow_with_local_parser(user_api):
     api = user_api
     start = demo_start_date()
-    api.patch("/api/v1/settings/profile", json={"home_city": "London", "timezone": "Europe/London"})
+    api.patch("/api/v1/settings/profile", json={"home_city": "Craiova", "timezone": "Europe/Bucharest"})
 
     # 1-6. Upload a flight confirmation; AI is off by default so the local parser runs.
     r = upload(api, "flight.pdf", D.flight_confirmation(start), "application/pdf")
@@ -22,8 +22,8 @@ def test_full_workflow_with_local_parser(user_api):
     records = item["records"]
     assert len(records) == 2
     out = records[0]
-    assert out["data"]["booking_reference"] == "TDQ7RM"
-    assert out["data"]["start_tz"] == "Europe/London" and out["data"]["end_tz"] == "Europe/Rome"
+    assert out["data"]["booking_reference"] == "WZ7QRM"
+    assert out["data"]["start_tz"] == "Europe/Bucharest" and out["data"]["end_tz"] == "Europe/Rome"
     fields = {f["field"]: f for f in out["fields"]}
     assert fields["booking_reference"]["verification"] == "evidence_found"
     assert fields["start_local"]["verification"] == "evidence_found"
@@ -42,8 +42,8 @@ def test_full_workflow_with_local_parser(user_api):
     assert trip["start_date"] == start.isoformat()
     assert any(d["name"] == "Rome" for d in trip["destinations"])
     res = api.get(f"/api/v1/trips/{trip_id}/reservations").get_json()["data"]
-    assert {x["details"].get("flight_number") for x in res} == {"TD 412", "TD 419"}
-    assert next(x for x in res if x["details"]["flight_number"] == "TD 412")["details"]["seat"] == "15A"
+    assert {x["details"].get("flight_number") for x in res} == {"W6 3501", "W6 3502"}
+    assert next(x for x in res if x["details"]["flight_number"] == "W6 3501")["details"]["seat"] == "15A"
 
     # Hotel joins the same trip automatically by destination + dates.
     r = upload(api, "hotel.pdf", D.hotel_confirmation(start), "application/pdf")

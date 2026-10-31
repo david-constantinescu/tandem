@@ -75,7 +75,7 @@ def test_full_simulated_purchase_by_the_agent(api):
     assert task["result"]["selected"]["depart"] >= "14:00"
     action = api.get(f"/api/v1/approvals/{task['action_id']}").get_json()["data"]
     assert action["action_type"] == "browser_checkout" and action["status"] == "awaiting_approval"
-    assert action["payload"]["travellers"] == ["Alex Demo", "Sam Demo"]
+    assert action["payload"]["travellers"] == ["Andrei Popescu", "Ioana Marinescu"]
     # Nothing typed into the site yet: the approval comes first.
     assert not any(s["action"] == "details" for s in task["log"])
     done = api.post(f"/api/v1/approvals/{action['id']}/approve", json={"payload_hash": action["payload_hash"]}).get_json()["data"]
@@ -87,7 +87,7 @@ def test_full_simulated_purchase_by_the_agent(api):
     res = api.get(f"/api/v1/trips/{trip['id']}/reservations").get_json()["data"]
     booked = next(x for x in res if x["booking_reference"] == done["result"]["provider_booking_id"])
     assert booked["type"] == "train" and booked["verification"] == "verified" and booked["start_tz"] == "Europe/Rome"
-    assert booked["travellers"] == ["Alex Demo", "Sam Demo"]
+    assert booked["travellers"] == ["Andrei Popescu", "Ioana Marinescu"]
     assert booked["start_local"].startswith(f"{day}T{task['result']['selected']['depart']}")
 
 

@@ -40,12 +40,12 @@ from app.utils.timeutil import utcnow
 log = logging.getLogger("tandem.agent")
 
 MAX_TOOL_CALLS = 8
-MAX_SECONDS = 75
+MAX_SECONDS = 40  # the whole turn: Vercel stops a function at 60 s
 HISTORY = 12
 PROMPT_VERSION = "agent-v1"
 
 
-def system_prompt(user: User, trip: Trip | None) -> str:
+def system_prompt(user: User, trip: Trip | None, brief: str = "") -> str:
     today = today_for(user)
     ctx = {
         "today": today.isoformat(), "weekday": today.strftime("%A"), "user_timezone": user.timezone,
@@ -60,11 +60,25 @@ def system_prompt(user: User, trip: Trip | None) -> str:
                          "currency": user.preferences.default_currency} if user.preferences else None),
     }
     return f"""You are Tandem, a personal travel manager (prompt {PROMPT_VERSION}). You help with the user's own trips only.
+You are the one assistant behind everything in the app (plans, activities, journeys, weather, news, bookings, the browser
+agent); nothing is handled by anyone else, so never send the user elsewhere to do what you can do yourself.
 
 Context: {json.dumps(ctx)}
 
+Everything Tandem knows about the focused trip, current as of this message:
+{brief}
+
 How you work:
-- Use the tools to read the user's actual trips, itinerary, reservations and conflicts. Never answer from assumptions.
+- The brief above is already up to date: answer from it, and don't call tools to re-read what it says. Use tools to
+  act, to look up other trips or days, and for live context. Never answer from assumptions beyond it.
+- "The weekend", "Saturday", "the trip" mean the focused trip's own dates. Don't ask which; just answer.
+- Ask a clarifying question only when the answer would change what you do and neither the brief nor the message gives it
+  (e.g. "something cultural" could be a museum, a tour or a show; a budget or a time that decides the choice). Then call
+  ask_user once with 2-4 short options and stop. Otherwise act and say what you assumed.
+- Asking means calling ask_user, always. Never write a question with a list of choices in your reply: the app shows
+  the options as buttons only when you call the tool. Ask at most once per request. If your previous message was
+  a question, the user's message is the answer: act on it now (search, plan, add), don't ask a follow-up.
+  Fill gaps yourself: a day left open means the day with free time in the brief; the party is the travellers listed.
 - Never invent booking references, times, prices, availability, opening hours or provider capabilities.
   If a tool result does not contain it, say you don't know.
 - Times in tool results are local to each event's timezone; say so when zones differ.
@@ -143,6 +157,9 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
                tool_log: list[dict]) -> tuple[str, str, str]:
     router = AIRouter()
     messages = _history(conversation)
+    from app.services.agent.brief import trip_brief
+
+    brief = trip_brief(user, trip)
     specs = tool_specs()
     started = time.monotonic()
     calls = 0
@@ -151,9 +168,9 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
         if time.monotonic() - started > MAX_SECONDS:
             return ("I ran out of time working on that. Here's what I found so far — try a narrower question."
                     , provider, model)
-        req = AIRequest(task=TASK_AGENT, system=system_prompt(user, trip), messages=messages,
+        req = AIRequest(task=TASK_AGENT, system=system_prompt(user, trip, brief), messages=messages,
                         tools=specs if calls < MAX_TOOL_CALLS else None, role="reasoning", temperature=0.2,
-                        max_output_tokens=2048, user_id=user.id)
+                        max_output_tokens=2048, user_id=user.id, deadline=started + MAX_SECONDS)
         resp = router.run(req, user=user)
         provider, model = resp.provider, resp.model
         if not resp.tool_calls:
@@ -173,6 +190,11 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
             messages.append(ChatMessage(role="tool", parts=[TextPart(compact(result))], tool_call_id=call.id,
                                         tool_name=call.name))
         db.session.commit()
+        asked = next((c for c in resp.tool_calls if c.name == "ask_user"), None)
+        if asked and any(r.get("type") == "choices" for r in ctx.references):
+            question = (asked.arguments or {}).get("question") or ""
+            lead = (resp.text or "").strip()
+            return (f"{lead}\n\n{question}" if lead and question not in lead else lead or question), provider, model
 
 
 def _safe_args(args: dict) -> dict:

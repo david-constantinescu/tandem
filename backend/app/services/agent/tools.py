@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field, ValidationError
@@ -283,9 +283,37 @@ def create_itinerary_event(ctx: ToolContext, args: CreateEventArgs):
     t = _trip(ctx, args.trip_id)
     status = "unbooked" if args.requested_by_user or args.type in ("free_time", "reminder") else "suggested"
     data = args.model_dump(exclude={"trip_id", "requested_by_user"})
+    if not data.get("end_local") and args.type != "reminder":
+        # Without an end there is nothing to clash with: assume a meal lasts 90 minutes, anything else an hour.
+        start = datetime.fromisoformat(args.start_local)
+        data["end_local"] = (start + timedelta(minutes=90 if args.type == "restaurant" else 60)).strftime("%Y-%m-%dT%H:%M")
     e = create_event(ctx.user, t, {**data, "status": status}, source="assistant")
     ctx.references.append({"type": "event", "id": str(e.id), "label": e.title, "trip_id": str(t.id)})
-    return {"created": _event_brief(e)}
+    clashes = [{"title": render(c.title), "detail": render(c.detail)} for c in conflict_engine.detect(t)
+               if str(e.id) in [str(x) for x in c.event_ids]]
+    return {"created": _event_brief(e), "conflicts": clashes,
+            **({"note": "This overlaps something already planned: tell the user and offer to move one of them."}
+               if clashes else {})}
+
+
+class AskArgs(BaseModel):
+    question: str = Field(description="One short question, in the user's language")
+    options: list[str] = Field(min_length=2, max_length=4, description="2 to 4 short answers the user can tap; "
+                               "they are sent back as the user's reply, so write them as the user would say them")
+
+
+@tool("ask_user", "Ask the user ONE clarifying question with 2-4 tappable answers, and stop for their reply. Use it only "
+      "when the answer would change what you do and is not already in the trip context (for example: what kind of "
+      "activity, or a time and budget when they are open-ended). Never ask for what you can find out with a tool or what "
+      "the focused trip already says (its dates, destination, travellers). Don't ask about things you can simply do.",
+      AskArgs)
+def ask_user(ctx: ToolContext, args: AskArgs):
+    options = [o.strip()[:60] for o in args.options if o.strip()][:4]
+    if len(options) < 2:
+        raise ToolError("Provide at least two options")
+    ctx.references.append({"type": "choices", "id": str(abs(hash(args.question)) % 10**10), "label": args.question[:300],
+                           "options": options})
+    return {"asked": True, "note": "Stop here. The user's answer arrives as their next message."}
 
 
 class UpdateEventArgs(BaseModel):
