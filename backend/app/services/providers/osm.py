@@ -30,6 +30,8 @@ CATEGORY_TAGS = {
 DEFAULT_CATEGORIES = ["museums", "attractions", "historical"]
 
 
+OVERPASS_MIRRORS = ("https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter")
+
 class OSMPlacesAdapter(TravelProviderAdapter):
     key = "osm"
     name = "OpenStreetMap places"
@@ -95,19 +97,40 @@ class OSMPlacesAdapter(TravelProviderAdapter):
         for cat in cats:
             for tag in CATEGORY_TAGS[cat]:
                 selectors.append(f'nwr[{tag}](around:{radius},{lat},{lon});')
-        query = f"[out:json][timeout:20];({''.join(selectors)});out center tags 60;"
-        try:
-            resp = httpx.post(self.cfg["OVERPASS_URL"], data={"data": query}, timeout=25,
-                              headers={"User-Agent": geo.user_agent()})
-        except httpx.HTTPError as exc:
-            raise ProviderRequestError(f"OpenStreetMap is unreachable ({type(exc).__name__})",
-                                       code=TEMPORARILY_UNAVAILABLE, retryable=True) from exc
-        if resp.status_code in (429, 504):
-            raise ProviderRequestError("OpenStreetMap is busy; try again shortly", code=TEMPORARILY_UNAVAILABLE,
-                                       retryable=True)
-        if resp.status_code != 200:
-            raise ProviderRequestError(f"OpenStreetMap returned HTTP {resp.status_code}", code="provider_error")
-        return resp.json().get("elements", [])
+        query = f"[out:json][timeout:10];({''.join(selectors)});out center tags 60;"
+        from app.services.cache import cache_get, cache_set
+
+        key = {"q": query}
+        cached = cache_get("overpass", key)
+        if cached is not None:
+            return cached
+        # The public Overpass servers are often slow or overloaded: try a couple, briefly, then give up quickly so
+        # a chat turn isn't spent waiting. (A miss is remembered for a minute so the next question doesn't wait again.)
+        if cache_get("overpass_down", "all"):
+            raise ProviderRequestError("OpenStreetMap is busy; try again shortly", code=TEMPORARILY_UNAVAILABLE, retryable=True)
+        last: ProviderRequestError | None = None
+        for url in dict.fromkeys([self.cfg["OVERPASS_URL"], *OVERPASS_MIRRORS]):
+            try:
+                resp = httpx.post(url, data={"data": query}, timeout=7, headers={"User-Agent": geo.user_agent()})
+            except httpx.HTTPError as exc:
+                last = ProviderRequestError(f"OpenStreetMap is unreachable ({type(exc).__name__})",
+                                            code=TEMPORARILY_UNAVAILABLE, retryable=True)
+                continue
+            if resp.status_code in (429, 502, 503, 504):
+                last = ProviderRequestError("OpenStreetMap is busy; try again shortly", code=TEMPORARILY_UNAVAILABLE, retryable=True)
+                continue
+            if resp.status_code != 200:
+                last = ProviderRequestError(f"OpenStreetMap returned HTTP {resp.status_code}", code="provider_error")
+                continue
+            try:
+                elements = resp.json().get("elements", [])
+            except ValueError:
+                last = ProviderRequestError("OpenStreetMap sent an unreadable answer", code="provider_error")
+                continue
+            cache_set("overpass", key, elements, ttl_hours=24)
+            return elements
+        cache_set("overpass_down", "all", True, ttl_hours=1 / 30)
+        raise last or ProviderRequestError("OpenStreetMap is unreachable", code=TEMPORARILY_UNAVAILABLE, retryable=True)
 
 
 def _describe(tags: dict) -> str:

@@ -23,7 +23,7 @@ def app():
     app = create_app({
         "TESTING": True, "SQLALCHEMY_DATABASE_URI": TEST_DB, "JOB_RUNNER": "inline", "RATELIMIT_ENABLED": False,
         "LOCATION_PROVIDER": "offline", "STORAGE_LOCAL_PATH": storage_dir, "OSM_PLACES_ENABLED": False,
-        "WEATHER_ENABLED": False, "NEWS_ENABLED": False,  # no network in tests; test_trip_context mocks it
+        "WEATHER_ENABLED": False, "NEWS_ENABLED": False, "AI_TURN_SECONDS": 0,  # no network in tests; test_trip_context mocks it
         "SECRET_KEY": "test-secret-key-that-is-long-enough-for-tests", "GEMINI_API_KEY": "", "ZAI_API_KEY": "",
         "GROQ_API_KEY": "", "GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": "", "DEMO_ALLOW_EXTERNAL_AI": False,
         "BROWSER_WORKER_ENABLED": False, "BROWSER_ASSIST_SITES": "",

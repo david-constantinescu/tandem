@@ -96,9 +96,8 @@ class GeminiProvider(AIProvider):
         models keeps the assistant answering. Only text requests fall back: files stay on the requested model.
         """
         chain = [model]
-        if not request.has_files and not request.has_images:
-            chain += [m for m in str(self.cfg.get("GEMINI_FALLBACK_MODELS") or "").split(",")
-                      if m.strip() and m.strip() != model]
+        # Every Gemini model reads text, images and PDFs, so they can all stand in for each other.
+        chain += [m for m in str(self.cfg.get("GEMINI_FALLBACK_MODELS") or "").split(",") if m.strip() and m.strip() != model]
         last: Exception | None = None
         resting = self._resting(chain)
         for i, name in enumerate(chain):

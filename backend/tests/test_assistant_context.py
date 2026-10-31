@@ -188,3 +188,79 @@ def test_a_model_that_just_ran_out_of_quota_is_skipped_by_the_next_request(app, 
     assert provider.generate(req, "main").model == "backup"
     assert provider.generate(req, "main").model == "backup"
     assert tried == ["main", "backup", "backup"]  # the second request didn't ask "main" again
+
+
+class _R:
+    def __init__(self, status, payload=None):
+        self.status_code, self._p = status, payload or {}
+
+    def json(self):
+        return self._p
+
+
+def test_overpass_tries_a_mirror_quickly_and_remembers_the_answer(app, monkeypatch):
+    import httpx
+
+    from app.services.providers import osm
+
+    calls = []
+
+    def fake_post(url, **kw):
+        calls.append((url, kw["timeout"]))
+        if "overpass-api.de" in url:
+            raise httpx.ReadTimeout("slow")
+        return _R(200, {"elements": [{"type": "node", "id": 1, "lat": 41.9, "lon": 12.5, "tags": {"name": "Museo", "tourism": "museum"}}]})
+
+    monkeypatch.setattr(osm.httpx, "post", fake_post)
+    adapter = osm.OSMPlacesAdapter(app.config)
+    first = adapter._query(41.9, 12.5, 2000, ["museums"])
+    again = adapter._query(41.9, 12.5, 2000, ["museums"])
+    assert first == again and first[0]["id"] == 1
+    assert all(t <= 8 for _, t in calls) and len(calls) == 2  # one timeout, one mirror; the repeat came from the cache
+
+
+def test_when_every_overpass_server_fails_the_next_question_does_not_wait_again(app, monkeypatch):
+    import httpx
+
+    from app.services.providers import osm
+    from app.services.providers.base import ProviderRequestError
+
+    calls = []
+    monkeypatch.setattr(osm.httpx, "post", lambda url, **kw: (calls.append(url), (_ for _ in ()).throw(httpx.ConnectError("down")))[1])
+    adapter = osm.OSMPlacesAdapter(app.config)
+    with pytest.raises(ProviderRequestError):
+        adapter._query(41.9, 12.5, 2500, ["historical"])
+    n = len(calls)
+    with pytest.raises(ProviderRequestError):
+        adapter._query(41.9, 12.5, 3000, ["outdoor"])
+    assert len(calls) == n  # no new network attempts during the rest period
+
+
+def test_every_ai_request_in_a_web_request_gets_a_deadline(app, monkeypatch):
+    from app.services.ai.base import AIResponse
+    from app.services.ai.router import AIRouter
+
+    seen = {}
+
+    class P:
+        name = "gemini"
+        supports_original_file_processing = True
+
+        def configured(self): return True
+        def model_for(self, role): return "gemini-2.5-flash"
+        def generate(self, request, model):
+            seen["deadline"] = request.deadline
+            return AIResponse(provider="gemini", model=model, text="ok")
+
+    app.config["AI_TURN_SECONDS"] = 30
+    try:
+        user, _ = _demo_user()
+        user.ai_settings.mode = "full"
+        db.session.commit()
+        app.config["DEMO_ALLOW_EXTERNAL_AI"] = True
+        req = AIRequest(task="agent", system="", messages=[ChatMessage(role="user", parts=[TextPart("hi")])])
+        AIRouter(providers={"gemini": P()}).run(req, user=user)
+        assert seen["deadline"] is not None and 0 < seen["deadline"] - time.monotonic() <= 30
+    finally:
+        app.config["AI_TURN_SECONDS"] = 0
+        app.config["DEMO_ALLOW_EXTERNAL_AI"] = False

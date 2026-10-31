@@ -170,6 +170,8 @@ class AIRouter:
         is_demo = bool(user and user.is_demo)
         if is_demo:
             self._enforce_demo_budget(user)
+        if request.deadline is None and self.cfg.get("AI_TURN_SECONDS"):
+            request.deadline = time.monotonic() + float(self.cfg["AI_TURN_SECONDS"])
         plan = self.plan(request, settings, is_demo=is_demo)
         if not plan.candidates:
             reasons = {s["reason"] for s in plan.skipped}

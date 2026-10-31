@@ -96,6 +96,8 @@ class Config:
         self.AI_DEFAULT_PROVIDER = _str("AI_DEFAULT_PROVIDER", "gemini")
         self.AI_ALLOW_PAID_MODELS = _bool("AI_ALLOW_PAID_MODELS", False)
         self.AI_ENABLE_FALLBACK = _bool("AI_ENABLE_FALLBACK", True)
+        # A single AI request (a document, a chat turn) never runs longer than this: serverless functions stop at 60 s.
+        self.AI_TURN_SECONDS = _int("AI_TURN_SECONDS", 40)
         self.AI_REQUEST_TIMEOUT = _int("AI_REQUEST_TIMEOUT", 90)
         self.AI_MAX_RETRIES = _int("AI_MAX_RETRIES", 2)
         self.AI_CACHE_TTL_HOURS = _int("AI_CACHE_TTL_HOURS", 24 * 7)

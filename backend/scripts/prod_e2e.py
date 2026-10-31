@@ -30,7 +30,11 @@ def call(method: str, path: str, body=None, timeout: int = 75):
         r = opener.open(req, timeout=timeout)
         return r.status, json.loads(r.read() or b"{}")
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read() or b"{}")
+        raw = e.read() or b""
+        try:
+            return e.code, json.loads(raw or b"{}")
+        except ValueError:
+            return e.code, {"error": raw[:200].decode("utf-8", "replace")}
 
 
 def check(name: str, ok, detail: str = "") -> None:
