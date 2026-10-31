@@ -375,6 +375,7 @@ RO: dict[str, str] = {
     "None of these mention your trip dates, so they look like they're about other days.":
         "Niciuna nu menționează datele călătoriei, deci par să fie despre alte zile.",
     "tickets": "bilete",
+    "No conflicts were detected.": "Nu am găsit suprapuneri sau probleme.",
     "The browser agent types these names on {site}: {names}.": "Agentul scrie aceste nume pe {site}: {names}.",
     "Then it stops on the payment page and asks you again before paying €{total}.": "Apoi se oprește pe pagina de plată și te întreabă din nou înainte să plătească €{total}.",
     "Simulated site: no money moves.": "Site simulat: nu se mișcă bani.",

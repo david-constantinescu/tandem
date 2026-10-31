@@ -115,9 +115,9 @@ class GeminiProvider(AIProvider):
             req = request
             if i:  # starea de gandire de la alt model nu merge trimisa la asta
                 req = replace(request, messages=flatten_tool_turns(request.messages))
-            if request.task == "agent" and request.deadline is not None and i + 1 < len(chain):
-                # in chat, un model lent azi nu trebuie sa manance tot timpul: 15s si trecem la urmatorul
-                req = replace(req, deadline=min(request.deadline, time.monotonic() + 15))
+            if request.deadline is not None and i + 1 < len(chain):
+                # un model lent azi nu trebuie sa manance tot timpul: 15s in chat, 20s la documente, apoi urmatorul
+                req = replace(req, deadline=min(request.deadline, time.monotonic() + (15 if request.task == "agent" else 20)))
             try:
                 return self._generate_one(req, name)
             except (QuotaExceeded, ProviderUnavailable, ProviderTimeout, ProviderError) as exc:

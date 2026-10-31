@@ -79,7 +79,10 @@ def ingest_text(user: User, text: str, *, title: str | None = None) -> Document:
         from app.utils.errors import ValidationFailed
 
         raise ValidationFailed("Paste a bit more text (at least 20 characters)", code="text_too_short")
-    name = safe_filename((title or text.splitlines()[0])[:60]) + ".txt"
+    first = text.splitlines()[0].strip()
+    # numele vine din titlu sau din primul rand, taiat frumos la un cuvant, nu la jumatate
+    short = first if len(first) <= 42 else first[:42].rsplit(" ", 1)[0] + "…"
+    name = safe_filename(title or short) + ".txt"
     return _store_and_queue(user, filename=name, mime_type="text/plain", data=text[:MAX_TEXT_CHARS].encode(),
                             source="paste")
 

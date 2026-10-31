@@ -6,6 +6,7 @@ from flask import Blueprint, request
 from pydantic import BaseModel, Field
 
 from app.api._core import current_user, doc, get_owned, login_required, ok, parse_body
+from app.i18n import locale_of, render, tr
 from app.extensions import db
 from app.models import Document, ItineraryEvent, Reservation, ReservationChange, Traveller, Trip
 from app.schemas.serializers import change_dict, document_dict, event_dict, reservation_dict, trip_dict
@@ -223,11 +224,12 @@ def explain_conflicts(trip_id):
     u = current_user()
     items = conflict_engine.detect(t)
     if not items:
-        return ok({"explanation": "No conflicts were detected.", "provider": None})
-    facts = "\n".join(f"- [{c.severity}] {c.title}: {c.detail}" for c in items[:12])
+        return ok({"explanation": tr("No conflicts were detected.", locale_of(u)), "provider": None})
+    facts = "\n".join(f"- [{c.severity}] {render(c.title)}: {render(c.detail)}" for c in items[:12])
+    lang = "Romanian (with correct diacritics)" if locale_of(u) == "ro" else "English"
     req = AIRequest(task=TASK_EXPLANATION, role="fast", temperature=0.2, max_output_tokens=700,
                     system="You explain travel itinerary issues found by a deterministic checker. Use only the facts "
-                           "given. Suggest practical fixes in 3-6 short bullet points. Do not invent times or prices.",
+                           f"given. Suggest practical fixes in 3-6 short bullet points. Do not invent times or prices. Write in {lang}.",
                     messages=[ChatMessage.user(f"Trip: {t.name}\nIssues found:\n{facts}")], user_id=u.id)
     try:
         resp = AIRouter().run(req, user=u)
