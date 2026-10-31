@@ -95,7 +95,7 @@ def main() -> int:
     cards = [x for x in (r or {}).get("references", []) if x["type"] == "activity"]
     check("the tapped answer leads to results", r and (cards or any(c["name"] == "search_activities" for c in r["tool_calls"])), f"{len(cards)} cards {dt:.0f}s {short(r)}")
     r, dt = ask("Cum ajung de la Craiova la Roma cu avionul pe 12 noiembrie?")
-    check("journey answer", r and (any(c["name"] == "plan_journey" for c in r["tool_calls"]) or "google.com/travel/flights" in r["content"]), f"{dt:.0f}s {short(r)}")
+    check("journey answer (links, or the flight already booked)", r and (any(c["name"] == "plan_journey" for c in r["tool_calls"]) or "google.com/travel/flights" in r["content"] or "W6 3501" in r["content"]), f"{dt:.0f}s {short(r)}")
     r, dt = ask("Ce mai am neconfirmat?")
     check("answers from the trip brief", r and r["provider"] != "local", f"{dt:.0f}s {short(r)}")
 

@@ -165,7 +165,7 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
     specs = tool_specs()
     started = time.monotonic()
     calls = 0
-    nudged = False
+    nudged = ask_nudged = False
     provider = model = ""
     while True:
         if time.monotonic() - started > MAX_SECONDS:
@@ -183,7 +183,15 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
                 messages.append(ChatMessage(role="user", parts=[TextPart(
                     "Now answer my last message in my language, using the tool results above. Don't call more tools.")]))
                 continue
-            return (resp.text.strip() or tr("I couldn't produce an answer.", locale_of(user))), provider, model
+            text = resp.text.strip()
+            if text.endswith("?") and not ask_nudged and not any(r.get("type") == "choices" for r in ctx.references):
+                # A question written as prose has no buttons: have the model ask it through the tool, once.
+                ask_nudged = True
+                messages.append(ChatMessage(role="assistant", parts=[TextPart(text)]))
+                messages.append(ChatMessage(role="user", parts=[TextPart(
+                    "Ask that question again by calling ask_user with 2-4 short answers I can tap. Don't write it as text.")]))
+                continue
+            return (text or tr("I couldn't produce an answer.", locale_of(user))), provider, model
         messages.append(ChatMessage(role="assistant", parts=[TextPart(resp.text)] if resp.text else [],
                                     tool_calls=resp.tool_calls, provider_state=resp.provider_state))
         for call in resp.tool_calls:

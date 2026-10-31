@@ -279,3 +279,16 @@ def test_gemini_moves_to_the_next_model_when_one_answers_with_an_error(app, monk
     provider = GeminiProvider({"GEMINI_API_KEY": "x", "AI_REQUEST_TIMEOUT": 20, "GEMINI_FALLBACK_MODELS": "backup"})
     req = AIRequest(task="agent", system="", messages=[ChatMessage(role="user", parts=[TextPart("hi")])])
     assert provider.generate(req, "main").model == "backup"
+
+
+def test_a_question_written_as_prose_is_asked_again_through_the_tool(app, scripted):  # noqa: F811
+    user, trip = _demo_user()
+    user.ai_settings.mode = "full"
+    db.session.commit()
+    p = scripted(["Ce fel de activitate te interesează?",
+                  [ToolCall("1", "ask_user", {"question": "Ce fel de activitate te interesează?", "options": ["Muzeu", "Tur"]})],
+                  "unused"])
+    msg = orchestrator.respond(user, _conversation(user, trip), "Ceva cultural")
+    assert [r["options"] for r in msg.references if r["type"] == "choices"] == [["Muzeu", "Tur"]]
+    sent = " ".join(getattr(part, "text", "") or "" for m in p.seen[-1].messages for part in m.parts)
+    assert "by calling ask_user" in sent and len(p.seen) == 2
