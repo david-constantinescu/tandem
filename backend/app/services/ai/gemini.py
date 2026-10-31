@@ -155,6 +155,9 @@ class GeminiProvider(AIProvider):
             if request.remaining is not None:  # never wait past the turn's deadline
                 config_kwargs["http_options"] = types.HttpOptions(
                     timeout=int(max(3.0, min(float(self.cfg["AI_REQUEST_TIMEOUT"]), request.remaining)) * 1000))
+            if model.startswith("gemini-2.5-flash") and not model.endswith("lite"):
+                # 2.5 Flash thinks for a long time by default; a short budget keeps chat answers quick and cheap.
+                config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=512)
             if model.startswith("gemini-3"):
                 # Gemini 3.x: 'minimal' thinking is rejected by 3.8-flash, so use 'low' for latency.
                 config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="low")
