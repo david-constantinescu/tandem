@@ -106,7 +106,7 @@ class Config:
         self.GEMINI_VISION_MODEL = _str("GEMINI_VISION_MODEL", "gemini-2.5-flash")
         self.GEMINI_FAST_MODEL = _str("GEMINI_FAST_MODEL", "gemini-2.5-flash-lite")
         # Tried in order when the main model is out of quota, at capacity or slow (free-tier limits are per model).
-        self.GEMINI_FALLBACK_MODELS = _str("GEMINI_FALLBACK_MODELS", "gemini-2.5-flash-lite,gemini-3.5-flash-lite")
+        self.GEMINI_FALLBACK_MODELS = _str("GEMINI_FALLBACK_MODELS", "gemini-3.5-flash-lite,gemini-2.5-flash-lite")
         self.GEMINI_EMBEDDING_MODEL = _str("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
 
         self.ZAI_API_KEY = _str("ZAI_API_KEY")

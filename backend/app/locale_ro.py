@@ -375,6 +375,7 @@ RO: dict[str, str] = {
     "None of these mention your trip dates, so they look like they're about other days.":
         "Niciuna nu menționează datele călătoriei, deci par să fie despre alte zile.",
     "tickets": "bilete",
+    "I couldn't produce an answer.": "Nu am reușit să formulez un răspuns. Încearcă să reformulezi.",
     "Tell me what and when, e.g. *add dinner at Roscioli on Saturday at 20:00*.":
         "Spune-mi ce și când, de ex. *adaugă cină la Roscioli sâmbătă la 20:00*.",
     "I couldn't add that to the plan.": "Nu am putut adăuga asta în plan.",

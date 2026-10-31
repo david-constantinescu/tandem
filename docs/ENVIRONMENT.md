@@ -72,6 +72,15 @@ No key needed: `OSM_PLACES_ENABLED=true` searches museums, galleries and sights 
 | `LOCATION_PROVIDER=nominatim` + `OSM_CONTACT_EMAIL` | Geocoding addresses so events appear on the map | No key. OSM's [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) asks for a contact email in the User-Agent and max 1 request/second (Tandem respects both). `offline` uses the built-in city list only. |
 | `ROUTING_OSRM_URL` | Real travel times between places in conflict checks | Run [OSRM](https://project-osrm.org/) yourself. Without it Tandem says travel time is unknown instead of guessing. |
 
+## 5b. Which Gemini model
+
+`GEMINI_REASONING_MODEL` and friends default to `gemini-2.5-flash` (and `-flash-lite` for quick tasks): stable and on the
+free tier. The 3.x previews answer better sometimes but are often "at high demand" (HTTP 503). When a model is out of
+quota or busy, Gemini falls back along `GEMINI_FALLBACK_MODELS` (default `gemini-3.5-flash-lite,gemini-2.5-flash-lite`);
+free-tier limits are per model, so the chain keeps the assistant answering. A whole assistant turn is capped at 40 s
+because Vercel stops a function at 60 s. `backend/scripts/live_ai_check.py` runs a scripted conversation against the real
+providers (it spends free quota; run it sparingly).
+
 ## 6b. Live trip context
 
 | Variable | Unlocks | Where to get it |

@@ -37,18 +37,20 @@ a website's rules, or send your files to an AI company unless you've said that's
 
 ### What to try in the demo
 
-The demo is a fictional long weekend in Rome. Each visitor gets their own private copy that expires after a day.
+The demo is a real-looking long weekend in Rome, flying from Craiova. Names are real (Craiova airport, Wizz Air,
+Hotel Santa Maria, the Vatican Museums, Da Enzo al 29); the bookings are samples with made-up references, and every
+generated document says so. Each visitor gets a private copy that expires after a day.
 
-1. **Home** shows the next trip as a boarding pass, plus the clash Tandem already found.
-2. **Inbox → Try a sample document** sends a fictional Colosseum ticket through the real reading pipeline. Accept it
-   and watch a new conflict appear.
-3. **Assistant** answers from your actual plans ("what's still unconfirmed?").
-4. **The trip page** shows the real Open-Meteo forecast for each day and real local headlines about strikes, protests
-   and closures (from Google News, in Italian). Wet days are marked, and outdoor activities sink to the bottom.
-5. **Explore → Tickets → Get there** opens Google Maps and Google Flights with the route filled in, and lists the
-   official operators for that route (Trenitalia, Italo, ITA Airways…), which open on their own sites.
-6. **Explore → Tickets → Practice runs** lets the browser agent search a simulated rail site, pick a train that fits,
-   and stop for your approval. Approve it and the confirmation is read back into your trip. No real money moves.
+1. **Home** is one screen: the trip as a boarding pass, what's next, the real forecast for each day, and one alert line.
+2. **Trips → the trip** has the day pager: each day shows its forecast and what's planned. The ☂/⚠ button opens the
+   weather, local strike/protest headlines and the clash Tandem found.
+3. **Assistant** does everything else, with cards in the chat:
+   - *"Cum e vremea sâmbătă? Merită să stau afară?"* answers from the live forecast.
+   - *"E grevă? Pot lua autobuzul?"* reads real local news and links its sources.
+   - *"Vreau ceva cultural, dar nu știu exact ce"* makes it ask what kind, with answers you tap.
+   - *"Adaugă cină la Roscioli sâmbătă la 20:00"* puts it in the plan and says what it clashes with.
+   - *"Cum ajung de la Craiova la Roma?"* gives Google Maps, Google Flights and the airlines' own sites.
+4. **Inbox → a sample document** sends a fictional Colosseum ticket through the real reading pipeline.
 
 ---
 
@@ -189,7 +191,7 @@ None are required. The short version:
 |---|---|
 | `GEMINI_API_KEY` ([AI Studio](https://aistudio.google.com/apikey), free) | Reading PDFs/photos with AI, the full assistant |
 | `ZAI_API_KEY` ([Z.ai](https://z.ai/manage-apikey/apikey-list), free models) | Second provider + free vision model |
-| `GROQ_API_KEY` ([GroqCloud](https://console.groq.com/keys), free) | Fast text tasks |
+| `GROQ_API_KEY` ([GroqCloud](https://console.groq.com/keys), free; keys start with `gsk_`) | Fast text tasks |
 | `TAVILY_API_KEY` ([Tavily](https://app.tavily.com), 1,000 free searches/month) | General web search for the assistant |
 | Google OAuth client | Read-only Gmail import |
 | Viator / GetYourGuide / Booking.com / Expedia partner credentials | Live activities and bookings |

@@ -76,7 +76,8 @@ def trip_brief(user: User, trip: Trip | None) -> str:
     if clashes:
         from app.i18n import render
 
-        out.append("Open conflicts: " + "; ".join(render(c.title) for c in clashes[:5]))
+        out.append("Known clashes (background only: mention them only if the request is about the plan, timing or these events): "
+                   + "; ".join(render(c.title) for c in clashes[:5]))
     pending = db.session.execute(db.select(db.func.count(AgentAction.id)).where(
         AgentAction.user_id == user.id, AgentAction.status == "awaiting_approval")).scalar() or 0
     if pending:

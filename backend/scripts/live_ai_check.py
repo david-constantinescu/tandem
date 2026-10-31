@@ -31,7 +31,7 @@ SCRIPT = [
     ("Adaugă cină la Roscioli sâmbătă la 19:30", {"create_itinerary_event"}, "dinner"),
     ("Vreau să fac ceva cultural dar nu știu exact ce", set(), "ask_or_search"),
     ("Un tur ghidat", {"search_activities"}, None),
-    ("Cum ajung de la Roma la Florența cu trenul pe 14 noiembrie?", {"plan_journey"}, None),
+    ("Cum ajung de la Craiova la Roma cu avionul pe 12 noiembrie?", {"plan_journey"}, None),
     ("Ce mai am neconfirmat?", set(), "confirmed"),
 ]
 

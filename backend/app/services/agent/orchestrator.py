@@ -69,6 +69,8 @@ Everything Tandem knows about the focused trip, current as of this message:
 {brief}
 
 How you work:
+- Do what the user's latest message asks, and nothing else. The brief is background, not a to-do list: don't bring up
+  clashes, unconfirmed bookings or the weather unless the request is about them or they directly affect the answer.
 - The brief above is already up to date: answer from it, and don't call tools to re-read what it says. Use tools to
   act, to look up other trips or days, and for live context. Never answer from assumptions beyond it.
 - "The weekend", "Saturday", "the trip" mean the focused trip's own dates. Don't ask which; just answer.
@@ -163,6 +165,7 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
     specs = tool_specs()
     started = time.monotonic()
     calls = 0
+    nudged = False
     provider = model = ""
     while True:
         if time.monotonic() - started > MAX_SECONDS:
@@ -174,7 +177,13 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
         resp = router.run(req, user=user)
         provider, model = resp.provider, resp.model
         if not resp.tool_calls:
-            return (resp.text.strip() or "I couldn't produce an answer."), provider, model
+            if not resp.text.strip() and calls and not nudged:
+                # Smaller models sometimes stop after the tools without writing the answer: ask once for it.
+                nudged = True
+                messages.append(ChatMessage(role="user", parts=[TextPart(
+                    "Now answer my last message in my language, using the tool results above. Don't call more tools.")]))
+                continue
+            return (resp.text.strip() or tr("I couldn't produce an answer.", locale_of(user))), provider, model
         messages.append(ChatMessage(role="assistant", parts=[TextPart(resp.text)] if resp.text else [],
                                     tool_calls=resp.tool_calls, provider_state=resp.provider_state))
         for call in resp.tool_calls:

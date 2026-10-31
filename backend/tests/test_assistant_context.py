@@ -25,7 +25,7 @@ def test_brief_has_travellers_bookings_plan_and_conflicts(app):
     user, trip = _demo_user()
     text = trip_brief(user, trip)
     assert trip.name in text and "Travellers:" in text and "Bookings:" in text
-    assert "overlaps" in text.lower() or "Open conflicts" in text
+    assert "Known clashes" in text
     assert "Preferences:" in text
     assert len(text) <= 5300
 
@@ -136,3 +136,23 @@ def test_a_conversation_that_runs_past_its_deadline_stops_with_a_reply(app, scri
     scripted(["never used"])
     msg = orchestrator.respond(user, _conversation(user, trip), "Hello")
     assert "ran out of time" in msg.content
+
+
+def test_a_model_that_stops_after_the_tools_is_asked_once_for_the_answer(app, scripted):  # noqa: F811
+    user, trip = _demo_user()
+    user.ai_settings.mode = "full"
+    db.session.commit()
+    p = scripted([[ToolCall("1", "get_trip", {})], "", "Weekendul din Roma e 12-16 noiembrie."])
+    msg = orchestrator.respond(user, _conversation(user, trip), "Când plec?")
+    assert msg.content.startswith("Weekendul") and len(p.seen) == 3
+    assert "Now answer my last message" in p.seen[2].messages[-1].parts[0].text
+
+
+def test_an_assistant_that_never_answers_says_so_in_the_users_language(app, scripted):  # noqa: F811
+    user, trip = _demo_user()
+    user.ai_settings.mode = "full"
+    user.locale = "ro"
+    db.session.commit()
+    scripted([[ToolCall("1", "get_trip", {})], "", ""])
+    msg = orchestrator.respond(user, _conversation(user, trip), "Când plec?")
+    assert "Nu am reușit" in msg.content
