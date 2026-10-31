@@ -48,7 +48,7 @@ def test_rendering_follows_the_language(app):
         assert tr("Free afternoon") == "După-amiază liberă"
         assert T("{a} overlaps {b}", a="Tur", b="Cină").render() == "Tur se suprapune cu Cină"
     with app.test_request_context():  # no header and no user: Romanian
-        assert tr("Rome") == "Roma"
+        assert tr("Free afternoon") == "După-amiază liberă"
     from datetime import date, datetime
     assert When(datetime(2026, 11, 14, 17, 30)).render("ro") == "sâm. 14 nov. 17:30"
     assert When(datetime(2026, 11, 14, 17, 30)).render("en") == "Sat 14 Nov 17:30"
@@ -77,6 +77,8 @@ def test_demo_is_seeded_in_the_visitors_language(app):
         assert trips[0]["name"] == trip_name
         conflicts = client.get(f"/api/v1/trips/{trips[0]['id']}/conflicts", headers={"X-Tandem-Locale": locale}).get_json()["data"]
         assert any(overlap in c["title"] for c in conflicts)
+        # Place names are data: translating the trip's city must not invent a missing journey.
+        assert not any(c["type"] == "missing_transport" for c in conflicts)
         notes = client.get("/api/v1/notifications", headers={"X-Tandem-Locale": locale}).get_json()["data"]
         assert notes and all(n["title"] for n in notes)
         # The offline assistant answers a question in the same language.

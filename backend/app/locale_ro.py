@@ -172,7 +172,6 @@ RO: dict[str, str] = {
 
     # Demo
     "Rome long weekend": "Weekend prelungit la Roma",
-    "Rome": "Roma",
     "Demo trip with fictional bookings. Try the sample documents in the Inbox and ask the assistant about Saturday.":
         "Călătorie demo cu rezervări fictive. Încearcă documentele de test din Inbox și întreabă asistentul despre sâmbătă.",
     "Flight {number} {route}": "Zbor {number} {route}",

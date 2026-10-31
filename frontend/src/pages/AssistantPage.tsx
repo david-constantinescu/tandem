@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { ArrowUp, CircleAlert, History, MessageCirclePlus, Plus, Trash2, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type SubmitEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -109,7 +109,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
       setSending(null);
     }
   };
-  const submit = (e: SubmitEvent) => { e.preventDefault(); send(text); };
+  const submit = (e: SubmitEvent<HTMLFormElement>) => { e.preventDefault(); send(text); };
   // A question typed on Home arrives with the navigation: send it once, then drop it so a reload doesn't resend.
   useEffect(() => {
     const prompt = (location.state as { prompt?: string } | null)?.prompt;

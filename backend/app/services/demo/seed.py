@@ -111,7 +111,7 @@ def seed_rome_trip(user: User) -> None:
     start = demo_start_date()
     end = start + timedelta(days=4)
     d1, d2, d3 = (start + timedelta(days=i) for i in range(1, 4))
-    trip = trips.create_trip(user, tr("Rome long weekend", loc), start_date=start, end_date=end, destination=tr("Rome", loc),
+    trip = trips.create_trip(user, tr("Rome long weekend", loc), start_date=start, end_date=end, destination="Rome",  # place names are data: they must match the bookings' cities
                              created_via="demo", lat=41.9028, lon=12.4964)
     trip.notes = tr("Demo trip with fictional bookings. Try the sample documents in the Inbox and ask the assistant about Saturday.", loc)
     from app.models import Traveller
