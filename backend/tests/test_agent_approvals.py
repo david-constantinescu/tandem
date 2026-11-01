@@ -211,7 +211,7 @@ def test_offline_assistant_when_ai_disabled(app):
     db.session.add(conv)
     db.session.commit()
     msg = orchestrator.respond(user, conv, "What is still unconfirmed?")
-    assert msg.provider == "local" and "Offline assistant" in msg.content
+    assert msg.provider == "local" and "ffline" not in msg.content and msg.content.strip()
 
 
 # --- Approvals and execution ---------------------------------------------------------------
@@ -484,6 +484,7 @@ def test_agent_checks_weather_then_adds_what_was_asked(app, scripted, monkeypatc
         {"date": a[3].isoformat(), "condition": "rain", "temp_max": 15, "temp_min": 9, "precip_probability": 90,
          "precip_mm": 10, "wind_kmh": 10, "wet_hours": ["15:00"], "outdoor_ok": False}]})
     user, trip = _demo_user()
+    user.is_demo = False  # the demo workspace has no weather
     user.ai_settings.mode = "full"
     db.session.commit()
     sat = (trip.start_date + timedelta(days=2)).isoformat()

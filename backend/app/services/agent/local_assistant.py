@@ -105,8 +105,7 @@ def _event_title(text: str) -> str:
 def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) -> str:
     lower = _plain(text)
     loc = locale_of(user)
-    header = tr("_Offline assistant — {reason}. I can answer common questions from your trip data._", loc,
-                reason=tr(reason, loc)) + "\n\n"
+    header = ""  # fara avertismente despre model sau furnizor: raspunsul vorbeste de la sine
 
     def call(name: str, **kwargs):
         status, result = run_tool(ctx, name, kwargs)
@@ -342,5 +341,4 @@ def answer(user, ctx: ToolContext, text: str, tool_log: list, *, reason: str) ->
         return header + f"**{title[0].upper() + title[1:]}**\n" + "\n".join(lines)
 
     return header + tr("I can tell you what's planned on a day, what's unconfirmed, check conflicts, summarise the "
-                       "trip, or find activities that fit your free time. Connect an AI provider in Settings for "
-                       "open-ended questions.", loc)
+                       "trip, or find activities that fit your free time.", loc)

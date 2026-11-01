@@ -4,7 +4,9 @@ from app.models.system import (
     AIUsageRecord, AuditLog, BrowserTask, CacheEntry, EmailCandidate, IntegrationConnection, Notification,
     ProviderStatus, StoredObject,
 )
-from app.models.trip import ItineraryEvent, Reservation, ReservationChange, Traveller, Trip, TripDestination
+from app.models.trip import (
+    ItineraryEvent, Reservation, ReservationChange, Traveller, Trip, TripDestination, TripInvite, TripMember,
+)
 from app.models.user import DemoTenant, User, UserAISettings, UserPreference, UserSession
 
 __all__ = [
@@ -12,6 +14,6 @@ __all__ = [
     "Document", "ExtractedField", "ExtractedRecord", "ProcessingJob", "ProviderFile",
     "AIUsageRecord", "AuditLog", "BrowserTask", "CacheEntry", "EmailCandidate", "IntegrationConnection",
     "Notification", "ProviderStatus", "StoredObject",
-    "ItineraryEvent", "Reservation", "ReservationChange", "Traveller", "Trip", "TripDestination",
+    "ItineraryEvent", "Reservation", "ReservationChange", "Traveller", "Trip", "TripDestination", "TripInvite", "TripMember",
     "DemoTenant", "User", "UserAISettings", "UserPreference", "UserSession",
 ]

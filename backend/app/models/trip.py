@@ -4,11 +4,12 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, Float, ForeignKey, Index, Integer, Numeric, String, Text, Uuid
+from sqlalchemy import Boolean, Date, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.base import JSONType, Timestamps, UUIDPk, tz_dt, utcnow
+from app.security.encryption import EncryptedText
 
 RESERVATION_TYPES = (
     "flight", "train", "bus", "car_rental", "hotel", "activity", "tour", "museum",
@@ -41,6 +42,29 @@ class Trip(UUIDPk, Timestamps, db.Model):
         back_populates="trip", cascade="all, delete-orphan", order_by="TripDestination.position"
     )
     travellers: Mapped[list["Traveller"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
+
+
+class TripMember(UUIDPk, db.Model):
+    """cineva care vede calatoria altcuiva (familie, prieteni); proprietarul ramane Trip.user_id"""
+    __tablename__ = "trip_members"
+    __table_args__ = (UniqueConstraint("trip_id", "user_id", name="uq_trip_member"),)
+    trip_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(20), default="member")
+    joined_at: Mapped[datetime] = mapped_column(tz_dt(), default=utcnow)
+
+
+class TripInvite(UUIDPk, db.Model):
+    """link de invitatie: tokenul e credentialul; il tinem criptat (ca proprietarul sa-l poata copia din nou) si ca hash"""
+    __tablename__ = "trip_invites"
+    trip_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
+    token: Mapped[str] = mapped_column(EncryptedText)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(tz_dt(), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(tz_dt())
+    revoked_at: Mapped[datetime | None] = mapped_column(tz_dt(), nullable=True)
+    uses: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class TripDestination(UUIDPk, db.Model):

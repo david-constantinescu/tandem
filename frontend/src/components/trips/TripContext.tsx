@@ -64,7 +64,7 @@ export function TripContextCard({ tripId }: { tripId: string }) {
   const wet = weather.days.filter((d) => !d.outdoor_ok);
   return (
     <div className="card space-y-5 p-4">
-      <section>
+      {weather.reason !== "demo" && <section>
         <p className="eyebrow mb-3">{t("context.weather", { place: weather.place ?? "" })}</p>
         {weather.available ? (
           <>
@@ -85,7 +85,7 @@ export function TripContextCard({ tripId }: { tripId: string }) {
         ) : (
           <p className="text-[13px] text-ink-500">{weather.reason === "too_far_ahead" && weather.forecast_from ? t("context.tooFar", { date: fmtDate(weather.forecast_from) }) : t("context.noWeather")}</p>
         )}
-      </section>
+      </section>}
       <section>
         <p className="eyebrow mb-3">{t("context.news")}</p>
         {news.available && news.items.length ? <NewsList items={news.items} /> : (

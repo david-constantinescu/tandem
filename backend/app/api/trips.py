@@ -5,17 +5,18 @@ from datetime import date
 from flask import Blueprint, request
 from pydantic import BaseModel, Field
 
-from app.api._core import current_user, doc, get_owned, login_required, ok, parse_body
+from app.api._core import current_user, doc, get_owned, login_required, ok, parse_body, parse_uuid
 from app.i18n import locale_of, render, tr
 from app.extensions import db
-from app.models import Document, ItineraryEvent, Reservation, ReservationChange, Traveller, Trip
+from app.models import Document, ItineraryEvent, Reservation, ReservationChange, Traveller, Trip, User
 from app.schemas.serializers import change_dict, document_dict, event_dict, reservation_dict, trip_dict
 from app.services.ai.base import TASK_EXPLANATION, AIError, AIRequest, ChatMessage
 from app.services.ai.router import AIRouter
 from app.services.audit import audit
+from app.services import sharing
 from app.services.itinerary import conflicts as conflict_engine
 from app.services.trips import service as trips
-from app.utils.errors import ValidationFailed
+from app.utils.errors import NotFound, ValidationFailed
 from app.utils.timeutil import utcnow
 
 bp = Blueprint("trips", __name__, url_prefix="/api/v1/trips")
@@ -68,14 +69,32 @@ def _stats(t: Trip) -> dict:
             "conflict_count": len([k for k in (t.known_conflicts or []) if not k.startswith(("unconfirmed", "missing_"))])}
 
 
+def viewable_trip(trip_id) -> tuple[Trip, str]:
+    """calatoria mea sau una impartita cu mine; la fel ca get_owned, un id strain nu da de gol nimic"""
+    t = db.session.get(Trip, parse_uuid(trip_id, "trip"))
+    role = sharing.role_of(t, current_user()) if t else None
+    if t is None or role is None:
+        raise NotFound("Trip not found")
+    return t, role
+
+
+def _shown(t: Trip, role: str) -> dict:
+    out = {**trip_dict(t, stats=_stats(t)), "role": role}
+    if role != "owner":
+        owner = db.session.get(User, t.user_id)
+        out["owner_name"] = owner.display_name or owner.email.split("@")[0]
+    return out
+
+
 @bp.get("")
 @login_required
-@doc("List trips", tag="Trips")
+@doc("List trips (mine and the ones shared with me)", tag="Trips")
 def list_trips():
     u = current_user()
-    rows = db.session.execute(db.select(Trip).where(Trip.user_id == u.id)
+    shared = sharing.shared_trip_ids(u)
+    rows = db.session.execute(db.select(Trip).where((Trip.user_id == u.id) | Trip.id.in_(shared or [None]))
                               .order_by(Trip.start_date.is_(None), Trip.start_date)).scalars().all()
-    return ok([trip_dict(t, stats=_stats(t)) for t in rows])
+    return ok([_shown(t, "owner" if t.user_id == u.id else "member") for t in rows])
 
 
 @bp.post("")
@@ -99,8 +118,8 @@ def create_trip():
 @login_required
 @doc("Trip detail", tag="Trips")
 def get_trip(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
-    return ok(trip_dict(t, stats=_stats(t)))
+    t, role = viewable_trip(trip_id)
+    return ok(_shown(t, role))
 
 
 @bp.patch("/<trip_id>")
@@ -174,7 +193,7 @@ def add_traveller(trip_id):
 @login_required
 @doc("Reservations in a trip", tag="Trips")
 def trip_reservations(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
+    t, _ = viewable_trip(trip_id)
     rows = db.session.execute(db.select(Reservation).where(Reservation.trip_id == t.id)
                               .order_by(Reservation.start_at)).scalars().all()
     changes = db.session.execute(db.select(ReservationChange).where(
@@ -190,7 +209,7 @@ def trip_reservations(trip_id):
 @login_required
 @doc("Itinerary events in a trip, ordered by start time", tag="Trips")
 def trip_itinerary(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
+    t, _ = viewable_trip(trip_id)
     rows = db.session.execute(db.select(ItineraryEvent).where(ItineraryEvent.trip_id == t.id)
                               .order_by(ItineraryEvent.start_at)).scalars().all()
     return ok([event_dict(e) for e in rows])
@@ -200,7 +219,9 @@ def trip_itinerary(trip_id):
 @login_required
 @doc("Documents linked to a trip", tag="Trips")
 def trip_documents(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
+    t, role = viewable_trip(trip_id)
+    if role != "owner":  # biletele si confirmarile au date personale: raman la cine le-a adaugat
+        return ok([])
     rows = db.session.execute(db.select(Document).where(Document.trip_id == t.id)
                               .order_by(Document.created_at.desc())).scalars().all()
     return ok([document_dict(d) for d in rows])
@@ -210,7 +231,9 @@ def trip_documents(trip_id):
 @login_required
 @doc("Deterministic conflict check for a trip", tag="Trips")
 def trip_conflicts(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
+    t, role = viewable_trip(trip_id)
+    if role != "owner":  # cine doar vede nu schimba nimic si nu primeste notificari de la calatoria altcuiva
+        return ok(conflict_engine.as_dicts(conflict_engine.detect(t)))
     items = conflict_engine.check_and_notify(t, current_user())
     db.session.commit()
     return ok(conflict_engine.as_dicts(items))
@@ -242,7 +265,7 @@ def explain_conflicts(trip_id):
 @login_required
 @doc("Located points for the trip map", tag="Trips")
 def trip_map(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
+    t, _ = viewable_trip(trip_id)
     points = []
     for e in db.session.execute(db.select(ItineraryEvent).where(ItineraryEvent.trip_id == t.id)).scalars():
         if e.lat is not None and e.type not in ("flight",):

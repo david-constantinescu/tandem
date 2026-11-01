@@ -113,6 +113,12 @@ def trip_point(trip) -> tuple[float | None, float | None, str | None, str | None
 
 
 def for_trip(trip, day: date | None = None) -> dict:
+    from app.extensions import db
+    from app.models import User
+
+    owner = db.session.get(User, trip.user_id)
+    if owner is not None and owner.is_demo:  # spatiile demo nu au vreme: datele sunt fictive
+        return {"available": False, "reason": "demo", "days": []}
     lat, lon, tz, name = trip_point(trip)
     start = day or trip.start_date or utcnow().date()
     end = day or trip.end_date or start

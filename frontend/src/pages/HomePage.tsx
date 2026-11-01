@@ -45,7 +45,7 @@ export default function HomePage() {
         <h1 className="display text-[28px] leading-[1.08] tracking-[-0.02em] sm:text-[34px]">{t(greetingKey())}{first ? `, ${first}` : ""}</h1>
       </div>
       <LatestUpdate />
-      <AskBar tripId={featured?.id} />
+      <AskBar tripId={featured?.role === "member" ? undefined : featured?.id} />
       {featured ? <BoardingPass trip={featured} /> : <Welcome />}
       <InstallCard />
     </div>

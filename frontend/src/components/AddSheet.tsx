@@ -53,7 +53,7 @@ export function AddProvider({ children }: { children: ReactNode }) {
     try {
       let convId = location.pathname.match(/^\/assistant\/([\w-]+)/)?.[1];
       if (!convId) {
-        const next = trips.data?.find((x) => x.stats.phase !== "past" && x.stats.phase !== "cancelled");
+        const next = trips.data?.find((x) => x.role !== "member" && x.stats.phase !== "past" && x.stats.phase !== "cancelled");
         convId = (await api.post<Conversation>("/assistant/conversations", { trip_id: next?.id ?? null })).id;
       }
       const payload = await api.post<ConversationPayload>(`/assistant/conversations/${convId}/attachments`, { document_ids: docs.map((d) => d.id) });

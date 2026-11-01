@@ -39,7 +39,7 @@ export default function AssistantPage() {
   }, [id, conversations.data, trips.data, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = async (tripId?: string) => {
-    const conv = await api.post<Conversation>("/assistant/conversations", { trip_id: tripId ?? trips.data?.find((t) => t.stats.phase !== "past")?.id ?? null });
+    const conv = await api.post<Conversation>("/assistant/conversations", { trip_id: tripId ?? trips.data?.find((t) => t.role !== "member" && t.stats.phase !== "past")?.id ?? null });
     qc.invalidateQueries({ queryKey: keys.conversations });
     navigate(`/assistant/${conv.id}`, { replace: !id });
   };

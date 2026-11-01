@@ -17,7 +17,9 @@ bp = Blueprint("context", __name__, url_prefix="/api/v1")
 @limiter.limit("60 per hour")
 @doc("Weather for the trip's days and recent local news about strikes, protests and closures", tag="Trips")
 def trip_context(trip_id):
-    t = get_owned(Trip, trip_id, "trip")
+    from app.api.trips import viewable_trip
+
+    t, _ = viewable_trip(trip_id)
     return ok({"weather": weather.for_trip(t), "news": news.for_trip(t)})
 
 

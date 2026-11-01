@@ -9,6 +9,7 @@ import HomePage from "./pages/HomePage";
 
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
+const JoinPage = lazy(() => import("./pages/JoinPage"));
 const InboxItemPage = lazy(() => import("./pages/InboxItemPage"));
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
@@ -41,6 +42,7 @@ function Protected() {
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
+          <Route path="/join/:token" element={<Pane><JoinPage /></Pane>} />
           <Route path="/inbox" element={<Moved to="/assistant" />} />
           <Route path="/inbox/:id" element={<Pane><InboxItemPage /></Pane>} />
           <Route path="/explore" element={<ExplorePage />} />

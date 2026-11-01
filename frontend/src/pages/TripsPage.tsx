@@ -100,7 +100,7 @@ function TripCard({ trip }: { trip: Trip }) {
         <p className="mt-1.5 text-[14.5px] text-ink-500">{fmtRange(trip.start_date, trip.end_date)}</p>
         <p className="mt-4 flex items-center gap-1.5 text-[14.5px] text-ink-700"><MapPin className="h-4 w-4 shrink-0 text-clay-500" /><span className="truncate">{trip.destinations.map((x) => x.name).join(" → ") || trip.primary_destination || t("trips.noDestination")}</span></p>
         <div className="mt-auto flex items-center justify-between pt-4 text-[13px] text-ink-400">
-          <span>{tp("trips.bookings", trip.stats.reservations ?? 0)}</span>
+          <span>{trip.role === "member" ? t("share.sharedBy", { name: trip.owner_name ?? "" }) : tp("trips.bookings", trip.stats.reservations ?? 0)}</span>
           {(trip.stats.conflict_count ?? 0) > 0 && <span className="flex items-center gap-1.5 font-medium text-amber-ink"><AlertTriangle className="h-4 w-4" /> {tp("trips.toCheck", trip.stats.conflict_count ?? 0)}</span>}
         </div>
       </div>

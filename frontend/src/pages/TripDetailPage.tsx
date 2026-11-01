@@ -1,11 +1,12 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { clsx } from "clsx";
-import { AlertTriangle, CalendarPlus, Check, ChevronLeft, CloudSun, FilePlus, FileText, MessageCircle, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, CalendarPlus, Check, ChevronLeft, CloudSun, FilePlus, FileText, MessageCircle, MoreHorizontal, Pencil, Plus, Share2, StickyNote, Trash2, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdd } from "@/components/AddSheet";
 import { Segmented } from "@/components/motion";
 import { ConflictList } from "@/components/trips/ConflictList";
+import { ShareDialog } from "@/components/trips/ShareDialog";
 import { EventDialog, ReservationDialog } from "@/components/trips/EditDialogs";
 import { EventIcon } from "@/components/trips/EventIcon";
 import { TripContextCard, WeatherChip, WeatherIcon } from "@/components/trips/TripContext";
@@ -40,6 +41,7 @@ export default function TripDetailPage() {
   const [editing, setEditing] = useState<ItineraryEvent | null | "new">(null);
   const [editingRes, setEditingRes] = useState<Reservation | null | "new">(null);
   const [notes, setNotes] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   const touch = useRef<number | null>(null);
 
   useEffect(() => { if (trip.data && notes === null) setNotes(trip.data.notes); }, [trip.data, notes]);
@@ -57,6 +59,7 @@ export default function TripDetailPage() {
     return <LoadError title={t("load.trip")} onRetry={() => trip.refetch()} retrying={trip.isFetching} />;
   if (!trip.data) return <EmptyState title={t("trip.notFound")} action={<Link to="/trips" className="text-lagoon-600">{t("trip.backToTrips")}</Link>} />;
   const tr = trip.data;
+  const owner = tr.role !== "member"; // cine a primit un link doar vede calatoria
   const tz = tr.destinations.find((d) => d.timezone)?.timezone ?? null;
   const all = conflicts.data ?? [];
   const serious = all.filter((c) => c.severity !== "info");
@@ -97,8 +100,9 @@ export default function TripDetailPage() {
         <div className="flex items-center gap-1">
           <Link to="/trips" aria-label={t("trip.backToTrips")} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lagoon-600 active:bg-sand-100"><ChevronLeft className="h-6 w-6" /></Link>
           <h1 className="display line-clamp-2 min-w-0 flex-1 text-[23px] leading-[1.12] tracking-[-0.01em] sm:text-[30px]">{tr.name}</h1>
-          <button onClick={askAssistant} aria-label={t("trip.ask")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lagoon-900 text-white active:scale-90"><MessageCircle className="h-[18px] w-[18px]" /></button>
-          <Menu.Root>
+          <button onClick={() => setSharing(true)} aria-label={t("share.button")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 active:scale-90"><Share2 className="h-4 w-4" /></button>
+          {owner && <button onClick={askAssistant} aria-label={t("trip.ask")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lagoon-900 text-white active:scale-90"><MessageCircle className="h-[18px] w-[18px]" /></button>}
+          {owner && <Menu.Root>
             <Menu.Trigger className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sand-200 bg-white text-ink-500 active:scale-90" aria-label={t("trip.more")}><MoreHorizontal className="h-4 w-4" /></Menu.Trigger>
             <Menu.Portal>
               <Menu.Content align="end" className="z-50 min-w-[220px] rounded-xl border border-sand-200 bg-white p-1 text-[14px] shadow-[var(--shadow-lift)]">
@@ -114,10 +118,11 @@ export default function TripDetailPage() {
                 <Menu.Item onSelect={deleteTrip} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-rose-ink outline-none data-[highlighted]:bg-rose-soft"><Trash2 className="h-4 w-4" /> {t("trip.delete")}</Menu.Item>
               </Menu.Content>
             </Menu.Portal>
-          </Menu.Root>
+          </Menu.Root>}
         </div>
         <p className="mt-1 pl-0.5 text-[13.5px] leading-snug text-ink-500">
           {fmtRange(tr.start_date, tr.end_date)} · {tr.destinations.map((d) => d.name).join(" → ") || tr.primary_destination || t("trip.noDestination")}
+          {!owner && tr.owner_name && <span className="text-ink-400"> · {t("share.sharedBy", { name: tr.owner_name })}</span>}
           {tr.travellers.length > 0 && <span className="text-ink-400"> · <Users className="-mt-0.5 inline h-3 w-3" /> {tr.travellers.map((x) => x.full_name.split(" ")[0]).join(", ")}</span>}
         </p>
       </header>
@@ -157,7 +162,7 @@ export default function TripDetailPage() {
             <button onClick={() => setSheet("checks")} className={clsx("flex h-8 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-medium active:scale-95", serious.length ? "bg-amber-soft text-amber-ink" : "bg-sand-100 text-ink-600")}>
               {serious.length ? <AlertTriangle className="h-3.5 w-3.5" /> : <CloudSun className="h-3.5 w-3.5" />}{serious.length || t("trip.context")}
             </button>
-            <button onClick={() => setEditing("new")} aria-label={t("trip.addEvent")} className="flex h-8 w-8 items-center justify-center rounded-full bg-sand-100 text-ink-700 active:scale-90"><Plus className="h-4 w-4" /></button>
+            {owner && <button onClick={() => setEditing("new")} aria-label={t("trip.addEvent")} className="flex h-8 w-8 items-center justify-center rounded-full bg-sand-100 text-ink-700 active:scale-90"><Plus className="h-4 w-4" /></button>}
           </div>
           <div className="rounded-2xl"
             onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
@@ -165,7 +170,7 @@ export default function TripDetailPage() {
             {itinerary.isLoading ? <PageLoader /> : dayEvents.length === 0 ? (
               <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-sand-300 py-8 text-center">
                 <p className="px-6 text-[14px] text-ink-500">{events.length === 0 ? t("trip.emptyPlanBody") : t("trip.emptyDay")}</p>
-                <Button size="sm" variant="secondary" onClick={() => (events.length === 0 ? openAdd() : setEditing("new"))} icon={<Plus className="h-3.5 w-3.5" />}>{events.length === 0 ? t("trip.addBooking") : t("trip.addEvent")}</Button>
+                {owner && <Button size="sm" variant="secondary" onClick={() => (events.length === 0 ? openAdd() : setEditing("new"))} icon={<Plus className="h-3.5 w-3.5" />}>{events.length === 0 ? t("trip.addBooking") : t("trip.addEvent")}</Button>}
               </div>
             ) : (
               <ol className="space-y-1.5">
@@ -179,14 +184,14 @@ export default function TripDetailPage() {
       {tab === "bookings" && (
         <section className="flex flex-col gap-2">
           <div className="flex shrink-0 justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button>
-            <Button size="sm" variant="secondary" onClick={() => setEditingRes("new")} icon={<Plus className="h-3.5 w-3.5" />}>{t("trip.addManually")}</Button>
+            {owner && <Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button>}
+            {owner && <Button size="sm" variant="secondary" onClick={() => setEditingRes("new")} icon={<Plus className="h-3.5 w-3.5" />}>{t("trip.addManually")}</Button>}
           </div>
           {(reservations.data?.length ?? 0) === 0 ? <EmptyState title={t("trip.noReservations")} body={t("trip.noReservationsBody")} /> : (
             <ul className="card divide-y divide-sand-100">
               {reservations.data!.map((r) => (
                 <li key={r.id}>
-                  <button onClick={() => setEditingRes(r)} className="flex min-h-[58px] w-full items-center gap-3 px-3.5 py-2 text-left active:bg-sand-50">
+                  <button onClick={owner ? () => setEditingRes(r) : undefined} className="flex min-h-[58px] w-full items-center gap-3 px-3.5 py-2 text-left active:bg-sand-50">
                     <EventIcon type={r.type} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[14px] font-medium text-ink-900">{r.title}</span>
@@ -205,8 +210,8 @@ export default function TripDetailPage() {
 
       {tab === "docs" && (
         <section className="flex flex-col gap-2">
-          <div className="flex shrink-0 justify-end"><Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button></div>
-          {(documents.data?.length ?? 0) === 0 ? <EmptyState icon={<FileText className="h-7 w-7" />} title={t("trip.noDocuments")} body={t("trip.noDocumentsBody")} /> : (
+          {owner && <div className="flex shrink-0 justify-end"><Button size="sm" variant="secondary" onClick={openAdd} icon={<FilePlus className="h-3.5 w-3.5" />}>{t("trip.uploadConfirmation")}</Button></div>}
+          {!owner ? <EmptyState icon={<FileText className="h-7 w-7" />} title={t("share.docsPrivateTitle")} body={t("share.docsPrivate", { name: tr.owner_name ?? "" })} /> : (documents.data?.length ?? 0) === 0 ? <EmptyState icon={<FileText className="h-7 w-7" />} title={t("trip.noDocuments")} body={t("trip.noDocumentsBody")} /> : (
             <ul className="card divide-y divide-sand-100">
               {documents.data!.map((d) => (
                 <li key={d.id}>
@@ -234,9 +239,10 @@ export default function TripDetailPage() {
       <Dialog open={sheet === "event" && !!picked} onOpenChange={(o) => { if (!o) { setSheet(null); setPicked(null); } }} title={picked?.title ?? ""}
         description={picked ? `${fmtDate(dayKey(picked.start_local), { weekday: true })} · ${fmtTime(picked.start_local)}${picked.end_local ? `–${fmtTime(picked.end_local)}` : ""}` : undefined}>
         {picked && <EventSheet e={picked} flags={all.filter((c) => c.event_ids.includes(picked.id)).map((c) => c.title)}
-          onStatus={(s) => setStatus(picked, s)} onEdit={() => { setEditing(picked); setSheet(null); }} onDelete={() => remove(picked)} />}
+          readOnly={!owner} onStatus={(s) => setStatus(picked, s)} onEdit={() => { setEditing(picked); setSheet(null); }} onDelete={() => remove(picked)} />}
       </Dialog>
 
+      <ShareDialog trip={tr} open={sharing} onOpenChange={setSharing} />
       {editing && <EventDialog tripId={tr.id} event={editing === "new" ? null : editing} defaultTz={tz} defaultDay={current} onClose={() => setEditing(null)} />}
       {editingRes && <ReservationDialog tripId={tr.id} reservation={editingRes === "new" ? null : editingRes} defaultTz={tz} onClose={() => setEditingRes(null)} />}
     </div>
@@ -264,7 +270,7 @@ function DayRow({ e, flags, onOpen }: { e: ItineraryEvent; flags: number; onOpen
   );
 }
 
-function EventSheet({ e, flags, onStatus, onEdit, onDelete }: { e: ItineraryEvent; flags: string[]; onStatus: (s: string) => void; onEdit: () => void; onDelete: () => void }) {
+function EventSheet({ e, flags, readOnly, onStatus, onEdit, onDelete }: { e: ItineraryEvent; flags: string[]; readOnly?: boolean; onStatus: (s: string) => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useT();
   const editable = !e.reservation_id;
   return (
@@ -273,12 +279,12 @@ function EventSheet({ e, flags, onStatus, onEdit, onDelete }: { e: ItineraryEven
       {(e.location_name || e.end_location_name) && <p className="text-[14px] text-ink-600">{e.location_name}{e.end_location_name ? ` → ${e.end_location_name}` : ""}</p>}
       {e.notes && <p className="text-[13.5px] text-ink-500">{e.notes}</p>}
       {flags.map((f) => <p key={f} className="flex items-start gap-1.5 rounded-lg bg-amber-soft px-2.5 py-1.5 text-[13px] text-amber-ink"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{f}</p>)}
-      <div className="flex flex-wrap gap-2 pt-1">
+      {!readOnly && <div className="flex flex-wrap gap-2 pt-1">
         {e.status === "suggested" && <Button size="sm" onClick={() => onStatus("unbooked")} icon={<Check className="h-3.5 w-3.5" />}>{t("timeline.keep")}</Button>}
         {e.status !== "completed" && e.status !== "suggested" && <Button size="sm" variant="secondary" onClick={() => onStatus("completed")} icon={<Check className="h-3.5 w-3.5" />}>{t("timeline.complete")}</Button>}
         <Button size="sm" variant="secondary" onClick={onEdit} icon={<Pencil className="h-3.5 w-3.5" />}>{editable ? t("common.edit") : t("timeline.editNotes")}</Button>
         {editable && <Button size="sm" variant="ghost" onClick={onDelete} icon={e.status === "suggested" ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}>{e.status === "suggested" ? t("timeline.dismiss") : t("common.delete")}</Button>}
-      </div>
+      </div>}
     </div>
   );
 }

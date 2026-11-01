@@ -48,6 +48,8 @@ export type Trip = {
   grouping: Record<string, any>;
   destinations: TripDestination[];
   travellers: { id: string; full_name: string; is_primary: boolean }[];
+  role?: "owner" | "member";
+  owner_name?: string;
   stats: {
     reservations?: number;
     documents?: number;

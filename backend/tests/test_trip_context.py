@@ -68,8 +68,26 @@ def _trip(api) -> dict:
     return api.get("/api/v1/trips").get_json()["data"][0]
 
 
+def _as_real_user() -> None:
+    """the demo workspace has no weather by design; these tests are about the weather feature itself"""
+    from app.extensions import db
+    from app.models import User
+
+    for u in db.session.execute(db.select(User)).scalars():
+        u.is_demo = False
+    db.session.commit()
+
+
+def test_demo_workspace_has_no_weather(api, live):
+    api.demo()
+    t = _trip(api)
+    w = api.get(f"/api/v1/trips/{t['id']}/context").get_json()["data"]["weather"]
+    assert w["available"] is False and w["days"] == []
+
+
 def test_trip_context_has_weather_and_disruptions(api, live):
     api.demo()
+    _as_real_user()
     t = _trip(api)
     data = api.get(f"/api/v1/trips/{t['id']}/context").get_json()["data"]
     w = data["weather"]
@@ -93,6 +111,7 @@ def test_forecast_only_covers_sixteen_days(app, live):
 
 def test_offline_assistant_answers_weather_and_news(api, live):
     api.demo()
+    _as_real_user()
     t = _trip(api)
     conv = api.post("/api/v1/assistant/conversations", json={"trip_id": t["id"]}).get_json()["data"]
     weather_reply = api.post(f"/api/v1/assistant/conversations/{conv['id']}/messages",

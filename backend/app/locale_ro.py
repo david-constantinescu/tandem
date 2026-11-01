@@ -5,6 +5,15 @@ A template missing here falls back to English, so add the Romanian when you add 
 """
 
 RO: dict[str, str] = {
+    # Trip sharing
+    "{name} joined {trip}": "{name} s-a alăturat călătoriei {trip}",
+    "They can see the plan, bookings and map.": "Poate vedea planul, rezervările și harta.",
+    "This invite link isn't valid any more": "Linkul de invitație nu mai e valabil",
+    "Too many active invite links; remove one first": "Prea multe linkuri de invitație active; șterge unul mai întâi",
+    "This trip already has the most people it can share with": "Călătoria e deja împărțită cu numărul maxim de oameni",
+    "Only the owner can remove other people": "Doar cel care a creat călătoria poate scoate alți oameni",
+    "Member not found": "Persoana nu a fost găsită",
+    "Invite not found": "Invitația nu a fost găsită",
     # Itinerary checks
     "{a} overlaps {b}": "{a} se suprapune cu {b}",
     "They overlap by {minutes} min ({start} – {end}).": "Se suprapun {minutes} min ({start} – {end}).",
@@ -244,9 +253,9 @@ RO: dict[str, str] = {
     "Nothing is planned on {day}.": "Nimic planificat {day}.",
     "This trip has no itinerary events yet.": "Călătoria nu are încă evenimente în itinerariu.",
     "I can tell you what's planned on a day, what's unconfirmed, check conflicts, summarise the trip, or find "
-    "activities that fit your free time. Connect an AI provider in Settings for open-ended questions.":
+    "activities that fit your free time.":
         "Îți pot spune ce e planificat într-o zi, ce nu e confirmat, pot verifica suprapunerile, rezuma călătoria sau "
-        "găsi activități potrivite timpului liber. Pentru orice altă întrebare, conectează un furnizor AI în Setări.",
+        "găsi activități potrivite timpului liber.",
     "confirmed": "confirmat",
     "pending": "în așteptare",
     "unconfirmed": "neconfirmat",
