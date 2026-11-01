@@ -168,9 +168,8 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
 /** o lista care nu s-a incarcat nu trebuie sa arate ca un cont gol: spunem asta si dam o reincercare */
 export function LoadError({ title, onRetry, retrying }: { title: string; onRetry: () => void; retrying?: boolean }) {
   const { t } = useT();
-  const offline = typeof navigator !== "undefined" && !navigator.onLine;
   return (
-    <EmptyState icon={<CloudOff />} title={title} body={offline ? t("load.offline") : t("load.failed")}
+    <EmptyState icon={<CloudOff />} title={title} body={t("load.failed")}
       action={<Button variant="secondary" onClick={onRetry} loading={retrying} icon={<RotateCw className="h-4 w-4" />}>{t("common.retry")}</Button>} />
   );
 }

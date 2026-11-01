@@ -45,11 +45,9 @@ export const ro: Record<Key, string> = {
   "load.trip": "Nu am putut încărca această călătorie",
   "load.inbox": "Nu am putut încărca inboxul",
   "load.approvals": "Nu am putut încărca aprobările",
-  "load.offline": "Ești offline. Tandem se actualizează când revii online.",
   "load.failed": "Ceva n-a mers pe drum. Verifică conexiunea și încearcă din nou.",
 
   "err.unreachable": "Nu am putut contacta Tandem. Verifică conexiunea și încearcă din nou.",
-  "err.offline": "Ești offline.",
   "err.status": "Cererea a eșuat ({status})",
   "err.generic": "Ceva n-a mers",
 
@@ -882,8 +880,6 @@ export const ro: Record<Key, string> = {
   "auth.demo": "Încearcă demo-ul",
   "auth.demoBusy": "Se pregătește demo-ul…",
   "auth.demoHint": "Un weekend prelungit la Roma, cu rezervări fictive și un furnizor de rezervări simulat.",
-
-  "pwa.offline": "Offline · se afișează călătoriile salvate pe acest dispozitiv",
   "pwa.update": "O versiune nouă Tandem e gata.",
   "pwa.reload": "Reîncarcă",
   "pwa.later": "Mai târziu",

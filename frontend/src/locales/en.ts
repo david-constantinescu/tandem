@@ -45,11 +45,9 @@ export const en = {
   "load.trip": "Couldn't load this trip",
   "load.inbox": "Couldn't load your inbox",
   "load.approvals": "Couldn't load your approvals",
-  "load.offline": "You're offline. Tandem will catch up when you're back online.",
   "load.failed": "Something went wrong on the way. Check your connection and try again.",
 
   "err.unreachable": "Couldn't reach Tandem. Check your connection and try again.",
-  "err.offline": "You're offline.",
   "err.status": "Request failed ({status})",
   "err.generic": "Something went wrong",
 
@@ -898,7 +896,6 @@ export const en = {
   "auth.demoHint": "A long weekend in Rome with fictional bookings and a simulated booking provider.",
 
   // aplicatie instalabila
-  "pwa.offline": "Offline · showing trips saved on this device",
   "pwa.update": "A new version of Tandem is ready.",
   "pwa.reload": "Reload",
   "pwa.later": "Later",

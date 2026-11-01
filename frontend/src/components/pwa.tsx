@@ -1,8 +1,8 @@
-/** piesele aplicatiei instalabile: banda de offline, mesajul de versiune noua si cardul de adaugare pe ecranul principal */
+/** piesele aplicatiei instalabile: mesajul de versiune noua si cardul de adaugare pe ecranul principal */
 import { clsx } from "clsx";
-import { CloudOff, Download, RotateCw, Share, SquarePlus, X } from "lucide-react";
+import { Download, RotateCw, Share, SquarePlus, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 import { Button } from "@/components/ui";
 import { useT } from "@/lib/i18n";
@@ -24,19 +24,6 @@ if (typeof window !== "undefined") {
   });
 }
 
-const subscribeOnline = (f: () => void) => {
-  window.addEventListener("online", f);
-  window.addEventListener("offline", f);
-  return () => {
-    window.removeEventListener("online", f);
-    window.removeEventListener("offline", f);
-  };
-};
-
-export function useOnline(): boolean {
-  return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
-}
-
 export function isStandalone(): boolean {
   return window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
 }
@@ -44,23 +31,6 @@ export function isStandalone(): boolean {
 function isIOS(): boolean {
   // iPadOS se declara Mac; ecranul tactil il da de gol
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-export function OfflineBanner() {
-  const online = useOnline();
-  const { t } = useT();
-  return (
-    <AnimatePresence initial={false}>
-      {!online && (
-        <motion.div role="status" initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-          <div className="flex items-center justify-center gap-2 bg-amber-soft px-4 py-1.5 text-center text-[12.5px] font-medium text-amber-ink">
-            <CloudOff className="h-3.5 w-3.5 shrink-0" />
-            {t("pwa.offline")}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
 }
 
 /** inregistreaza service worker-ul si ofera versiunea noua cand asteapta, fara sa o schimbe pe nepusa masa */

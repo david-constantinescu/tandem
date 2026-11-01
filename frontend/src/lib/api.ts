@@ -38,7 +38,7 @@ export async function request<T = unknown>(path: string, opts: Options = {}): Pr
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
     // fetch pica doar cand cererea n-a primit niciun raspuns: fara net, DNS, conexiune cazuta
-    throw new ApiError(0, "network", translate(navigator.onLine ? "err.unreachable" : "err.offline"));
+    throw new ApiError(0, "network", translate("err.unreachable"));
   }
   const isJson = res.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await res.json() : null;

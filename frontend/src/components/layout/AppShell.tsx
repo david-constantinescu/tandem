@@ -15,7 +15,6 @@ import { AddProvider } from "@/components/AddSheet";
 import { NewTripDialog } from "@/components/trips/NewTripDialog";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { spring } from "@/components/motion";
-import { OfflineBanner } from "@/components/pwa";
 import { ThemeToggle } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -199,7 +198,6 @@ function Shell({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="safe-top z-30 shrink-0 border-b border-sand-200/60 bg-paper/90 backdrop-blur-xl lg:border-none lg:bg-transparent">
-          <OfflineBanner />
           <div className="flex h-[52px] items-center gap-1 px-3 lg:h-14 lg:justify-end lg:px-8">
             <Logo compact className="mr-auto pl-1 lg:hidden" />
             <button onClick={() => setNewTrip(true)} aria-label={t("trips.new")}
