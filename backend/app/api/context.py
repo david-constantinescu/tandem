@@ -4,9 +4,8 @@ from __future__ import annotations
 from flask import Blueprint
 from pydantic import BaseModel, Field
 
-from app.api._core import doc, get_owned, login_required, ok, parse_query
+from app.api._core import doc, login_required, ok, parse_query
 from app.extensions import limiter
-from app.models import Trip
 from app.services.context import journeys, news, weather
 
 bp = Blueprint("context", __name__, url_prefix="/api/v1")

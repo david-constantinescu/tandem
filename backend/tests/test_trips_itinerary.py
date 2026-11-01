@@ -117,7 +117,7 @@ def test_reupload_identical_reservation_is_not_a_change(user_api):
     doc = upload(user_api, "t.pdf", D.museum_ticket(start), "application/pdf").get_json()["data"]["documents"][0]
     rec = user_api.get(f"/api/v1/inbox/{doc['id']}").get_json()["data"]["records"][0]
     user_api.post(f"/api/v1/inbox/{doc['id']}/review", json={"decisions": [{"record_id": rec["id"], "decision": "accept"}]})
-    # Same content, different bytes (re-rendered) → no duplicate file match, but nothing changed.
+    # Same content, different bytes (re-rendered) -> no duplicate file match, but nothing changed.
     text = "Admission ticket\nReservation code: VM-20931\nVisit date: " + (start + timedelta(days=1)).strftime("%d %B %Y") + \
            "\nEntry time: 09:30\nDuration: 3 hours\nMuseum: Vatican Museums & Sistine Chapel - timed entry\nTotal paid: EUR 54.00"
     d = user_api.post("/api/v1/inbox/paste", json={"text": text}).get_json()["data"]
@@ -129,9 +129,9 @@ def test_reupload_identical_reservation_is_not_a_change(user_api):
 def test_dst_gap_and_fold():
     from app.utils.timeutil import localize as loc
 
-    gap, notes = loc(datetime(2026, 3, 29, 2, 30), "Europe/Rome")  # clocks jump 02:00 → 03:00
+    gap, notes = loc(datetime(2026, 3, 29, 2, 30), "Europe/Rome")  # clocks jump 02:00 -> 03:00
     assert notes and "does not exist" in notes[0]
-    fold, notes = loc(datetime(2026, 10, 25, 2, 30), "Europe/Rome")  # 02:00–03:00 happens twice
+    fold, notes = loc(datetime(2026, 10, 25, 2, 30), "Europe/Rome")  # 02:00-03:00 happens twice
     assert notes and "occurs twice" in notes[0]
     assert fold.isoformat() == "2026-10-25T00:30:00+00:00"
     normal, notes = loc(datetime(2026, 11, 12, 8, 5), "Europe/London")

@@ -110,7 +110,7 @@ export function useStatusLabel() {
   };
 }
 
-/** eticheta unui tip de rezervare sau eveniment (zbor, hotel, muzeu…) in limba activa */
+/** eticheta unui tip de rezervare sau eveniment (zbor, hotel, muzeu...) in limba activa */
 export function useTypeLabel() {
   const { t } = useT();
   return (type: string) => {
@@ -207,7 +207,7 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        // pe ecran tactil comutatorul ia marimea UISwitch 51×31, iar o margine nevazuta largeste zona de atins peste 44pt
+        // pe ecran tactil comutatorul ia marimea UISwitch 51x31, iar o margine nevazuta largeste zona de atins peste 44pt
         className={clsx("relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors after:absolute after:-inset-2 after:content-[''] pointer-coarse:h-[31px] pointer-coarse:w-[51px]", checked ? "bg-lagoon-600" : "bg-sand-300")}
       >
         <span className={clsx("inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform pointer-coarse:h-[27px] pointer-coarse:w-[27px]", checked ? "translate-x-5 pointer-coarse:translate-x-[22px]" : "translate-x-0.5")} />

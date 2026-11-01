@@ -109,7 +109,7 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
   );
 }
 
-/** pasul la care trece o cumparare pe site dupa o aprobare (date → plata), aratat chiar sub ea */
+/** pasul la care trece o cumparare pe site dupa o aprobare (date -> plata), aratat chiar sub ea */
 function NextStep({ id }: { id: string }) {
   const next = useQuery({ queryKey: ["approvals", "one", id], queryFn: () => api.get<Action>(`/approvals/${id}`) });
   if (!next.data) return null;

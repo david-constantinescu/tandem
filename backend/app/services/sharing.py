@@ -60,7 +60,6 @@ def find_invite(token: str) -> TripInvite:
 
 
 def accept_invite(invite: TripInvite, user: User) -> tuple[Trip, bool]:
-    """returns (trip, joined_now)"""
     trip = db.session.get(Trip, invite.trip_id)
     if trip is None:
         raise NotFound("This invite link isn't valid any more", code="invite_invalid")

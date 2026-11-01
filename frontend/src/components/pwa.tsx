@@ -75,7 +75,7 @@ export function UpdatePrompt() {
 
 const DISMISSED = "tandem.install.dismissed";
 
-/** instalare pe ecranul principal: mesajul propriu al browserului unde exista, altfel Share → Add to Home Screen din Safari */
+/** instalare pe ecranul principal: mesajul propriu al browserului unde exista, altfel Share -> Add to Home Screen din Safari */
 export function InstallCard({ className }: { className?: string }) {
   const [, rerender] = useState(0);
   const { t } = useT();

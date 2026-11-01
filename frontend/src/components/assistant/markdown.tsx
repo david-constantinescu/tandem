@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** linkurile scrise de asistent se deschid in tab nou si doar cele web sau de mail se pot apasa (fara javascript:, data:…) */
+/** linkurile scrise de asistent se deschid in tab nou si doar cele web sau de mail se pot apasa (fara javascript:, data:...) */
 export const MD = {
   a: ({ href, children }: { href?: string; children?: ReactNode }) => {
     const safe = href && /^(https?:|mailto:|\/(?!\/))/i.test(href) ? href : undefined;

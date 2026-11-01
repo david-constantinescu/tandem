@@ -148,7 +148,7 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
 }
 
 function ActionCardLive({ initial }: { initial: Action }) {
-  // urmareste actiunea dupa aprobare (in lucru → gata/esuat), ca fereastra sa arate rezultatul verificat
+  // urmareste actiunea dupa aprobare (in lucru -> gata/esuat), ca fereastra sa arate rezultatul verificat
   const q = useQuery({
     queryKey: ["approvals", "one", initial.id],
     queryFn: () => api.get<Action>(`/approvals/${initial.id}`),

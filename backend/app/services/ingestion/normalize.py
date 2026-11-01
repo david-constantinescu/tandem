@@ -29,7 +29,6 @@ def _resolve(text: str | None, code: str | None, allow_network: bool) -> geo.Pla
 
 def normalise_record(rec: ExtractedTravelRecord, *, source_text: str | None, fallback_tz: str,
                      allow_network: bool = True) -> tuple[dict, list[dict], list[str], float]:
-    """return (data, field_rows, notes, confidence)"""
     notes = list(rec.uncertainty_notes)
     if rec.date_ambiguity:
         notes.append(rec.date_ambiguity)

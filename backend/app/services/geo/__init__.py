@@ -92,7 +92,6 @@ def city(name: str | None, country: str | None = None) -> Place | None:
 
 
 def tz_for_point(lat: float | None, lon: float | None) -> str | None:
-    """IANA zone for coordinates"""
     from app.services.geo.cities import MAJOR_CITIES
 
     if lat is None or lon is None:

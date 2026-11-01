@@ -17,7 +17,7 @@ GOOGLE_NEWS = "https://news.google.com/rss/search"
 GDELT = "https://api.gdeltproject.org/api/v2/doc/doc"
 UA = "Mozilla/5.0 (compatible; Tandem travel assistant)"
 
-# destination country → (news language, words that signal a disruption in that language))).
+# destination country -> (news language, words that signal a disruption in that language))).
 LANGUAGES: dict[str, tuple[str, list[str]]] = {
     "IT": ("it", ["sciopero", "manifestazione", "corteo", "chiusura", "chiuso", "allerta meteo", "disagi"]),
     "FR": ("fr", ["grève", "manifestation", "fermeture", "perturbations", "vigilance"]),

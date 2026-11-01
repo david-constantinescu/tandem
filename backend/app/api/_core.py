@@ -41,7 +41,6 @@ def error_response(err: APIError) -> tuple[Response, int]:
 
 def doc(summary: str, *, body: type[BaseModel] | None = None, query: type[BaseModel] | None = None,
         tag: str | None = None, auth: bool = True):
-    """attach OpenAPI metadata to a view function"""
 
     def decorator(fn: Callable) -> Callable:
         OPENAPI_REGISTRY[f"{fn.__module__}.{fn.__name__}"] = {

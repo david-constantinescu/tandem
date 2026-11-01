@@ -108,7 +108,7 @@ def test_museum_purchase_and_price_change_protection(app, api):
     assert task["state"] == "awaiting_approval", task
     action = api.get(f"/api/v1/approvals/{task['action_id']}").get_json()["data"]
     assert "Galleria Demo d'Arte Moderna" in action["title"]
-    # The approved amount no longer matches what the site charges → the agent stops before paying.
+    # The approved amount no longer matches what the site charges -> the agent stops before paying.
     row = db.session.get(AgentAction, __import__("uuid").UUID(action["id"]))
     payload = dict(row.payload)
     payload["total"] = payload["total"] + 1

@@ -1,5 +1,5 @@
-"""End-to-end workflow (spec §29) through the HTTP API: document → extraction → review → reservation →
-trip → itinerary → conflicts → assistant → activity search → proposal → approval → verified result."""
+"""End-to-end workflow (spec §29) through the HTTP API: document -> extraction -> review -> reservation ->
+trip -> itinerary -> conflicts -> assistant -> activity search -> proposal -> approval -> verified result."""
 from __future__ import annotations
 
 from app.services.demo import documents as D
@@ -29,7 +29,7 @@ def test_full_workflow_with_local_parser(user_api):
     assert fields["start_local"]["verification"] == "evidence_found"
     assert out["grouping"]["action"] == "create"
 
-    # 7-10. Review (with a correction) and accept both segments → trip + reservations + itinerary.
+    # 7-10. Review (with a correction) and accept both segments -> trip + reservations + itinerary.
     r = api.post(f"/api/v1/inbox/{doc_id}/review", json={"decisions": [
         {"record_id": records[0]["id"], "decision": "accept", "corrections": {"seat": "15A"}},
         {"record_id": records[1]["id"], "decision": "accept"},
@@ -52,7 +52,7 @@ def test_full_workflow_with_local_parser(user_api):
     assert rec["grouping"]["action"] == "join" and rec["grouping"]["trip_id"] == trip_id
     api.post(f"/api/v1/inbox/{hotel_doc}/review", json={"decisions": [{"record_id": rec["id"], "decision": "accept"}]})
 
-    # Museum + overlapping tour → deterministic conflict.
+    # Museum + overlapping tour -> deterministic conflict.
     for name, data, mime in (("museum.pdf", D.museum_ticket(start), "application/pdf"),
                              ("colosseum.pdf", D.sample_colosseum_ticket(start), "application/pdf")):
         d = upload(api, name, data, mime).get_json()["data"]["documents"][0]["id"]
@@ -105,7 +105,7 @@ def test_full_booking_workflow_in_demo(api):
     assert fitting, "pasta workshop should fit the free afternoon"
     slot = next(s for s in fitting if s["remaining"] >= 2)
 
-    # 16. Proposal (live quote) — nothing booked yet.
+    # 16. Proposal (live quote) - nothing booked yet.
     r = api.post("/api/v1/activities/proposals", json={"provider": "simulator", "provider_item_id": workshop["provider_item_id"],
                                                       "date": slot["date"], "time": slot["time"], "participants": 2,
                                                       "trip_id": trip["id"]})
@@ -117,7 +117,7 @@ def test_full_booking_workflow_in_demo(api):
     # Approval is bound to the exact payload.
     bad = api.post(f"/api/v1/approvals/{action['id']}/approve", json={"payload_hash": "0" * 64})
     assert bad.status_code == 409
-    # 17-20. Approve → executed via provider, verified by read-back, reservation + itinerary updated.
+    # 17-20. Approve -> executed via provider, verified by read-back, reservation + itinerary updated.
     r = api.post(f"/api/v1/approvals/{action['id']}/approve", json={"payload_hash": action["payload_hash"]})
     assert r.status_code == 200, r.get_json()
     done = r.get_json()["data"]

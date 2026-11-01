@@ -25,7 +25,7 @@ HOME_TZ = "Europe/Bucharest"  # Craiova
 
 
 def demo_start_date(today: date | None = None) -> date:
-    """next occurrence of 12 November that keeps the 12–16 Nov trip in the future (or ongoing)"""
+    """next occurrence of 12 November that keeps the 12-16 Nov trip in the future (or ongoing)"""
     today = today or utcnow().date()
     start = date(today.year, 11, 12)
     if today > start + timedelta(days=4):
@@ -69,7 +69,6 @@ def create_demo_workspace(locale: str = "ro") -> User:
 
 
 def seed_demo_account(password: str | None = None) -> tuple[User, str | None]:
-    """create or reset the shared demo account"""
     cfg = current_app.config
     email = cfg["DEMO_ACCOUNT_EMAIL"]
     existing = db.session.execute(db.select(User).where(User.email == email)).scalar_one_or_none()

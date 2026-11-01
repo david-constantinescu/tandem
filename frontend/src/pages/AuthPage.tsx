@@ -19,7 +19,7 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"form" | "demo" | null>(null);
   const { t } = useT();
-  // Only in-app paths: "//evil.com" or "https://…" would send people elsewhere after signing in.
+  // Only in-app paths: "//evil.com" or "https://..." would send people elsewhere after signing in.
   const asked = params.get("next") || "/";
   const next = asked.startsWith("/") && !asked.startsWith("//") && !asked.startsWith("/\\") ? asked : "/";
 

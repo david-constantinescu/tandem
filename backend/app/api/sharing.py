@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint
 
 from app.api._core import current_user, doc, get_owned, login_required, ok, parse_uuid
+from app.api.trips import viewable_trip
 from app.extensions import db, limiter
 from app.i18n import T
 from app.models import Trip, TripInvite, TripMember, User
@@ -25,20 +26,11 @@ def _invite_dict(i: TripInvite) -> dict:
             "expires_at": iso_utc(i.expires_at), "uses": i.uses}
 
 
-def _viewable_trip(trip_id) -> tuple[Trip, str]:
-    u = current_user()
-    t = db.session.get(Trip, parse_uuid(trip_id, "trip"))
-    role = sharing.role_of(t, u) if t else None
-    if t is None or role is None:
-        raise NotFound("Trip not found")
-    return t, role
-
-
 @bp.get("/trips/<trip_id>/sharing")
 @login_required
 @doc("Who a trip is shared with, and its active invite links (links only for the owner)", tag="Sharing")
 def trip_sharing(trip_id):
-    t, role = _viewable_trip(trip_id)
+    t, role = viewable_trip(trip_id)
     owner = db.session.get(User, t.user_id)
     members = db.session.execute(db.select(TripMember, User).join(User, User.id == TripMember.user_id)
                                  .where(TripMember.trip_id == t.id).order_by(TripMember.joined_at)).all()
@@ -85,7 +77,7 @@ def revoke_invite(trip_id, invite_id):
 @doc("Remove someone from a shared trip, or leave it yourself", tag="Sharing")
 def remove_member(trip_id, user_id):
     u = current_user()
-    t, role = _viewable_trip(trip_id)
+    t, role = viewable_trip(trip_id)
     target = parse_uuid(user_id, "user")
     if role != "owner" and target != u.id:
         raise Forbidden("Only the owner can remove other people")

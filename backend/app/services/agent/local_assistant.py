@@ -86,7 +86,7 @@ _MONTH_WORDS = "|".join(sorted({m for pair in MONTHS for m in pair}))
 
 
 def _event_title(text: str) -> str:
-    """"Add dinner at Roscioli on Saturday at 20:00" → "Dinner at Roscioli"."""
+    """"Add dinner at Roscioli on Saturday at 20:00" -> "Dinner at Roscioli"."""
     t = _plain(text)
     keep = [True] * len(t)  # _plain keeps length for Romanian/Latin text, so spans map back onto the original
     for pattern in (r"^\s*(add|put|schedule|plan|adauga|pune|programeaza|planifica)\s+(an?\s+|un\s+|o\s+)?",

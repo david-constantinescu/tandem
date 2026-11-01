@@ -18,7 +18,7 @@ def _second_user(app):
     return other
 
 
-def test_invite_link_lets_family_see_the_trip_but_not_change_or_open_documents(user_api, app):
+def test_invite_flow(user_api, app):
     trip = user_api.post("/api/v1/trips", json={"name": "Lisbon weekend", "start_date": "2027-03-05",
                                                 "end_date": "2027-03-08", "primary_destination": "Lisbon"}).get_json()["data"]
     link = user_api.post(f"/api/v1/trips/{trip['id']}/invites").get_json()["data"]
@@ -52,7 +52,7 @@ def test_invite_link_lets_family_see_the_trip_but_not_change_or_open_documents(u
     assert any("joined" in n["title"] or "alăturat" in n["title"] for n in notes)
 
 
-def test_revoked_or_unknown_links_look_the_same_and_leaving_works(user_api, app):
+def test_revoked_link_and_leaving(user_api, app):
     trip = user_api.post("/api/v1/trips", json={"name": "Porto"}).get_json()["data"]
     link = user_api.post(f"/api/v1/trips/{trip['id']}/invites").get_json()["data"]
     token = link["url"].rsplit("/", 1)[1]
@@ -70,7 +70,7 @@ def test_revoked_or_unknown_links_look_the_same_and_leaving_works(user_api, app)
     assert gone.get_json()["error"]["code"] == unknown.get_json()["error"]["code"] == "invite_invalid"
 
 
-def test_expired_invite_is_refused(user_api, app):
+def test_expired_invite(user_api, app):
     from datetime import timedelta
 
     from app.utils.timeutil import utcnow

@@ -1,7 +1,7 @@
 /**
  * afisarea datei si a orei. API-ul trimite fiecare ora deja in fusul ei (de ex.
  * "2026-11-12T11:40:00+01:00"), deci formatam direct ora de pe ceas, fara conversie
- * in fusul browserului — o intrare la muzeu la 09:30 in Roma trebuie sa arate 09:30 si pentru cineva din Londra.
+ * in fusul browserului - o intrare la muzeu la 09:30 in Roma trebuie sa arate 09:30 si pentru cineva din Londra.
  * Numele zilelor si lunilor vin din Intl in limba activa, aplicat pe date UTC construite din aceste parti.
  */
 import { getLocale, intlLocale, translate, translatePlural, type Locale } from "./i18n";
@@ -67,7 +67,7 @@ export function tzCity(tz: string | null | undefined): string {
   return tz.split("/").pop()!.replace(/_/g, " ");
 }
 
-/** eticheta decalajului dintr-un ISO cu decalaj, de ex. "+01:00" → "UTC+1" */
+/** eticheta decalajului dintr-un ISO cu decalaj, de ex. "+01:00" -> "UTC+1" */
 export function offsetLabel(local: string | null | undefined): string {
   if (!local) return "";
   const m = /([+-])(\d{2}):(\d{2})$/.exec(local);

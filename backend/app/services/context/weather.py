@@ -15,7 +15,7 @@ WET_PROBABILITY = 50  # % chance of rain from which a day (or hour) counts as we
 
 
 def condition(code: int | None) -> str:
-    """WMO weather code → clear | cloudy | fog | drizzle | rain | snow | storm"""
+    """WMO weather code -> clear | cloudy | fog | drizzle | rain | snow | storm"""
     if code is None:
         return "unknown"
     if code == 0:

@@ -37,7 +37,7 @@ def _http(method: str, url: str, provider: str, **kwargs) -> dict:
 
 
 class BookingComAdapter(TravelProviderAdapter):
-    """Booking.com Demand API — Attractions (early-access pilot)"""
+    """Booking.com Demand API - Attractions (early-access pilot)"""
 
     key = "booking_com"
     name = "Booking.com Attractions"

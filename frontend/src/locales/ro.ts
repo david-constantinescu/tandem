@@ -1,6 +1,6 @@
 /**
  * romana (limba implicita). Tipizata dupa cheile englezesti: o traducere lipsa pica la verificarea de tipuri.
- * diacriticele sunt cele cu virgula (ș, ț). Plural: _one (1), _few (2–19), _other (20+, cu "de").
+ * diacriticele sunt cele cu virgula (ș, ț). Plural: _one (1), _few (2-19), _other (20+, cu "de").
  */
 import type { Key } from "./en";
 

@@ -1,5 +1,7 @@
 # Tandem
 
+**English** · [Română](README.ro.md)
+
 **Your travel, in tandem.** Drop in every confirmation, ticket and screenshot. Tandem reads them, builds one calm
 itinerary, tells you what clashes, and only books things when you say yes.
 
@@ -41,16 +43,16 @@ The demo is a real-looking long weekend in Rome, flying from Craiova. Names are 
 Hotel Santa Maria, the Vatican Museums, Da Enzo al 29); the bookings are samples with made-up references, and every
 generated document says so. Each visitor gets a private copy that expires after a day.
 
-1. **Home** is one screen: the trip as a boarding pass, what's next, the real forecast for each day, and one alert line.
-2. **Trips → the trip** has the day pager: each day shows its forecast and what's planned. The ☂/⚠ button opens the
-   weather, local strike/protest headlines and the clash Tandem found.
+1. **Home** is one screen: the trip as a boarding pass, what's next, and one alert line. (The demo shows no weather because its data is fictional; regular accounts get the real forecast.)
+2. **Trips → the trip** has the day pager: each day shows what's planned. The checks button opens local
+   strike/protest headlines and the clash Tandem found, and the share button makes an invite link for family.
 3. **Assistant** does everything else, with cards in the chat:
    - *"Cum e vremea sâmbătă? Merită să stau afară?"* answers from the live forecast.
    - *"E grevă? Pot lua autobuzul?"* reads real local news and links its sources.
    - *"Vreau ceva cultural, dar nu știu exact ce"* makes it ask what kind, with answers you tap.
    - *"Adaugă cină la Roscioli sâmbătă la 20:00"* puts it in the plan and says what it clashes with.
    - *"Cum ajung de la Craiova la Roma?"* gives Google Maps, Google Flights and the airlines' own sites.
-4. **Inbox → a sample document** sends a fictional Colosseum ticket through the real reading pipeline.
+4. **The + button in the chat bar → a sample document** sends a fictional Colosseum ticket through the real reading pipeline.
 
 ---
 
@@ -204,7 +206,7 @@ printing secrets), and `scripts/vercel-env-push.sh` copies keys to Vercel withou
 ### Tests
 
 ```bash
-cd backend && .venv/bin/python -m pytest      # 109 tests on a real PostgreSQL; providers are mocked
+cd backend && .venv/bin/python -m pytest      # 164 tests on a real PostgreSQL; providers are mocked
 cd frontend && npx vitest run && npx tsc -b --noEmit
 ```
 
