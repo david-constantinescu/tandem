@@ -197,7 +197,7 @@ export function RecordReview({ record, documentId }: { record: ExtractedRecord; 
             <p className="mt-4 text-[13px] text-ink-500">{t("review.addedAs")}{record.grouping?.applied?.trip_id ? <> <Link className="text-lagoon-600 hover:underline" to={`/trips/${record.grouping.applied.trip_id}`}>{t("review.openTrip")}</Link></> : ""}</p>
           )}
           <p className="mt-4 text-[11.5px] text-ink-400">
-            {record.extractor.provider === "local" ? t("review.byLocal") : t("review.by", { provider: `${record.extractor.provider} · ${record.extractor.model}` })}
+            {record.extractor.provider === "local" ? t("review.byLocal") : t("review.by")}
             {record.extractor.path === "original_file" ? ` ${t("doc.fromOriginal")}` : record.extractor.path === "extracted_text" ? ` ${t("doc.fromText")}` : record.extractor.path === "page_images" ? ` ${t("doc.fromImages")}` : "."}
           </p>
         </div>

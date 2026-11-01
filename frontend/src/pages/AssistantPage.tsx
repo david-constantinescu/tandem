@@ -11,7 +11,7 @@ import { Choices } from "@/components/assistant/Choices";
 import { Composer } from "@/components/assistant/Composer";
 import { MD } from "@/components/assistant/markdown";
 import { spring } from "@/components/motion";
-import { Badge, Button, PageLoader } from "@/components/ui";
+import { Button, PageLoader } from "@/components/ui";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
@@ -87,6 +87,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
   const conv = useConversation(id);
   const [text, setText] = useState("");
   const [sending, setSending] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null); // raspunsul care tocmai a venit apare treptat
   const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
@@ -114,6 +115,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
     setText("");
     try {
       const payload = await api.post<ConversationPayload>(`/assistant/conversations/${id}/messages`, { content });
+      setFresh(payload.reply?.id ?? null);
       qc.setQueryData(keys.conversation(id), payload);
       qc.invalidateQueries({ queryKey: keys.conversations });
       qc.invalidateQueries({ queryKey: keys.approvals });
@@ -179,7 +181,8 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
           {messages.map((m, i) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
               {/* o intrebare ramane cu raspuns posibil pana omul spune ceva dupa ea */}
-              <Bubble m={m} actions={actions} tripId={conversation.trip_id ?? undefined}
+              <Bubble m={m} actions={actions} tripId={conversation.trip_id ?? undefined} reveal={m.id === fresh}
+                onGrow={() => bottom.current?.scrollIntoView({ behavior: "auto", block: "end" })}
                 onChoose={i > lastUser && !sending ? send : undefined} />
             </motion.div>
           ))}
@@ -225,8 +228,33 @@ function SavedSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
   );
 }
 
-function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: ConversationPayload["actions"]; tripId?: string; onChoose?: (answer: string) => void }) {
+/** arata textul bucata cu bucata, cat sa se citeasca fluent; fara animatie daca omul a cerut miscare redusa */
+function useReveal(text: string, on: boolean, onGrow?: () => void) {
+  const [n, setN] = useState(on ? 0 : text.length);
+  const grow = useRef(onGrow);
+  grow.current = onGrow;
+  useEffect(() => {
+    if (!on || (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) { setN(text.length); return; }
+    setN(0);
+    const step = Math.max(2, Math.ceil(text.length / 220)); // cam 3-4 secunde pentru un raspuns lung
+    let at = 0;
+    const timer = window.setInterval(() => {
+      at = Math.min(text.length, at + step);
+      // nu taiem in mijlocul unui cuvant
+      let end = at;
+      while (end < text.length && !/\s/.test(text[end])) end++;
+      setN(end);
+      grow.current?.();
+      if (at >= text.length) window.clearInterval(timer);
+    }, 28);
+    return () => window.clearInterval(timer);
+  }, [text, on]);
+  return { shown: text.slice(0, n), done: n >= text.length };
+}
+
+function Bubble({ m, actions, tripId, onChoose, reveal, onGrow }: { m: Message; actions: ConversationPayload["actions"]; tripId?: string; onChoose?: (answer: string) => void; reveal?: boolean; onGrow?: () => void }) {
   const { t } = useT();
+  const { shown, done } = useReveal(m.role === "assistant" ? m.content : "", !!reveal && m.role === "assistant", onGrow);
   const tool = (name: string) => { const k = `tool.${name}` as Key; const x = t(k); return x === k ? name : x; };
   if (m.role === "user") {
     const files = m.references.filter((r) => r.type === "document");
@@ -260,7 +288,8 @@ function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: Convers
           ))}
         </div>
       )}
-      <div className="prose-chat min-w-0 rounded-[20px] rounded-bl-md bg-sand-100/80 px-4 py-3 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown components={MD}>{m.content}</ReactMarkdown></div>
+      <div className="prose-chat min-w-0 rounded-[20px] rounded-bl-md bg-sand-100/80 px-4 py-3 text-[15px] leading-relaxed text-ink-800 [overflow-wrap:anywhere]"><ReactMarkdown components={MD}>{done ? m.content : shown}</ReactMarkdown></div>
+      {done && <>
       {activities.length > 0 && (
         <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
           {activities.map((r) => <ActivityCard key={r.id} a={r.activity as ActivityResult & typeof r.activity} tripId={r.trip_id ?? tripId} date={r.date} />)}
@@ -279,11 +308,11 @@ function Bubble({ m, actions, tripId, onChoose }: { m: Message; actions: Convers
       <Choices options={choices} onChoose={onChoose} />
       {m.action_ids.map((aid) => actions[aid] && <ActionCard key={aid} action={actions[aid]} />)}
       <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-ink-400">
-        {m.provider === "local" ? <Badge tone="neutral">{t("assistant.offline")}</Badge> : m.provider === "tandem" ? <span>Tandem</span> : m.provider && <span>{m.provider} · {m.model}</span>}
         {links.slice(0, 6).map((r) => (
           <Link key={r.id} to={r.type === "trip" ? `/trips/${r.id}` : r.type === "browser_task" ? `/explore?task=${r.id}` : r.type === "document" ? `/inbox/${r.id}` : `/trips/${r.trip_id}`} className="text-lagoon-600 hover:underline">{r.label}</Link>
         ))}
       </div>
+      </>}
     </div>
   );
 }

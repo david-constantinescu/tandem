@@ -271,7 +271,6 @@ export const en = {
   "conflicts.none": "No conflicts found in this itinerary.",
   "conflicts.fixes": "Suggested fixes",
   "conflicts.noAi": "AI explanations aren't available right now ({reason}). The checks above are complete without AI.",
-  "conflicts.explainedBy": "Explained by {provider} from the detected facts only.",
   "conflicts.suggestFixes": "Suggest fixes",
 
   "map.empty": "No mapped places yet. Addresses from your bookings will appear here.",
@@ -496,7 +495,7 @@ export const en = {
   "review.addedAs": "Added as a booking.",
   "review.openTrip": "Open the trip",
   "review.byLocal": "Read by Tandem's local parser (no AI)",
-  "review.by": "Read by {provider}",
+  "review.by": "Read by Tandem",
 
   "change.applied": "Booking updated and itinerary rechecked",
   "change.dismissed": "Change dismissed",

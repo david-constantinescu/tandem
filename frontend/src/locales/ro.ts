@@ -266,7 +266,6 @@ export const ro: Record<Key, string> = {
   "conflicts.none": "Nicio problemă găsită în acest itinerariu.",
   "conflicts.fixes": "Soluții sugerate",
   "conflicts.noAi": "Explicațiile AI nu sunt disponibile acum ({reason}). Verificările de mai sus sunt complete și fără AI.",
-  "conflicts.explainedBy": "Explicat de {provider} doar pe baza faptelor detectate.",
   "conflicts.suggestFixes": "Sugerează soluții",
 
   "map.empty": "Niciun loc pe hartă încă. Adresele din rezervări vor apărea aici.",
@@ -488,7 +487,7 @@ export const ro: Record<Key, string> = {
   "review.addedAs": "Adăugat ca rezervare.",
   "review.openTrip": "Deschide călătoria",
   "review.byLocal": "Citit de parserul local Tandem (fără AI)",
-  "review.by": "Citit de {provider}",
+  "review.by": "Citit de Tandem",
 
   "change.applied": "Rezervare actualizată, itinerariu reverificat",
   "change.dismissed": "Modificare respinsă",

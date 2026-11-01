@@ -58,7 +58,6 @@ export function ConflictList({ conflicts, tripId, compact, showInfo }: { conflic
               ) : (
                 <p className="text-[13px] text-ink-500">{t("conflicts.noAi", { reason: explanation.reason?.replace(/_/g, " ") ?? "" })}</p>
               )}
-              {explanation.provider && <p className="mt-2 text-[11.5px] text-ink-400">{t("conflicts.explainedBy", { provider: explanation.provider })}</p>}
             </div>
           ) : (
             <Button variant="secondary" size="sm" onClick={explain} loading={loading} icon={<Sparkles className="h-3.5 w-3.5" />}>{t("conflicts.suggestFixes")}</Button>
