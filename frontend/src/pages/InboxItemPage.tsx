@@ -22,7 +22,7 @@ export default function InboxItemPage() {
   const { t, tp } = useT();
   if (item.isLoading) return <PageLoader />;
   const d = item.data;
-  if (!d) return <EmptyState title={t("doc.notFound")} action={<Link to="/inbox?tab=documents" className="text-lagoon-600">{t("doc.back")}</Link>} />;
+  if (!d) return <EmptyState title={t("doc.notFound")} action={<Link to="/assistant" className="text-lagoon-600">{t("doc.back")}</Link>} />;
   const busy = PROCESSING.has(d.status);
   const records = [...(d.records ?? []), ...(d.attachments ?? []).flatMap((a) => a.records ?? [])];
   const m = d.extraction_method ?? {};
@@ -33,7 +33,7 @@ export default function InboxItemPage() {
 
   return (
     <div className="max-w-4xl">
-      <Link to="/inbox?tab=documents" className="-ml-1 inline-flex min-h-11 items-center gap-1 pr-3 text-[15px] text-lagoon-600 hover:text-lagoon-700"><ChevronLeft className="h-5 w-5" />{t("nav.inbox")}</Link>
+      <Link to="/assistant" className="-ml-1 inline-flex min-h-11 items-center gap-1 pr-3 text-[15px] text-lagoon-600 hover:text-lagoon-700"><ChevronLeft className="h-5 w-5" />{t("nav.assistant")}</Link>
       <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="display break-words text-[26px] leading-tight sm:text-[30px]">{d.filename}</h1>
@@ -47,7 +47,7 @@ export default function InboxItemPage() {
           {d.status !== "ignored" && <Button size="sm" variant="ghost" icon={<EyeOff className="h-3.5 w-3.5" />} onClick={() => run(() => api.post(`/inbox/${d.id}/ignore`), t("doc.ignored"))}>{t("doc.ignore")}</Button>}
           <Button size="sm" variant="danger" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={async () => {
             if (!confirm(t("doc.deleteConfirm"))) return;
-            await api.del(`/inbox/${d.id}`); invalidate(); navigate("/inbox?tab=documents");
+            await api.del(`/inbox/${d.id}`); invalidate(); navigate("/assistant");
           }}>{t("common.delete")}</Button>
         </div>
       </div>

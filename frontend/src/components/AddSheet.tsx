@@ -6,11 +6,12 @@
 import { Camera, ChevronRight, ClipboardPaste, FileUp, Link2, Loader2 } from "lucide-react";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ACCEPT, PasteDialog, UrlDialog, useUpload } from "@/components/inbox/UploadZone";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { useT, type Key } from "@/lib/i18n";
 import { keys, useTrips, type ConversationPayload } from "@/lib/queries";
 import type { Conversation, DocumentItem } from "@/lib/types";
@@ -33,6 +34,18 @@ export function AddProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const toast = useToast();
   const { t } = useT();
+  const { user } = useAuth();
+  // in demo, documente de test trimise prin aceeasi citire reala, ca sa se vada ce spune asistentul
+  const samples = useQuery({ queryKey: ["demo-samples"], enabled: !!user?.is_demo && open,
+    queryFn: () => api.get<{ key: string; filename: string; description: string }[]>("/demo/samples") });
+  const sendSample = async (key: string) => {
+    setOpen(false);
+    try {
+      await show([await api.post<DocumentItem>(`/demo/samples/${key}/upload`)]);
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
 
   // tot ce se adauga ajunge in chat: conversatia deschisa sau una noua despre urmatoarea calatorie
   const show = useCallback(async (docs: DocumentItem[]) => {
@@ -90,6 +103,22 @@ export function AddProvider({ children }: { children: ReactNode }) {
             </li>
           ))}
         </ul>
+        {user?.is_demo && !!samples.data?.length && (
+          <div className="-mx-2 border-t border-sand-100 px-2 pb-3 pt-3">
+            <p className="eyebrow mb-1">{t("inbox.samples")}</p>
+            <p className="mb-2 text-[12.5px] text-ink-500">{t("inbox.samplesHint")}</p>
+            <ul className="space-y-1.5">
+              {samples.data.map((s) => (
+                <li key={s.key}>
+                  <button onClick={() => sendSample(s.key)} className="flex min-h-11 w-full flex-col rounded-xl bg-sand-50 px-3 py-2 text-left active:scale-[0.99]">
+                    <span className="text-[13.5px] font-medium text-ink-900">{s.filename}</span>
+                    <span className="text-[12.5px] text-ink-500">{s.description}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Dialog>
       {busy && (
         <div role="status" className="fixed inset-x-0 top-[calc(env(safe-area-inset-top)+64px)] z-[60] flex justify-center px-4">

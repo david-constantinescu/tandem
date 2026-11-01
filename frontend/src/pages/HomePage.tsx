@@ -176,7 +176,7 @@ function BoardingPass({ trip }: { trip: Trip }) {
         {forecast.length > 0 && <div className="flex shrink-0 flex-wrap gap-1.5">{forecast.map((d) => <WeatherChip key={d.date} day={d} withDay />)}</div>}
         <div className="flex flex-col gap-1.5">
           {waiting > 0 && (
-            <Link to="/inbox" className="flex min-h-11 items-center gap-2.5 rounded-xl bg-clay-50 px-3 text-[13.5px] font-medium text-clay-600 active:scale-[0.99]">
+            <Link to="/assistant" className="flex min-h-11 items-center gap-2.5 rounded-xl bg-clay-50 px-3 text-[13.5px] font-medium text-clay-600 active:scale-[0.99]">
               <FileSearch className="h-4 w-4 shrink-0" /><span className="flex-1">{tp("home.waiting", waiting)}</span><ChevronRight className="h-4 w-4" />
             </Link>
           )}

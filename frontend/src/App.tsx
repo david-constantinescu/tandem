@@ -9,7 +9,6 @@ import HomePage from "./pages/HomePage";
 
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
-const InboxPage = lazy(() => import("./pages/InboxPage"));
 const InboxItemPage = lazy(() => import("./pages/InboxItemPage"));
 const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
@@ -42,7 +41,7 @@ function Protected() {
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
-          <Route path="/inbox" element={<Pane><InboxPage /></Pane>} />
+          <Route path="/inbox" element={<Moved to="/assistant" />} />
           <Route path="/inbox/:id" element={<Pane><InboxItemPage /></Pane>} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/assistant" element={<AssistantPage />} />
@@ -51,7 +50,7 @@ function Protected() {
           <Route path="/settings/:section" element={<Pane><SettingsPage /></Pane>} />
           <Route path="/discover" element={<Moved to="/assistant" />} />
           <Route path="/websites" element={<Moved to="/assistant" />} />
-          <Route path="/approvals" element={<Moved to="/inbox" extra={{ tab: "approvals" }} />} />
+          <Route path="/approvals" element={<Moved to="/assistant" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Page>

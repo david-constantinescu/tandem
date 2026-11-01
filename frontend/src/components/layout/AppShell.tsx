@@ -1,11 +1,12 @@
 /**
  * navigare. Asistentul e centrul aplicatiei: tabul din mijloc si locul unde ajunge tot ce se adauga. In jurul lui:
- * Acasa (ce urmeaza), Calatorii (planul, rezervarile, harta si documentele fiecareia) si Inbox (ce te asteapta).
+ * Acasa (ce urmeaza) si Calatorii (planul, rezervarile, harta si documentele fiecareia). Ce te asteapta (documente de
+ * verificat, aprobari) vine ca mesaj de la asistent, cu un numar pe tabul lui.
  * O calatorie noua porneste din bara de sus. Paginile se deruleaza normal; chatul isi tine bara lipita jos.
  */
 import * as Popover from "@radix-ui/react-popover";
 import { clsx } from "clsx";
-import { Bell, CheckCheck, Home, Inbox, LogOut, Map, MessageCircle, Plus, Settings } from "lucide-react";
+import { Bell, CheckCheck, Home, LogOut, Map, MessageCircle, Plus, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
@@ -36,7 +37,7 @@ export function Logo({ className, compact }: { className?: string; compact?: boo
   );
 }
 
-/** ce asteapta omul: documente de verificat si rezervari de aprobat */
+/** ce asteapta omul: documente de verificat si rezervari de aprobat; apare ca numar pe tabul asistentului */
 export function useWaitingCount() {
   const inbox = useInbox();
   const approvals = useApprovals("awaiting_approval");
@@ -156,10 +157,9 @@ function Shell({ children }: { children: ReactNode }) {
   const [newTrip, setNewTrip] = useState(false);
   useCheckIn(!!user);
   const tabs = [
-    { to: "/", icon: <Home />, label: t("nav.home"), end: true },
-    { to: "/trips", icon: <Map />, label: t("nav.trips") },
-    { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant"), center: true },
-    { to: "/inbox", icon: <Inbox />, label: t("nav.inbox"), count: waiting },
+    { to: "/", icon: <Home />, label: t("nav.home"), end: true, count: 0 },
+    { to: "/assistant", icon: <MessageCircle />, label: t("nav.assistant"), count: waiting },
+    { to: "/trips", icon: <Map />, label: t("nav.trips"), count: 0 },
   ];
 
   return (
@@ -170,10 +170,9 @@ function Shell({ children }: { children: ReactNode }) {
           <Plus className="h-4 w-4" /> {t("trips.new")}
         </button>
         <nav className="mt-6 flex flex-col gap-1" aria-label={t("nav.main")}>
-          <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} />
           <NavItem to="/" end icon={<Home />} label={t("nav.home")} />
+          <NavItem to="/assistant" icon={<MessageCircle />} label={t("nav.assistant")} count={waiting} />
           <NavItem to="/trips" icon={<Map />} label={t("nav.trips")} />
-          <NavItem to="/inbox" icon={<Inbox />} label={t("nav.inbox")} count={waiting} />
         </nav>
         <div className="mt-auto flex flex-col gap-1">
           <NavItem to="/settings" icon={<Settings />} label={t("nav.settings")} />
@@ -213,16 +212,10 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="mx-auto h-full w-full max-w-[1100px] px-4 pt-3 sm:px-6 lg:px-10">{children}</div>
         </main>
         <nav aria-label={t("nav.main")} className="shrink-0 border-t border-sand-200/60 bg-white/85 px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1 backdrop-blur-xl lg:hidden">
-          <div className="mx-auto grid max-w-md grid-cols-4 items-end">
+          <div className="mx-auto grid max-w-md grid-cols-3 items-end">
             {tabs.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className="relative flex h-[50px] flex-col items-center justify-end gap-0.5 pb-1 text-[10.5px] font-semibold">
-                {({ isActive }) => item.center ? (
-                  <motion.span whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-0.5">
-                    <span className={clsx("-mt-5 flex h-12 w-12 items-center justify-center rounded-full shadow-[0_8px_20px_-6px_rgba(200,98,58,0.6)] ring-4 ring-paper transition-colors [&>svg]:h-[22px] [&>svg]:w-[22px]",
-                      isActive ? "bg-clay-600 text-white" : "bg-clay-500 text-white")}>{item.icon}</span>
-                    <span className={isActive ? "text-clay-600" : "text-ink-500"}>{item.label}</span>
-                  </motion.span>
-                ) : (
+                {({ isActive }) => (
                   <motion.span whileTap={{ scale: 0.86 }} className={clsx("relative flex flex-col items-center gap-0.5", isActive ? "text-clay-600" : "text-ink-400")}>
                     <span className="relative [&>svg]:h-[22px] [&>svg]:w-[22px]">
                       {item.icon}
