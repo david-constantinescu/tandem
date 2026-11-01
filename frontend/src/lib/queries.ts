@@ -38,7 +38,7 @@ export function useReservations(id: string) {
   return useQuery({ queryKey: keys.reservations(id), queryFn: () => api.get<Reservation[]>(`/trips/${id}/reservations`), enabled: !!id });
 }
 
-/** Weather for the trip's days and local disruption news; changes slowly, so it's cached for half an hour. */
+/** vremea pe zilele calatoriei si stirile locale cu perturbari; se schimba incet, deci o tinem in cache o jumatate de ora */
 export function useTripContext(id: string) {
   return useQuery({ queryKey: ["trip", id, "context"], queryFn: () => api.get<TripContext>(`/trips/${id}/context`), enabled: !!id, staleTime: 30 * 60_000 });
 }
@@ -98,7 +98,7 @@ export function useConversation(id: string | undefined) {
     refetchInterval: (q) => {
       const data = q.state.data;
       if (Object.values(data?.actions ?? {}).some((a) => a.status === "in_progress")) return 1500;
-      // Just added a file that Tandem is still reading: look again shortly for its follow-up.
+      // tocmai s-a adaugat un fisier pe care Tandem inca il citeste: ne uitam din nou in curand dupa continuare
       const last = data?.messages[data.messages.length - 1];
       const fresh = last && last.model === "reader" && Date.now() - new Date(last.created_at).getTime() < 90_000;
       return fresh ? 4000 : false;
@@ -110,7 +110,7 @@ export function useActivityProviders() {
   return useQuery({ queryKey: ["activity-providers"], queryFn: () => api.get<ProviderCaps[]>("/activities/providers"), staleTime: 60000 });
 }
 
-/** Invalidate everything that a trip-changing mutation can affect. */
+/** invalideaza tot ce poate fi atins de o modificare a unei calatorii */
 export function useInvalidateTripData() {
   const qc = useQueryClient();
   return () => {

@@ -74,7 +74,7 @@ export function RecordReview({ record, documentId }: { record: ExtractedRecord; 
   const [tripChoice, setTripChoice] = useState<string>(suggested);
   const [touched, setTouched] = useState(false);
   const [newName, setNewName] = useState(proposal?.new_trip?.name ?? "");
-  // Proposals are refreshed on the server when other records create trips; follow them until the user picks.
+  // propunerile se reimprospateaza pe server cand alte inregistrari creeaza calatorii; le urmarim pana alege omul
   useEffect(() => {
     if (!touched) {
       setTripChoice(suggested);
@@ -97,8 +97,8 @@ export function RecordReview({ record, documentId }: { record: ExtractedRecord; 
     const body: Record<string, any> = { record_id: record.id, decision, corrections: changed };
     if (tripChoice === "__none") body.no_trip = true;
     else if (tripChoice === "__suggested_new") {
-      // Keep Tandem's suggestion: the server re-runs grouping at accept time, so a trip created moments
-      // ago (e.g. from the outbound flight) is joined instead of duplicated. A renamed trip is explicit.
+      // pastram sugestia Tandem: serverul regrupeaza la acceptare, deci o calatorie creata cu cateva clipe
+      // in urma (de ex. din zborul de dus) se uneste, nu se dubleaza. O calatorie redenumita e alegere explicita
       if (newName && newName !== proposal?.new_trip?.name) body.new_trip_name = newName;
     } else if (tripChoice === "__new") body.new_trip_name = newName || t("review.newTripDefault");
     else body.trip_id = tripChoice;

@@ -13,14 +13,14 @@ import { AuthProvider } from "./lib/auth";
 import { I18nProvider } from "./lib/i18n";
 import { applyTheme } from "./lib/theme";
 
-applyTheme(); // before the first paint, so a light-mode choice doesn't flash dark
+applyTheme(); // inainte de prima desenare, ca tema luminoasa sa nu clipeasca intai in intuneric
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 15_000,
       refetchOnWindowFocus: true,
-      // "always": offline requests fail straight away and the page says so, instead of a spinner that never ends.
+      // "always": fara net cererile pica pe loc si pagina zice asta, in loc de un spinner fara sfarsit
       networkMode: "always",
       retry: (count, err) => !(err instanceof ApiError && err.status > 0 && err.status < 500) && count < 2 && navigator.onLine,
     },

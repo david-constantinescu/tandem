@@ -1,4 +1,4 @@
-/** Live context for a trip: the forecast for each day and local news that could disrupt plans. */
+/** context live pentru o calatorie: prognoza pe zile si stiri locale care pot strica planurile */
 import { clsx } from "clsx";
 import { AlertTriangle, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, ExternalLink, Megaphone, Sun, TrainFront } from "lucide-react";
 import { fmtDate, relativeTime } from "@/lib/format";
@@ -13,7 +13,7 @@ export function WeatherIcon({ condition, className }: { condition: DayWeather["c
   return <Icon className={className} aria-hidden />;
 }
 
-/** Compact weather for a day heading: icon, temperatures, chance of rain. */
+/** vremea pe scurt pentru titlul unei zile: icoana, temperaturi, sansa de ploaie */
 export function WeatherChip({ day, withDay }: { day: DayWeather; withDay?: boolean }) {
   const { t } = useT();
   return (

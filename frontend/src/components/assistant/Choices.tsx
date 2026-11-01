@@ -1,6 +1,6 @@
 import { useT } from "@/lib/i18n";
 
-/** The assistant's clarifying question as tappable answers. A tap is the user's reply; older questions are greyed out. */
+/** intrebarea de clarificare a asistentului, cu raspunsuri de atins. Atingerea e raspunsul omului; intrebarile mai vechi sunt stinse */
 export function Choices({ options, onChoose }: { options: string[]; onChoose?: (answer: string) => void }) {
   const { t } = useT();
   if (!options.length) return null;

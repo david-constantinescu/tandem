@@ -1,7 +1,7 @@
 /**
- * The one way to add anything: a confirmation file, a photo of a ticket, a pasted email, or a link. Whatever it is
- * lands in the chat, and Tandem answers with what it read. (Gmail needs no button: once connected in Settings, travel
- * emails arrive in the chat on their own.) Opened from the + in the chat bar and from empty states.
+ * singurul mod de a adauga ceva: un fisier de confirmare, poza unui bilet, un email lipit sau un link. Orice ar fi,
+ * ajunge in chat si Tandem raspunde cu ce a citit. (Gmail nu are buton: dupa ce il conectezi din Setari, emailurile de
+ * calatorie vin singure in chat.) Se deschide din + de la bara de chat si din ecranele goale.
  */
 import { Camera, ChevronRight, ClipboardPaste, FileUp, Link2, Loader2 } from "lucide-react";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
@@ -34,7 +34,7 @@ export function AddProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
   const { t } = useT();
 
-  // Everything added goes into the chat: the open conversation, or a new one about the next trip.
+  // tot ce se adauga ajunge in chat: conversatia deschisa sau una noua despre urmatoarea calatorie
   const show = useCallback(async (docs: DocumentItem[]) => {
     if (!docs.length) return;
     try {
@@ -53,7 +53,7 @@ export function AddProvider({ children }: { children: ReactNode }) {
   }, [location.pathname, trips.data, qc, navigate, toast]);
 
   const pick = (input: HTMLInputElement | null) => {
-    // The picker must open inside the tap, before the sheet closes (iOS ignores it otherwise).
+    // selectorul trebuie sa se deschida in interiorul atingerii, inainte sa se inchida foaia (altfel iOS il ignora)
     input?.click();
     setOpen(false);
   };

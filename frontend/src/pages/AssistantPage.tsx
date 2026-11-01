@@ -35,7 +35,7 @@ export default function AssistantPage() {
   useEffect(() => {
     if (id || !conversations.data || !trips.data) return;
     if (conversations.data.length) navigate(`/assistant/${conversations.data[0].id}`, { replace: true });
-    else if (!started.current) { started.current = true; start(); } // first visit: straight into a chat with suggestions
+    else if (!started.current) { started.current = true; start(); } // prima vizita: direct intr-un chat cu sugestii
   }, [id, conversations.data, trips.data, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = async (tripId?: string) => {
@@ -102,7 +102,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
   useEffect(() => {
     const el = bottom.current;
     if (!el || !loaded) return;
-    // Open at the newest message; after that, glide to each new one.
+    // se deschide la cel mai nou mesaj; dupa aceea alunecam la fiecare mesaj nou
     const behavior = firstScroll.current ? "auto" : "smooth";
     firstScroll.current = false;
     requestAnimationFrame(() => el.scrollIntoView({ behavior, block: "end" }));
@@ -125,7 +125,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
       setSending(null);
     }
   };
-  // A question typed on Home arrives with the navigation: send it once, then drop it so a reload doesn't resend.
+  // o intrebare scrisa in Acasa vine odata cu navigarea: o trimitem o data, apoi o stergem ca o reincarcare sa nu o retrimita
   useEffect(() => {
     const prompt = (location.state as { prompt?: string } | null)?.prompt;
     if (prompt && !asked.current && conv.data) {
@@ -178,7 +178,7 @@ function Chat({ id, onNew, onHistory }: { id: string; onNew: () => void; onHisto
         <AnimatePresence initial={false}>
           {messages.map((m, i) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
-              {/* A question stays answerable until the user has said something after it. */}
+              {/* o intrebare ramane cu raspuns posibil pana omul spune ceva dupa ea */}
               <Bubble m={m} actions={actions} tripId={conversation.trip_id ?? undefined}
                 onChoose={i > lastUser && !sending ? send : undefined} />
             </motion.div>

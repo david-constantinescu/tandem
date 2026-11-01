@@ -1,5 +1,5 @@
-/** Thin client for the Flask API. Session cookie auth + CSRF header on every state-changing request.
- * Every request names the interface language so the server answers (errors, conflicts, assistant) in it. */
+/** client subtire pentru API-ul Flask. Autentificare cu cookie de sesiune + header CSRF la fiecare cerere care schimba ceva.
+ * Fiecare cerere spune limba interfetei, ca serverul sa raspunda in ea (erori, suprapuneri, asistent). */
 import { getLocale, translate } from "./i18n";
 
 let csrfToken: string | null = null;
@@ -37,7 +37,7 @@ export async function request<T = unknown>(path: string, opts: Options = {}): Pr
     res = await fetch(`/api/v1${path}`, { method, headers, body, credentials: "same-origin", signal: opts.signal });
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
-    // fetch only rejects when the request never got a response: offline, DNS, a dropped connection.
+    // fetch pica doar cand cererea n-a primit niciun raspuns: fara net, DNS, conexiune cazuta
     throw new ApiError(0, "network", translate(navigator.onLine ? "err.unreachable" : "err.offline"));
   }
   const isJson = res.headers.get("content-type")?.includes("application/json");

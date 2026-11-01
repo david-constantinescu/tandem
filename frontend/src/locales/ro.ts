@@ -1,6 +1,6 @@
 /**
- * Romanian (default). Typed against the English keys: a missing translation fails the type check.
- * Diacritics use the comma-below forms (ș, ț). Plurals: _one (1), _few (2–19), _other (20+, with "de").
+ * romana (limba implicita). Tipizata dupa cheile englezesti: o traducere lipsa pica la verificarea de tipuri.
+ * diacriticele sunt cele cu virgula (ș, ț). Plural: _one (1), _few (2–19), _other (20+, cu "de").
  */
 import type { Key } from "./en";
 

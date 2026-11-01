@@ -1,7 +1,7 @@
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { TaskPanel } from "@/components/explore/TaskPanel";
 
-/** Explore moved into the assistant. This address stays for the browser agent's run view (?task=…) and old links. */
+/** Explorarea s-a mutat in asistent. Adresa ramane pentru vederea de rulare a agentului de browser (?task=…) si pentru linkuri vechi */
 export default function ExplorePage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();

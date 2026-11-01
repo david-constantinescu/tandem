@@ -24,8 +24,8 @@ export function TripMap({ events }: { events: ItineraryEvent[] }) {
     return <p className="rounded-xl bg-sand-50 px-4 py-10 text-center text-[14px] text-ink-500">{t("map.empty")}</p>;
   }
   return (
-    // `isolate` keeps Leaflet's high z-indexes from painting over the sticky header and tab bar.
-    // On touch screens one-finger drags scroll the page; pinch still zooms the map.
+    // `isolate` impiedica z-index-urile mari din Leaflet sa acopere antetul lipit si bara de taburi
+    // pe ecran tactil tragerea cu un deget deruleaza pagina; ciupirea tot mareste harta
     <div className="isolate h-[360px] overflow-hidden rounded-[22px] border border-sand-200 sm:h-[440px]">
       <MapContainer center={points[0]} zoom={13} scrollWheelZoom={false} dragging={!L.Browser.mobile} className="h-full w-full">
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

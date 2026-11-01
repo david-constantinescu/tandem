@@ -27,7 +27,7 @@ function greetingKey(): Key {
   return h < 5 ? "home.greeting.late" : h < 12 ? "home.greeting.morning" : h < 18 ? "home.greeting.afternoon" : "home.greeting.evening";
 }
 
-/** Home: Tandem's latest word (with answers you can tap), a way to ask, and the next trip. It scrolls like any page. */
+/** Acasa: ultimul mesaj de la Tandem (cu raspunsuri de atins), un loc unde intrebi si urmatoarea calatorie. Se deruleaza ca orice pagina */
 export default function HomePage() {
   const { user } = useAuth();
   const { t } = useT();
@@ -52,7 +52,7 @@ export default function HomePage() {
   );
 }
 
-/** The newest thing Tandem wrote by itself, as a chat bubble; tapping an answer continues in the chat. */
+/** cel mai nou lucru scris de Tandem singur, ca balon de chat; atingerea unui raspuns continua in chat */
 function LatestUpdate() {
   const { t } = useT();
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ function LatestUpdate() {
   );
 }
 
-/** Ask the assistant straight from Home: opens a conversation about the next trip with the question already sent. */
+/** intrebi asistentul direct din Acasa: deschide o conversatie despre urmatoarea calatorie cu intrebarea deja trimisa */
 function AskBar({ tripId }: { tripId?: string }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -128,7 +128,7 @@ function BoardingPass({ trip }: { trip: Trip }) {
   const next = (itinerary.data ?? []).filter((e) => new Date(e.start_at).getTime() >= now && !["cancelled", "suggested"].includes(e.status)).slice(0, 3);
   const clashes = (conflicts.data ?? []).filter((c) => c.severity !== "info");
   const waiting = (inbox.data?.data ?? []).filter((d) => d.status === "awaiting_review").length + (approvals.data?.length ?? 0);
-  // Only news that can change these plans: it names the trip's dates, or it is today's and the trip is under way.
+  // doar stirile care pot schimba planurile: ating datele calatoriei sau sunt de azi si calatoria e in desfasurare
   const fresh = (n: { published: string | null }) => !!n.published && now - new Date(n.published).getTime() < 24 * 3600_000;
   const news = (context.data?.news.items ?? []).filter((n) => n.kind !== "news" && (n.mentions_dates.length > 0 || (trip.stats.phase === "current" && fresh(n))));
   const forecast = (context.data?.weather.days ?? []).slice(0, 4);

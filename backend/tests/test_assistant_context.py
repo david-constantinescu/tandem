@@ -67,6 +67,12 @@ def test_prompt_tells_the_model_not_to_ask_what_the_trip_already_says(app):
     assert "Don't ask which" in prompt and "ask_user" in prompt
 
 
+def test_prompt_makes_clash_questions_get_a_direct_answer(app):
+    user, trip = _demo_user()
+    prompt = orchestrator.system_prompt(user, trip, trip_brief(user, trip))
+    assert "answered, never asked back" in prompt and "Never call ask_user" in prompt
+
+
 def test_added_event_gets_a_length_and_reports_its_clash(app):
     from app.services.agent.tools import ToolContext, run_tool
 

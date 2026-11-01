@@ -60,6 +60,6 @@ describe("the chat bar", () => {
     fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
     expect(onSend).toHaveBeenCalledWith("Cum e vremea?");
     fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", shiftKey: true });
-    expect(onSend).toHaveBeenCalledTimes(1); // Shift+Enter is a new line
+    expect(onSend).toHaveBeenCalledTimes(1); // shift+enter e rand nou
   });
 });

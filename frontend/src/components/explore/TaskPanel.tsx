@@ -16,7 +16,7 @@ function describeParams(p: Record<string, any>) {
   return [where, p.date ? fmtDate(p.date) : "", p.adults ? translatePlural("sites.people", p.adults) : ""].filter(Boolean).join(" · ");
 }
 
-/** What the browser agent did, step by step, and the approval it is waiting for. Opened from the assistant's answer. */
+/** ce a facut agentul de browser, pas cu pas, si aprobarea pe care o asteapta. Se deschide din raspunsul asistentului */
 export function TaskPanel({ id, onClose }: { id: string; onClose: () => void }) {
   const task = useQuery({
     queryKey: ["browser-task", id],

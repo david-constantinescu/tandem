@@ -1,8 +1,8 @@
 /**
- * Date/time display. The API sends each event time already in its own timezone (e.g.
- * "2026-11-12T11:40:00+01:00"), so we format the wall-clock part directly instead of converting
- * to the browser's zone — a 09:30 museum entry in Rome must read 09:30 for a user in London.
- * Names of days and months come from Intl in the active language, applied to UTC dates built from those parts.
+ * afisarea datei si a orei. API-ul trimite fiecare ora deja in fusul ei (de ex.
+ * "2026-11-12T11:40:00+01:00"), deci formatam direct ora de pe ceas, fara conversie
+ * in fusul browserului — o intrare la muzeu la 09:30 in Roma trebuie sa arate 09:30 si pentru cineva din Londra.
+ * Numele zilelor si lunilor vin din Intl in limba activa, aplicat pe date UTC construite din aceste parti.
  */
 import { getLocale, intlLocale, translate, translatePlural, type Locale } from "./i18n";
 
@@ -40,7 +40,7 @@ export function fmtDateTime(local: string | null | undefined, locale: Locale = g
   return `${fmtDate(local, {}, locale)}, ${fmtTime(local)}`;
 }
 
-/** Today in words, e.g. "Saturday 31 October" / "Sâmbătă, 31 octombrie". */
+/** azi in cuvinte, de ex. "Saturday 31 October" / "Sâmbătă, 31 octombrie" */
 export function fmtToday(locale: Locale = getLocale()): string {
   return capitalise(new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", day: "numeric", month: "long" }).format(new Date()));
 }
@@ -57,7 +57,7 @@ export function fmtRange(start: string | null, end: string | null, locale: Local
   return f.formatRange(utc(a), utc(parts(end)!));
 }
 
-/** Short month name for a date, e.g. "Nov" / "nov.". */
+/** numele scurt al lunii, de ex. "Nov" / "nov." */
 export function fmtMonth(local: string, locale: Locale = getLocale()): string {
   return fmt(locale, { month: "short" }).format(utc(parts(local)!));
 }
@@ -67,7 +67,7 @@ export function tzCity(tz: string | null | undefined): string {
   return tz.split("/").pop()!.replace(/_/g, " ");
 }
 
-/** Offset label from an ISO string with offset, e.g. "+01:00" → "UTC+1". */
+/** eticheta decalajului dintr-un ISO cu decalaj, de ex. "+01:00" → "UTC+1" */
 export function offsetLabel(local: string | null | undefined): string {
   if (!local) return "";
   const m = /([+-])(\d{2}):(\d{2})$/.exec(local);
@@ -122,7 +122,7 @@ export function daysUntil(dateStr: string | null): number | null {
   return Math.round((target - today) / 86400000);
 }
 
-/** "Today", "Tomorrow", "In 12 days" in the active language. */
+/** "Azi", "Maine", "In 12 zile" in limba activa */
 export function whenLabel(days: number | null, locale: Locale = getLocale()): string {
   if (days === null) return translate("fmt.soon", undefined, locale);
   if (days === 0) return translate("fmt.today", undefined, locale);
@@ -130,7 +130,7 @@ export function whenLabel(days: number | null, locale: Locale = getLocale()): st
   return translatePlural("fmt.inDays", days, undefined, locale);
 }
 
-/** Every date from `start` to `end` (inclusive, YYYY-MM-DD). One date when there is no end; capped at 60 days. */
+/** fiecare data de la `start` la `end` (inclusiv, YYYY-MM-DD). O singura data cand nu exista final; maxim 60 de zile */
 export function eachDay(start: string | null, end: string | null): string[] {
   if (!start) return [];
   const out: string[] = [];

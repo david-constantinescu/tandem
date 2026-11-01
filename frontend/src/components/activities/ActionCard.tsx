@@ -9,7 +9,7 @@ import { intlLocale, useT } from "@/lib/i18n";
 import { useApprove, useReject } from "@/lib/queries";
 import type { Action } from "@/lib/types";
 
-/** Approval card bound to the exact payload: approving sends the payload hash the user is looking at. */
+/** cardul de aprobare e legat de continutul exact: la aprobare se trimite hash-ul continutului pe care il vede omul */
 export function ActionCard({ action, compact }: { action: Action; compact?: boolean }) {
   const approve = useApprove();
   const reject = useReject();
@@ -109,7 +109,7 @@ export function ActionCard({ action, compact }: { action: Action; compact?: bool
   );
 }
 
-/** The step a website purchase moves on to after an approval (details → payment), shown right under it. */
+/** pasul la care trece o cumparare pe site dupa o aprobare (date → plata), aratat chiar sub ea */
 function NextStep({ id }: { id: string }) {
   const next = useQuery({ queryKey: ["approvals", "one", id], queryFn: () => api.get<Action>(`/approvals/${id}`) });
   if (!next.data) return null;

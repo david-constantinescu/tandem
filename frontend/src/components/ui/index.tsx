@@ -43,7 +43,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   );
 });
 
-/** A button-styled link: `to` for routes inside the app, `href` for files and URLs the browser should open itself. */
+/** link facut sa arate ca un buton: `to` pentru rute din aplicatie, `href` pentru fisiere si adrese pe care le deschide browserul */
 export function LinkButton({ to, href, variant = "secondary", size = "md", icon, children, className }: { to?: string; href?: string; variant?: Variant; size?: Size; icon?: ReactNode; children: ReactNode; className?: string }) {
   const cls = clsx("inline-flex select-none items-center justify-center font-medium transition-[background-color,transform] duration-150 active:scale-[0.97] whitespace-nowrap", variants[variant], sizes[size], className);
   if (href) return <a href={href} className={cls}>{icon}{children}</a>;
@@ -100,7 +100,7 @@ const statusTone: Record<string, Tone> = {
   failed: "rose",
 };
 
-/** Label for a status code in the active language; unknown codes fall back to the code itself. */
+/** eticheta unui cod de stare in limba activa; codurile necunoscute raman cum sunt */
 export function useStatusLabel() {
   const { t } = useT();
   return (status: string) => {
@@ -110,7 +110,7 @@ export function useStatusLabel() {
   };
 }
 
-/** Label for a booking or event type (flight, hotel, museum…) in the active language. */
+/** eticheta unui tip de rezervare sau eveniment (zbor, hotel, muzeu…) in limba activa */
 export function useTypeLabel() {
   const { t } = useT();
   return (type: string) => {
@@ -121,7 +121,7 @@ export function useTypeLabel() {
 }
 
 export function StatusPill({ status, className }: { status: string; className?: string }) {
-  // Pills read like little stamps: tight, confident, never shouting.
+  // pastilele arata ca niste stampile mici: stranse, sigure, fara sa tipe
   const label = useStatusLabel();
   return <Badge tone={statusTone[status] ?? "neutral"} className={className}>{label(status)}</Badge>;
 }
@@ -165,7 +165,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
   );
 }
 
-/** A list that failed to load must not look like an empty account: say so and offer a retry. */
+/** o lista care nu s-a incarcat nu trebuie sa arate ca un cont gol: spunem asta si dam o reincercare */
 export function LoadError({ title, onRetry, retrying }: { title: string; onRetry: () => void; retrying?: boolean }) {
   const { t } = useT();
   const offline = typeof navigator !== "undefined" && !navigator.onLine;
@@ -208,7 +208,7 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        // On touch screens the switch takes UISwitch's 51×31 size, and an invisible margin stretches the hit area past 44pt.
+        // pe ecran tactil comutatorul ia marimea UISwitch 51×31, iar o margine nevazuta largeste zona de atins peste 44pt
         className={clsx("relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors after:absolute after:-inset-2 after:content-[''] pointer-coarse:h-[31px] pointer-coarse:w-[51px]", checked ? "bg-lagoon-600" : "bg-sand-300")}
       >
         <span className={clsx("inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform pointer-coarse:h-[27px] pointer-coarse:w-[27px]", checked ? "translate-x-5 pointer-coarse:translate-x-[22px]" : "translate-x-0.5")} />

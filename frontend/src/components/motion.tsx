@@ -1,7 +1,7 @@
 import { motion, type HTMLMotionProps, type Transition } from "motion/react";
 import type { ReactNode } from "react";
 
-/** Shared motion language: quick, springy, never in the way. Respects reduced motion via <MotionConfig>. */
+/** miscare comuna: rapida, elastica, niciodata in cale. Respecta miscarea redusa prin <MotionConfig> */
 export const spring: Transition = { type: "spring", stiffness: 420, damping: 36, mass: 0.7 };
 export const softSpring: Transition = { type: "spring", stiffness: 260, damping: 30 };
 const easeOut = [0.22, 1, 0.36, 1] as const;
@@ -27,7 +27,7 @@ export function StaggerItem({ children, className, as = "div", ...rest }: { chil
   return <Comp className={className} variants={child} {...rest}>{children}</Comp>;
 }
 
-/** Hand-drawn style route line that draws itself, with a plane gliding along it. */
+/** linie de traseu ca desenata de mana, care se deseneaza singura, cu un avion care aluneca pe ea */
 export function RouteDoodle({ className, from, to, light }: { className?: string; from?: string; to?: string; light?: boolean }) {
   const stroke = light ? "rgba(255,255,255,0.75)" : "var(--color-clay-500)";
   const path = "M10 46 C 70 6, 150 6, 210 30 S 300 58, 330 18";
@@ -52,7 +52,7 @@ export function RouteDoodle({ className, from, to, light }: { className?: string
   );
 }
 
-/** iOS-style segmented control with a sliding thumb. */
+/** comutator segmentat ca pe iOS, cu buton glisant */
 export function Segmented<T extends string>({ value, onChange, options, id, className }: {
   value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; id: string; className?: string;
 }) {

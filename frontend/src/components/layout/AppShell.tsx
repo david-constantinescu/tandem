@@ -1,7 +1,7 @@
 /**
- * Navigation. The assistant is the centre of the app: the middle tab, and where everything added ends up. Around it:
- * Home (what's next), Trips (each trip's plan, bookings, map and documents) and Inbox (things that wait for you).
- * A new trip starts from the top bar. Pages scroll normally; the chat keeps its bar pinned at the bottom.
+ * navigare. Asistentul e centrul aplicatiei: tabul din mijloc si locul unde ajunge tot ce se adauga. In jurul lui:
+ * Acasa (ce urmeaza), Calatorii (planul, rezervarile, harta si documentele fiecareia) si Inbox (ce te asteapta).
+ * O calatorie noua porneste din bara de sus. Paginile se deruleaza normal; chatul isi tine bara lipita jos.
  */
 import * as Popover from "@radix-ui/react-popover";
 import { clsx } from "clsx";
@@ -37,7 +37,7 @@ export function Logo({ className, compact }: { className?: string; compact?: boo
   );
 }
 
-/** Things waiting for the user: documents to check and bookings to approve. */
+/** ce asteapta omul: documente de verificat si rezervari de aprobat */
 export function useWaitingCount() {
   const inbox = useInbox();
   const approvals = useApprovals("awaiting_approval");
@@ -131,16 +131,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   return <AddProvider><Shell>{children}</Shell></AddProvider>;
 }
 
-/** Once per visit, let Tandem look for news about coming trips (it writes in the chat if something needs you). */
+/** o data pe vizita, lasam Tandem sa caute stiri despre calatoriile urmatoare (scrie in chat daca are nevoie de tine) */
 function useCheckIn(enabled: boolean) {
   const qc = useQueryClient();
   useEffect(() => {
     if (!enabled) return;
     let done = false;
-    try { done = sessionStorage.getItem("tandem.checkin") === "1"; } catch { /* private mode */ }
+    try { done = sessionStorage.getItem("tandem.checkin") === "1"; } catch { /* mod privat */ }
     if (done) return;
     api.post<{ posted: number }>("/assistant/check-in").then((r) => {
-      try { sessionStorage.setItem("tandem.checkin", "1"); } catch { /* ignore */ }
+      try { sessionStorage.setItem("tandem.checkin", "1"); } catch { /* ignoram */ }
       if (r.posted) {
         qc.invalidateQueries({ queryKey: keys.conversations });
         qc.invalidateQueries({ queryKey: keys.notifications });

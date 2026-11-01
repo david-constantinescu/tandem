@@ -1,8 +1,8 @@
 /**
- * Keeps a copy of the signed-in user's trips on this device so the itinerary opens without a connection
- * (in the air, abroad without data). Only trips, itineraries, reservations and conflicts are kept: not documents,
- * the inbox, settings or assistant chats. The copy is tied to one user, expires after a week and is deleted on
- * sign-out or when someone else signs in.
+ * tine pe dispozitiv o copie a calatoriilor omului conectat, ca itinerariul sa se deschida fara conexiune
+ * (in avion, in strainatate fara date). Se pastreaza doar calatoriile, itinerariile, rezervarile si suprapunerile: nu
+ * documentele, inbox-ul, setarile sau chaturile cu asistentul. Copia e legata de un singur om, expira dupa o saptamana si
+ * se sterge la deconectare sau cand intra altcineva.
  */
 import { dehydrate, hydrate, type DehydratedState, type Query, type QueryClient } from "@tanstack/react-query";
 import type { User } from "./types";
@@ -28,18 +28,18 @@ function keep(q: Query): boolean {
   return root === "trips" || (root === "trip" && (part === undefined || TRIP_PARTS.has(part as string)));
 }
 
-/** The user saved with the offline copy, for opening the app when the session can't be checked. */
+/** omul salvat odata cu copia offline, ca sa putem deschide aplicatia cand sesiunea nu poate fi verificata */
 export function offlineUser(): User | null {
   return read()?.user ?? null;
 }
 
-/** Load the saved trips into the cache (only for the same user); fresh data replaces them once it arrives. */
+/** incarca in cache calatoriile salvate (doar pentru acelasi om); datele proaspete le inlocuiesc cand sosesc */
 export function restoreOffline(qc: QueryClient, userId: string): void {
   const s = read();
   if (s?.user.id === userId) hydrate(qc, s.state);
 }
 
-/** Save the kept queries whenever they change. Returns a function that stops saving. */
+/** salveaza interogarile pastrate de fiecare data cand se schimba. Intoarce o functie care opreste salvarea */
 export function persistOffline(qc: QueryClient, user: User): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const save = () => {
@@ -47,7 +47,7 @@ export function persistOffline(qc: QueryClient, user: User): () => void {
       const snapshot: Snapshot = { user, savedAt: Date.now(), state: dehydrate(qc, { shouldDehydrateQuery: keep }) };
       localStorage.setItem(STORE, JSON.stringify(snapshot));
     } catch {
-      // Storage full or blocked (private browsing): the app works the same, just not offline.
+      // spatiu plin sau blocat (navigare privata): aplicatia merge la fel, doar ca nu si fara net
     }
   };
   const unsubscribe = qc.getQueryCache().subscribe((e) => {
@@ -65,6 +65,6 @@ export function clearOffline(): void {
   try {
     localStorage.removeItem(STORE);
   } catch {
-    // nothing stored
+    // nu era nimic salvat
   }
 }

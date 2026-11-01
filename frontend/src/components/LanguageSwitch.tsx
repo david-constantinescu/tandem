@@ -5,11 +5,11 @@ import { spring } from "@/components/motion";
 import { useAuth } from "@/lib/auth";
 import { LOCALES, useT } from "@/lib/i18n";
 
-/** RO | EN switch. Every place that changes the language goes through this, so the account stays in step. */
+/** comutator RO | EN. Orice loc care schimba limba trece pe aici, ca si contul sa ramana la fel */
 export function LanguageSwitch({ className, size = "md" }: { className?: string; size?: "sm" | "md" }) {
   const { locale, t } = useT();
   const { setLanguage } = useAuth();
-  const id = useId(); // two switches can be on screen at once; each needs its own sliding thumb
+  const id = useId(); // pot fi doua comutatoare pe ecran odata; fiecare isi vrea propriul buton glisant
   return (
     <div role="radiogroup" aria-label={t("lang.label")} className={clsx("inline-grid grid-cols-2 rounded-full bg-sand-100 p-0.5", className)}>
       {LOCALES.map((l) => {

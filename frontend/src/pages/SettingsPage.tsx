@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const label = sectionKey ? t(sectionKey) : t("nav.settings");
   return (
     <div>
-      {/* Phones get an iOS-style grouped list first; a section opens as its own screen. */}
+      {/* pe telefon apare intai o lista grupata ca pe iOS; o sectiune se deschide ca ecran separat */}
       <div className={clsx("lg:hidden", picked && "hidden")}>
         <PageHeader title={t("nav.settings")} />
         <div className="card mb-5 flex items-center gap-3 rounded-[22px] p-4">

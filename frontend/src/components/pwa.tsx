@@ -1,4 +1,4 @@
-/** Installable-app pieces: the offline strip, the "new version" prompt and the Add to Home Screen card. */
+/** piesele aplicatiei instalabile: banda de offline, mesajul de versiune noua si cardul de adaugare pe ecranul principal */
 import { clsx } from "clsx";
 import { CloudOff, Download, RotateCw, Share, SquarePlus, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -9,7 +9,7 @@ import { useT } from "@/lib/i18n";
 
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 
-// Chrome and Edge fire this once, early, often before any page has mounted; keep it until the card asks.
+// Chrome si Edge il trimit o singura data, devreme, adesea inainte sa existe vreo pagina; il pastram pana il cere cardul
 let deferredInstall: InstallPrompt | null = null;
 const installListeners = new Set<() => void>();
 if (typeof window !== "undefined") {
@@ -42,7 +42,7 @@ export function isStandalone(): boolean {
 }
 
 function isIOS(): boolean {
-  // iPadOS reports itself as a Mac; touch support gives it away.
+  // iPadOS se declara Mac; ecranul tactil il da de gol
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
@@ -63,7 +63,7 @@ export function OfflineBanner() {
   );
 }
 
-/** Registers the service worker and offers the new version when one is waiting, instead of swapping it mid-task. */
+/** inregistreaza service worker-ul si ofera versiunea noua cand asteapta, fara sa o schimbe pe nepusa masa */
 export function UpdatePrompt() {
   const [update, setUpdate] = useState<((reload?: boolean) => Promise<void>) | null>(null);
   const [busy, setBusy] = useState(false);
@@ -75,7 +75,7 @@ export function UpdatePrompt() {
     const updateSW = registerSW({
       onNeedRefresh: () => setUpdate(() => updateSW),
       onRegisteredSW: (_url, reg) => {
-        // Installed apps can stay open for days; look for a new version every hour.
+        // aplicatiile instalate pot sta deschise zile intregi; cautam versiune noua din ora in ora
         if (reg) timer = setInterval(() => { if (navigator.onLine) reg.update(); }, 3600_000);
       },
     });
@@ -105,7 +105,7 @@ export function UpdatePrompt() {
 
 const DISMISSED = "tandem.install.dismissed";
 
-/** Home-screen install: the browser's own prompt where it exists, Safari's Share → Add to Home Screen otherwise. */
+/** instalare pe ecranul principal: mesajul propriu al browserului unde exista, altfel Share → Add to Home Screen din Safari */
 export function InstallCard({ className }: { className?: string }) {
   const [, rerender] = useState(0);
   const { t } = useT();
@@ -124,7 +124,7 @@ export function InstallCard({ className }: { className?: string }) {
 
   const dismiss = () => {
     setDismissed(true);
-    try { localStorage.setItem(DISMISSED, "1"); } catch { /* remembered for this visit only */ }
+    try { localStorage.setItem(DISMISSED, "1"); } catch { /* tinem minte doar pentru vizita asta */ }
   };
   const install = async () => {
     const p = deferredInstall;

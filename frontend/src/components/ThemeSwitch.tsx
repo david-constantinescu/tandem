@@ -5,7 +5,7 @@ import { spring } from "@/components/motion";
 import { useT } from "@/lib/i18n";
 import { useTheme, type Theme } from "@/lib/theme";
 
-/** Dark | Light, the same shape as the language switch. */
+/** intunecat | luminos, la fel ca la limba */
 export function ThemeSwitch({ className }: { className?: string }) {
   const [theme, setTheme] = useTheme();
   const { t } = useT();

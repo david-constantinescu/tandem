@@ -14,7 +14,7 @@ const style = {
   info: "border-sand-200 bg-sand-50 text-ink-600",
 };
 
-/** Conflict texts come from the server in the account's language. `compact` shows titles only. */
+/** textele suprapunerilor vin de pe server in limba contului. `compact` arata doar titlurile */
 export function ConflictList({ conflicts, tripId, compact, showInfo }: { conflicts: Conflict[]; tripId: string; compact?: boolean; showInfo?: boolean }) {
   const [explanation, setExplanation] = useState<{ text: string | null; provider?: string | null; reason?: string } | null>(null);
   const [loading, setLoading] = useState(false);

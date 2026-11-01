@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { fmtDate, fmtDayHeading, fmtRange, fmtTime, money, offsetLabel, parts, whenLabel } from "../lib/format";
 import { translatePlural } from "../lib/i18n";
 
-// Intl uses non-breaking and thin spaces; compare with plain ones.
+// Intl pune spatii care nu rup randul si spatii subtiri; comparam cu spatii simple
 const sp = (s: string) => s.replace(/[\u00a0\u2009\u202f]/g, " ");
 
 describe("format", () => {
   it("formats wall-clock time from the event's own timezone, not the browser's", () => {
-    // 09:30 in Rome must read 09:30 regardless of where the browser is.
+    // 09:30 la Roma trebuie sa ramana 09:30 oriunde e browserul
     expect(fmtTime("2026-11-13T09:30:00+01:00")).toBe("09:30");
     expect(fmtTime("2026-11-12T08:05:00+00:00")).toBe("08:05");
   });

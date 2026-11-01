@@ -15,7 +15,7 @@ type AuthState = {
   startDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
-  /** Switch the interface language; saved to the account when signed in so server text follows. */
+  /** schimba limba interfetei; se salveaza in cont cand esti conectat, ca textele de pe server sa urmeze */
   setLanguage: (l: Locale) => Promise<void>;
 };
 
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const { locale, setLocale } = useT();
 
-  // Signed in, the account's language wins; signed out, the device's last choice stays.
+  // conectat, conteaza limba contului; deconectat, ramane ultima alegere de pe dispozitiv
   const apply = useCallback((s: Session) => {
     setCsrf(s.csrf_token);
     setUser(s.user);
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       else clearOffline();
       apply(s);
     } catch (err) {
-      // Offline: open with the trips saved on this device. Any other failure means signed out.
+      // fara net: deschidem cu calatoriile salvate pe dispozitiv. Orice alta eroare inseamna deconectat
       const saved = isNetworkError(err) ? offlineUser() : null;
       if (saved) {
         restoreOffline(qc, saved.id);
@@ -56,14 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refresh();
-    // Back online: re-check the session (an offline start has no CSRF token yet).
+    // iar online: verificam din nou sesiunea (o pornire fara net nu are inca token CSRF)
     window.addEventListener("online", refresh);
     return () => window.removeEventListener("online", refresh);
   }, [refresh]);
 
   useEffect(() => (user ? persistOffline(qc, user) : undefined), [qc, user]);
 
-  // A new session never sees the previous one's cached or saved data.
+  // o sesiune noua nu vede niciodata datele salvate sau din cache ale celei dinainte
   const reset = () => {
     qc.clear();
     clearOffline();
@@ -101,10 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await api.patch("/settings/profile", { locale: l });
           setUser({ ...user, locale: l });
         } catch {
-          // Offline or signed out meanwhile: the device keeps the choice and the account catches up next time.
+          // fara net sau deconectat intre timp: dispozitivul tine alegerea, iar contul se aliniaza data viitoare
         }
       }
-      // Conflicts, notifications and assistant text come from the server in the account's language.
+      // suprapunerile, notificarile si textele asistentului vin de pe server in limba contului
       qc.invalidateQueries();
     },
   };

@@ -12,7 +12,7 @@ import { useInvalidateTripData } from "@/lib/queries";
 import type { Action, ActivityResult } from "@/lib/types";
 import { ActionCard } from "./ActionCard";
 
-/** Category names arrive in English from providers; show the ones Tandem knows in the active language. */
+/** categoriile vin in engleza de la furnizori; le aratam in limba activa pe cele pe care le stie Tandem */
 export function categoryLabel(c: string, t: (k: Key) => string) {
   const key = `category.${c.toLowerCase()}` as Key;
   const text = t(key);
@@ -148,7 +148,7 @@ function BookingDialog({ a, tripId, date, onClose }: { a: ActivityResult; tripId
 }
 
 function ActionCardLive({ initial }: { initial: Action }) {
-  // Follows the action after approval (in progress → completed/failed) so the dialog shows the verified outcome.
+  // urmareste actiunea dupa aprobare (in lucru → gata/esuat), ca fereastra sa arate rezultatul verificat
   const q = useQuery({
     queryKey: ["approvals", "one", initial.id],
     queryFn: () => api.get<Action>(`/approvals/${initial.id}`),

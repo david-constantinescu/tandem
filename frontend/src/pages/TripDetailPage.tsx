@@ -19,7 +19,7 @@ import { useT } from "@/lib/i18n";
 import { useConflicts, useInvalidateTripData, useItinerary, useReservations, useTrip, useTripContext, useTripDocuments } from "@/lib/queries";
 import type { Conversation, ItineraryEvent, Reservation } from "@/lib/types";
 
-/** A trip is one screen: header, four tabs, and a day pager inside the plan. The lists inside fit; only an unusually long day scrolls. */
+/** o calatorie e un singur ecran: antet, patru taburi si un paginator de zile in plan. Listele din ea incap; se deruleaza doar o zi neobisnuit de lunga */
 export default function TripDetailPage() {
   const { id = "" } = useParams();
   const trip = useTrip(id);

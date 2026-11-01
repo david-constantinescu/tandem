@@ -13,7 +13,7 @@ export const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.heic,.txt,.html,.htm,.eml,.do
 
 type UploadError = { filename: string; message: string };
 
-/** Sends files to the inbox. Shared by the drop zone and the Add sheet. */
+/** trimite fisiere in inbox. O folosesc zona de tras fisiere si foaia de adaugare */
 export function useUpload() {
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<UploadError[]>([]);

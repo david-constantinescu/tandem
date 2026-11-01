@@ -13,7 +13,7 @@ import type { Trip } from "@/lib/types";
 
 const ORDER: Record<string, number> = { current: 0, upcoming: 1, planning: 1, past: 2, cancelled: 3 };
 
-/** Trips: one card at a time, swipe or tap through them. Nothing here scrolls the page. */
+/** Calatorii: o carte pe rand, le parcurgi cu glisare sau atingere. Nimic de aici nu deruleaza pagina */
 export default function TripsPage() {
   const trips = useTrips();
   const [open, setOpen] = useState(false);
@@ -27,7 +27,7 @@ export default function TripsPage() {
   const go = (i: number) => {
     const el = rail.current;
     if (!el) return;
-    const n = Math.max(0, Math.min(list.length, i)); // list.length is the "new trip" card
+    const n = Math.max(0, Math.min(list.length, i)); // list.length e cardul "calatorie noua"
     el.scrollTo({ left: n * el.clientWidth, behavior: "smooth" });
     setIndex(n);
   };

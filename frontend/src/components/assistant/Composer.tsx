@@ -5,8 +5,8 @@ import { useAdd } from "@/components/AddSheet";
 import { useT } from "@/lib/i18n";
 
 /**
- * The chat bar, in the iMessage mould: a round + for adding a file, photo, email or link (it lands in the chat), a
- * pill that grows with the text, and a send button that only lights up when there is something to send.
+ * bara de chat, in stil iMessage: un + rotund pentru fisier, poza, email sau link (ajunge in chat), o
+ * pastila care creste odata cu textul si un buton de trimis care se aprinde doar cand ai ce trimite.
  */
 export function Composer({ value, onChange, onSend, busy, placeholder, autoFocus, className }: {
   value: string; onChange: (v: string) => void; onSend: (text: string) => void; busy?: boolean; placeholder?: string;

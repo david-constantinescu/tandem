@@ -1,9 +1,9 @@
 /**
- * Localisation. Romanian is the default; English is the alternative. `en` is the typed source of truth and `ro`
- * must translate every key, so a missing translation fails the type check instead of showing English.
+ * traduceri. Romana e implicita, engleza e alternativa. `en` e sursa de adevar tipizata, iar `ro`
+ * trebuie sa traduca fiecare cheie, deci o traducere lipsa pica la verificarea de tipuri, nu apare engleza.
  *
- * Which language wins: signed out, the last choice saved on this device (else Romanian); signed in, the account's
- * language. Switching while signed in also saves it to the account, so server-written text follows.
+ * Care limba castiga: deconectat, ultima alegere salvata pe dispozitiv (altfel romana); conectat, limba
+ * contului. Schimbarea cat esti conectat se salveaza si in cont, ca textele scrise de server sa urmeze.
  */
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { en, type Key } from "@/locales/en";
@@ -19,7 +19,7 @@ const dictionaries: Record<Locale, Record<Key, string>> = { en, ro };
 const STORE = "tandem.locale";
 
 export type Vars = Record<string, string | number>;
-/** Base names of plural keys: "trips.bookings" for "trips.bookings_one" / "_few" / "_other". */
+/** numele de baza ale cheilor de plural: "trips.bookings" pentru "trips.bookings_one" / "_few" / "_other" */
 export type PluralKey = { [K in Key]: K extends `${infer B}_one` ? B : never }[Key];
 
 export function isLocale(v: unknown): v is Locale {
@@ -37,12 +37,12 @@ function stored(): Locale {
 
 let current: Locale = stored();
 
-/** The active language, for code outside React (formatting helpers, error messages). */
+/** limba activa, pentru cod din afara React (formatari, mesaje de eroare) */
 export function getLocale(): Locale {
   return current;
 }
 
-/** BCP 47 tag for Intl formatting. */
+/** eticheta BCP 47 pentru formatarea Intl */
 export function intlLocale(locale: Locale = current): string {
   return locale === "ro" ? "ro-RO" : "en-GB";
 }
@@ -52,7 +52,7 @@ function apply(locale: Locale) {
   try {
     localStorage.setItem(STORE, locale);
   } catch {
-    // Private browsing: the choice lasts for this visit.
+    // navigare privata: alegerea tine doar cat dureaza vizita
   }
   document.documentElement.lang = locale;
   document.title = dictionaries[locale]["app.title"];
@@ -63,7 +63,7 @@ export function translate(key: Key, vars?: Vars, locale: Locale = current): stri
   return vars ? text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : text;
 }
 
-/** Plural-aware lookup: Romanian has three forms ("1 zi", "2 zile", "20 de zile"), English two. */
+/** cautare cu plural: romana are trei forme ("1 zi", "2 zile", "20 de zile"), engleza doua */
 export function translatePlural(base: PluralKey, n: number, vars?: Vars, locale: Locale = current): string {
   const cat = new Intl.PluralRules(intlLocale(locale)).select(n);
   const form = cat === "one" ? "one" : cat === "few" ? "few" : "other";
@@ -89,7 +89,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     apply(l);
     setState(l);
   }, []);
-  // `locale` is a dependency so every consumer re-renders (and re-formats dates) after a switch.
+  // `locale` e dependenta, ca orice consumator sa se redeseneze (si sa reformateze datele) dupa schimbare
   const value = useMemo<I18n>(() => ({
     locale,
     setLocale,

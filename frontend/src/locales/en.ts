@@ -1,11 +1,11 @@
 /**
- * English strings. This object defines every key; `ro.ts` must translate all of them. {name} placeholders are
- * filled in by `t()`. Plural keys come in _one / _few / _other (English uses _one and _other; _few mirrors _other).
+ * textele in engleza. Obiectul asta defineste fiecare cheie; `ro.ts` trebuie sa le traduca pe toate. Locurile {name} sunt
+ * completate de `t()`. Cheile de plural vin ca _one / _few / _other (engleza foloseste _one si _other; _few copiaza _other).
  */
 export const en = {
   "app.title": "Tandem — your travel, organised",
 
-  // Navigation
+  // navigare
   "nav.home": "Home",
   "nav.homeLabel": "Tandem home",
   "nav.trips": "Trips",
@@ -20,7 +20,7 @@ export const en = {
 
   "lang.label": "Language",
 
-  // Common
+  // comune
   "common.cancel": "Cancel",
   "common.close": "Close",
   "common.copy": "Copy",
@@ -62,7 +62,7 @@ export const en = {
   "fmt.inDays_few": "In {n} days",
   "fmt.inDays_other": "In {n} days",
 
-  // Statuses
+  // stari
   "status.confirmed": "Confirmed",
   "status.pending": "Pending",
   "status.suggested": "Suggestion",
@@ -103,7 +103,7 @@ export const en = {
   "status.disabled": "disabled",
   "status.temporarily_unavailable": "temporarily unavailable",
 
-  // Booking and event types
+  // tipuri de rezervari si evenimente
   "type.flight": "Flight",
   "type.train": "Train",
   "type.bus": "Bus",
@@ -140,7 +140,7 @@ export const en = {
   "category.tour": "Tour",
   "category.attraction": "Attraction",
 
-  // Home
+  // acasa
   "home.greeting.morning": "Good morning",
   "home.greeting.afternoon": "Good afternoon",
   "home.greeting.evening": "Good evening",
@@ -185,7 +185,7 @@ export const en = {
   "home.welcome.step3Hint": "Your itinerary in local times, with alerts for clashes and tight connections.",
   "home.welcome.cta": "Add your first booking",
 
-  // Trips
+  // calatorii
   "trips.title": "Trips",
   "trips.subtitle": "Each trip gathers its bookings, plan, map and documents.",
   "trips.new": "New trip",
@@ -218,7 +218,7 @@ export const en = {
   "newTrip.end": "End",
   "newTrip.submit": "Create trip",
 
-  // Trip page
+  // pagina unei calatorii
   "trip.notFound": "Trip not found",
   "trip.backToTrips": "Back to trips",
   "trip.noDestination": "No destination yet",
@@ -337,7 +337,7 @@ export const en = {
   "event.place": "Place",
   "event.notes": "Notes",
 
-  // Add sheet and uploads
+  // foaia de adaugare si incarcari
   "add.title": "Add",
   "add.subtitle": "It goes into the chat: Tandem reads it, tells you what it found and files it in the right trip.",
   "add.file": "Upload a confirmation",
@@ -373,7 +373,7 @@ export const en = {
   "upload.urlLabel": "Link",
   "upload.urlSubmit": "Import",
 
-  // Inbox
+  // inbox
   "inbox.title": "Inbox",
   "inbox.subtitle": "Everything that arrives for your trips, and everything that waits for your decision.",
   "inbox.tab.todo": "Needs you",
@@ -434,7 +434,7 @@ export const en = {
   "email.imported": "Imported",
   "email.attachment": "Attachment",
 
-  // Document page
+  // pagina unui document
   "doc.notFound": "Document not found",
   "doc.back": "Back to documents",
   "doc.pages_one": "{n} page",
@@ -511,7 +511,7 @@ export const en = {
   "change.wasApplied": "This update was applied.",
   "change.wasDismissed": "This update was dismissed.",
 
-  // Approvals
+  // aprobari
   "action.simDone": "Simulated booking confirmed and verified",
   "action.done": "Done",
   "action.priceChanged": "The price changed — please review again",
@@ -538,7 +538,7 @@ export const en = {
   "action.decline": "Decline",
   "action.validUntil": "Price valid until {time}",
 
-  // Explore
+  // explorare
   "explore.title": "Explore",
   "explore.subtitle": "Things to do and tickets to book, fitted around your plans.",
   "explore.tabActivities": "Things to do",
@@ -660,7 +660,7 @@ export const en = {
   "sites.step.skipped": "Skipped",
   "sites.step.stopped": "Stopped",
 
-  // Assistant
+  // asistent
   "assistant.prompt1": "What do I have booked tomorrow?",
   "assistant.prompt2": "Is there enough time between my flight and hotel check-in?",
   "assistant.prompt3": "Find something to do on Sunday afternoon that fits my plans",
@@ -705,7 +705,7 @@ export const en = {
   "tool.start_website_task": "Ran the browser agent",
   "tool.get_website_task": "Checked the browser agent",
 
-  // Notifications
+  // notificari
   "notif.title": "Notifications",
   "notif.markAll": "Mark all read",
   "notif.empty": "You're all caught up.",
@@ -713,7 +713,7 @@ export const en = {
   "notif.labelUnread_few": "Notifications, {n} unread",
   "notif.labelUnread_other": "Notifications, {n} unread",
 
-  // Settings
+  // setari
   "settings.sec.profile": "Profile",
   "settings.sec.calendar": "Calendar",
   "settings.sec.notifications": "Notifications",
@@ -867,7 +867,7 @@ export const en = {
   "data.deleteButton": "Delete my account",
   "data.seeAlso": "How documents are processed:",
 
-  // Sign in
+  // conectare
   "auth.kicker": "Your travel, in tandem.",
   "auth.headline": "Every booking, one calm itinerary.",
   "auth.pitch": "Drop in confirmations, tickets and screenshots. Tandem reads them, builds your trip, spots clashes and finds things to do that actually fit — booking only when you say so.",
@@ -897,7 +897,7 @@ export const en = {
   "auth.demoBusy": "Preparing your demo…",
   "auth.demoHint": "A long weekend in Rome with fictional bookings and a simulated booking provider.",
 
-  // Installable app
+  // aplicatie instalabila
   "pwa.offline": "Offline · showing trips saved on this device",
   "pwa.update": "A new version of Tandem is ready.",
   "pwa.reload": "Reload",

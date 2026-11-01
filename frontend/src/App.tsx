@@ -15,7 +15,7 @@ const ExplorePage = lazy(() => import("./pages/ExplorePage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
-/** Old addresses live on in notifications, assistant answers and home-screen bookmarks: keep them working. */
+/** adresele vechi inca stau in notificari, in raspunsurile asistentului si in marcajele de pe ecranul principal: le pastram functionale */
 function Moved({ to, extra }: { to: string; extra?: Record<string, string> }) {
   const { search } = useLocation();
   const params = new URLSearchParams(search);
@@ -24,7 +24,7 @@ function Moved({ to, extra }: { to: string; extra?: Record<string, string> }) {
   return <Navigate to={`${to}${q ? `?${q}` : ""}`} replace />;
 }
 
-/** Pages that are plain reading (inbox, documents, settings) get comfortable bottom room; the shell does the scrolling. */
+/** paginile de citit (inbox, documente, setari) au loc jos; derularea o face shell-ul */
 function Pane({ children }: { children: ReactNode }) {
   return <div className="pb-10">{children}</div>;
 }

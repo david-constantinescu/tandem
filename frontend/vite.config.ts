@@ -11,14 +11,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // The manifest lives in public/ so it is readable without a build; the plugin only builds the service worker.
+      // manifestul sta in public/ ca sa poata fi citit fara build; pluginul construieste doar service worker-ul
       manifest: false,
       registerType: "prompt",
       injectRegister: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
         navigateFallback: "/index.html",
-        // API responses (private data) and the demo booking sites are never served by the service worker.
+        // raspunsurile API (date private) si site-urile demo de rezervari nu trec niciodata prin service worker
         navigateFallbackDenylist: [/^\/api\//, /^\/demo-sites\//],
         cleanupOutdatedCaches: true,
       },
