@@ -204,6 +204,9 @@ def _run_model(user: User, conversation: Conversation, trip: Trip | None, ctx: T
             same = sum(1 for t in tool_log if t["name"] == call.name)
             if calls > MAX_TOOL_CALLS:
                 status, result = "error", {"error": "Tool-call budget reached; answer with what you have."}
+            elif same >= 1 and call.name in ("start_website_task", "create_booking_proposal"):
+                # un singur card de cumparare pe raspuns, altfel omul are doua rezervari de aprobat pt acelasi lucru
+                status, result = "error", {"error": f"{call.name} already ran in this reply; tell the user about the approval card instead."}
             elif same >= 3:
                 # modelele mici uneori cauta la nesfarsit; dupa 3 incercari raspunde cu ce are
                 status, result = "error", {"error": f"You already called {call.name} {same} times. Answer the user now with what you have."}

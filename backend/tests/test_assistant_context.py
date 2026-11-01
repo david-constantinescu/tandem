@@ -292,3 +292,33 @@ def test_a_question_written_as_prose_is_asked_again_through_the_tool(app, script
     assert [r["options"] for r in msg.references if r["type"] == "choices"] == [["Muzeu", "Tur"]]
     sent = " ".join(getattr(part, "text", "") or "" for m in p.seen[-1].messages for part in m.parts)
     assert "by calling ask_user" in sent and len(p.seen) == 2
+
+
+def test_only_one_purchase_starts_per_reply(app, scripted):  # noqa: F811
+    from app.models import AgentAction
+
+    user, trip = _demo_user()
+    user.ai_settings.mode = "full"
+    db.session.commit()
+    day = trip.start_date.isoformat()
+    args = {"site": "demo_rail", "origin": "Roma", "destination": "Firenze", "date": day, "adults": 2}
+    scripted([[ToolCall("1", "start_website_task", args), ToolCall("2", "start_website_task", args)], "Card mai jos."])
+    msg = orchestrator.respond(user, _conversation(user, trip), "cumpara trenul pe site-ul de exercitii")
+    assert [c["status"] for c in msg.tool_calls] == ["ok", "error"]
+    waiting = db.session.execute(db.select(AgentAction).where(AgentAction.user_id == user.id,
+                                                               AgentAction.status == "awaiting_approval")).scalars().all()
+    assert len(waiting) == 1
+
+
+def test_deciding_an_approval_clears_its_notification(app, api):
+    from app.models import Notification
+
+    api.demo()
+    t = api.get("/api/v1/trips").get_json()["data"][0]
+    task = api.post("/api/v1/browser/tasks", json={"site": "demo_rail", "origin": "Roma", "destination": "Firenze",
+                                                   "date": t["start_date"], "adults": 1, "trip_id": t["id"]}).get_json()["data"]
+    note = db.session.execute(db.select(Notification).where(Notification.dedupe_key == f"approval:{task['action_id']}")).scalar_one()
+    assert note.read_at is None
+    api.post(f"/api/v1/approvals/{task['action_id']}/reject", json={})
+    db.session.refresh(note)
+    assert note.read_at is not None

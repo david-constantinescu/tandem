@@ -190,7 +190,7 @@ function Shell({ children }: { children: ReactNode }) {
               <span className="block truncate text-[13px] font-medium text-ink-800">{user?.display_name || t("common.traveller")}</span>
               <span className="block truncate text-[11.5px] text-ink-400">{user?.is_demo ? t("demo.workspace") : user?.email}</span>
             </span>
-            <button onClick={async () => { await logout(); navigate("/login"); }} className="rounded-lg p-1.5 text-ink-400 hover:bg-white hover:text-ink-700" aria-label={t("auth.signOut")}>
+            <button onClick={async () => { navigate("/", { replace: true }); await logout(); }} className="rounded-lg p-1.5 text-ink-400 hover:bg-white hover:text-ink-700" aria-label={t("auth.signOut")}>
               <LogOut className="h-4 w-4" />
             </button>
           </div>

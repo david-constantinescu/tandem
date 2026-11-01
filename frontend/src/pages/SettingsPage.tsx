@@ -71,7 +71,7 @@ export default function SettingsPage() {
             </li>
           ))}
         </ul>
-        <button onClick={async () => { await logout(); navigate("/login"); }} className="card mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[22px] text-[16px] font-medium text-rose-ink active:bg-sand-50">
+        <button onClick={async () => { navigate("/", { replace: true }); await logout(); }} className="card mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[22px] text-[16px] font-medium text-rose-ink active:bg-sand-50">
           <LogOut className="h-[18px] w-[18px]" /> {t("auth.signOut")}
         </button>
       </div>
@@ -486,7 +486,7 @@ function Security() {
   const change = async (e: FormEvent) => {
     e.preventDefault();
     setErr(null);
-    try { await api.post("/settings/password", { current_password: cur, new_password: next }); await logout(); navigate("/login"); } catch (e2) { setErr(errorMessage(e2)); }
+    try { await api.post("/settings/password", { current_password: cur, new_password: next }); navigate("/", { replace: true }); await logout(); } catch (e2) { setErr(errorMessage(e2)); }
   };
   return (
     <div className="space-y-6">

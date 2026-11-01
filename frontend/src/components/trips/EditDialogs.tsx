@@ -11,11 +11,11 @@ const RES_TYPES = ["flight", "train", "bus", "hotel", "car_rental", "activity", 
 
 const local = (s: string | null | undefined) => (s ? s.slice(0, 16) : "");
 
-export function EventDialog({ tripId, event, defaultTz, onClose }: { tripId: string; event?: ItineraryEvent | null; defaultTz?: string | null; onClose: () => void }) {
+export function EventDialog({ tripId, event, defaultTz, defaultDay, onClose }: { tripId: string; event?: ItineraryEvent | null; defaultTz?: string | null; defaultDay?: string | null; onClose: () => void }) {
   const owned = !!event?.reservation_id;
   const [form, setForm] = useState({
     title: event?.title ?? "", type: event?.type ?? "activity", status: event?.status ?? "unbooked",
-    start_local: local(event?.start_local), end_local: local(event?.end_local), start_tz: event?.start_tz ?? defaultTz ?? "",
+    start_local: event ? local(event.start_local) : defaultDay ? `${defaultDay}T10:00` : "", end_local: event ? local(event.end_local) : defaultDay ? `${defaultDay}T11:00` : "", start_tz: event?.start_tz ?? defaultTz ?? "",
     location_name: event?.location_name ?? "", address: event?.address ?? "", notes: event?.notes ?? "",
   });
   const [error, setError] = useState<string | null>(null);

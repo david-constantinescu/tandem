@@ -138,6 +138,7 @@ def approve(user: User, action: AgentAction, presented_hash: str) -> AgentAction
         raise Conflict("The proposal changed since you reviewed it. Please review it again.", code="payload_changed")
     db.session.add(Approval(action_id=action.id, user_id=user.id, decision="approved", payload_hash=action.payload_hash))
     action.status = "in_progress"
+    _settle_notification(user, action)
     audit(user.id, "action.approved", resource_type="agent_action", resource_id=action.id,
           payload_hash=action.payload_hash)
     db.session.commit()
@@ -157,8 +158,19 @@ def reject(user: User, action: AgentAction, note: str = "") -> AgentAction:
     db.session.add(Approval(action_id=action.id, user_id=user.id, decision="rejected",
                             payload_hash=action.payload_hash, note=note[:500]))
     action.status = "rejected" if action.status == "awaiting_approval" else "cancelled"
+    _settle_notification(user, action)
     audit(user.id, "action.rejected", resource_type="agent_action", resource_id=action.id)
     return action
+
+
+def _settle_notification(user: User, action: AgentAction) -> None:
+    """notificarea "aprobare necesara" nu mai e noutate dupa ce omul a decis"""
+    from app.models import Notification
+
+    note = db.session.execute(db.select(Notification).where(
+        Notification.user_id == user.id, Notification.dedupe_key == f"approval:{action.id}")).scalar_one_or_none()
+    if note is not None and note.read_at is None:
+        note.read_at = utcnow()
 
 
 # ---------------------------------------------------------------------------------------

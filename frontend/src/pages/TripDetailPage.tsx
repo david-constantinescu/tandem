@@ -237,7 +237,7 @@ export default function TripDetailPage() {
           onStatus={(s) => setStatus(picked, s)} onEdit={() => { setEditing(picked); setSheet(null); }} onDelete={() => remove(picked)} />}
       </Dialog>
 
-      {editing && <EventDialog tripId={tr.id} event={editing === "new" ? null : editing} defaultTz={tz} onClose={() => setEditing(null)} />}
+      {editing && <EventDialog tripId={tr.id} event={editing === "new" ? null : editing} defaultTz={tz} defaultDay={current} onClose={() => setEditing(null)} />}
       {editingRes && <ReservationDialog tripId={tr.id} reservation={editingRes === "new" ? null : editingRes} defaultTz={tz} onClose={() => setEditingRes(null)} />}
     </div>
   );

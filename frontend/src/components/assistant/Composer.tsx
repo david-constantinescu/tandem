@@ -38,7 +38,7 @@ export function Composer({ value, onChange, onSend, busy, placeholder, autoFocus
           className="min-h-[42px] min-w-0 flex-1 resize-none bg-transparent py-[10px] text-[16px] leading-[22px] text-ink-900 outline-none placeholder:text-ink-300 lg:text-[15px]" />
         <button type="submit" disabled={!ready} aria-label={t("assistant.send")}
           className={clsx("mb-[5px] flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full transition active:scale-90",
-            ready ? "bg-clay-500 text-white shadow-[0_4px_12px_-4px_rgba(200,98,58,0.7)]" : "bg-sand-200 text-white")}>
+            ready ? "bg-clay-500 text-white shadow-[0_4px_12px_-4px_rgba(200,98,58,0.7)]" : "bg-sand-200 text-ink-300")}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.6} />}
         </button>
       </div>

@@ -299,7 +299,7 @@ def _request_checkout_approval(task: BrowserTask, site: Site, user: User, offer:
         consequences=[tr("The browser agent types these names on {site}: {names}.", loc, site=site.name, names=", ".join(names)),
                       tr("Then it stops on the payment page and asks you again before paying €{total}.", loc, total=f"{offer['total']:.2f}"),
                       tr("Simulated site: no money moves.", loc)],
-        cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
+        cancellation_policy=tr("Simulated booking; nothing to cancel with a real provider.", loc))
     task.action_id = action.id
     task.state = "awaiting_approval"
     task.stop_reason = tr("Waiting for your approval before entering traveller details", locale_of(user))
@@ -358,7 +358,7 @@ def complete_checkout(user: User, action: AgentAction) -> None:
             expires_at=utcnow() + timedelta(minutes=30),
             consequences=[tr("Presses Pay for €{total} on {site} — simulated site, no money moves.", loc, total=f"{float(p['total']):.2f}", site=site.name),
                           tr("Reads the confirmation page back and adds the booking to your trip.", loc)],
-            cancellation_policy="Simulated booking; nothing to cancel with a real provider.")
+            cancellation_policy=tr("Simulated booking; nothing to cancel with a real provider.", loc))
         task.action_id = payment.id
         task.state = "awaiting_approval"
         task.stop_reason = tr("On the payment page: waiting for your OK to pay", loc)
